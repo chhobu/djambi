@@ -1,0 +1,7 @@
+; $Id$
+name = Djambi
+description = "Machiavelli chess online !"
+core = 7.x
+version = 7.x-0.1-dev
+package = Kweb Djambi
+files[] = kw_djambi.module
