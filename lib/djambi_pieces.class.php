@@ -42,10 +42,7 @@ class DjambiPiece {
     return $this->shortname;
   }
   
-  public function getLongname($mode = NULL) {
-    if ($mode == "html") {
-      return t($this->longname);
-    }
+  public function getLongname() {
     return $this->longname;
   }
   

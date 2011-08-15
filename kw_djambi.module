@@ -236,6 +236,7 @@ function kw_djambi_load_library() {
   module_load_include("class.php", "kw_djambi", "lib/djambi_faction");
   module_load_include("class.php", "kw_djambi", "lib/djambi_battlefield");
   module_load_include("class.php", "kw_djambi", "lib/djambi_pieces");
+  module_load_include("inc", "kw_djambi", "kw_djambi_messages");
 }
 
 function kw_djambi_preprocess_page(&$variables) {
@@ -715,7 +716,10 @@ function kw_djambi_game_form_submit(&$form, &$form_state) {
 }
 
 function _kw_djambi_get_full_piece_name(DjambiPiece $piece) {
-  return t("!color !longname", array("!color" => $piece->getFaction()->getName("t"), "!longname" => $piece->getLongname("t")));
+  return t("!color !longname", array(
+    "!color" => _kw_djambi_get_translatable_messages($piece->getFaction()->getName()), 
+    "!longname" => _kw_djambi_get_translatable_messages($piece->getLongname())
+  ));
 }
 
 function theme_djambi_grid($variables) {
@@ -828,8 +832,8 @@ function theme_djambi_grid($variables) {
   }
   // Création des légendes de la grille
   $caption = "";;
-  $caption_lines[t("Mode")] = DjambiBattlefield::explainMode($grid->getMode(), "t");
-  $caption_lines[t("Status")] = DjambiBattlefield::explainStatus($grid->getStatus(), "t");
+  $caption_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
+  $caption_lines[t("Status")] = _kw_djambi_get_translatable_messages($grid->getStatus());
   $turn = end($grid->getTurns());
   $caption_lines[t("Turn")] = t("#%turn", array("%turn" => $turn["turn"]));
   if ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING) {
@@ -882,12 +886,12 @@ function theme_djambi_grid($variables) {
     if (is_array($event["args"])) {
       foreach ($event["args"] as $key => $arg) {
         if (substr($key, 0, 2) == "!!") {
-          $arg = t($arg);
+          $arg = _kw_djambi_get_translatable_messages($arg);
         }
         $args[$key] = $arg;
       }
     }
-    $msg = t($event["event"], $args);
+    $msg = _kw_djambi_get_translatable_messages($event["event"], $args);
     $log["time"][] = $event["time"];
     $log["msg"][] = "<div class='event ". $event["type"] . "'><span class=''>" . format_date($event["time"], "short") . " :</span> " . $msg . "</div>";
   }
@@ -936,23 +940,8 @@ function theme_djambi_grid($variables) {
       $log["msg"][] = "<div class='" . $move["type"] . "'><span class=''>" . format_date($move["time"], "short") . " :</span>  " . $msg . "</div>";
     }
     if (!empty($move["special_event"])) {
-      switch($move["special_event"]) {
-        case("throne access"):
-          $msg2 = t("!piece is now the great and beloved ruler of the djambi world.", array(
-            "!piece" => _kw_djambi_get_full_piece_name($piece)
-          ));
-          break;
-        case("throne retreat"):
-          $msg2 = t("!piece's reign of despotism and terror is now over.", array(
-            "!piece" => _kw_djambi_get_full_piece_name($piece)
-          ));
-          break;
-        case("throne evacuation"):
-          $msg2 = t("!piece body has been exhumed from his mausoleum.", array(
-            "!piece" => _kw_djambi_get_full_piece_name($piece)
-          ));
-          break;
-      }
+      $msg2 = _kw_djambi_get_translatable_messages($move["special_event"], 
+        array("!piece" => _kw_djambi_get_full_piece_name($piece)));
       $log["time"][] = $move["time"];
       $log["msg"][] = "<div class='event'> " . $msg2 . "</div>";
     }

@@ -1,5 +1,6 @@
 <?php
 define("KW_DJAMBI_MODE_SANDBOX", "bac-a-sable");
+define("KW_DJAMBI_MODE_HOTCHAIR", "hotchair");
 define("KW_DJAMBI_MODE_ROULETTE", "roulette");
 define("KW_DJAMBI_MODE_VIP", "vip");
 define("KW_DJAMBI_STATUS_PENDING", "pending");
@@ -144,7 +145,7 @@ class DjambiBattlefield {
       $faction->setBattlefield($this);
       $faction->createPieces($pieces_scheme, $start_scheme);
     }
-    $this->logEvent("info", "New djambi chess game created."); // Translatable
+    $this->logEvent("info", "NEW_DJAMBI_GAME");
     return $this;
   }
   
@@ -160,56 +161,56 @@ class DjambiBattlefield {
     $militant_habilities = array("limited_move" => 2, "kill_by_attack" => TRUE);
     return array(
       "L" => array(
-        "shortname" => "Lea", // Translatable
-        "longname" => "Leader", // Translatable
+        "shortname" => "Lea",
+        "longname" => "Leader",
         "type" => "leader", 
-        "habilities" => array("access_throne" => TRUE, "kill_by_attack" => TRUE, "must_live" => TRUE)
+        "habilities" => array("kill_throne_leader" => TRUE, "access_throne" => TRUE, "kill_by_attack" => TRUE, "must_live" => TRUE)
       ),
       "R" => array(
-        "shortname" => "Rep", // Translatable
-        "longname" => "Reporter", // Translatable
+        "shortname" => "Rep",
+        "longname" => "Reporter",
         "type" => "reporter",
         "habilities" => array("kill_by_proximity" => TRUE, "kill_throne_leader" => TRUE)
       ),
       "M1" => array(
-        "shortname" => "M#1", // Translatable
-        "longname" => "Militant #1", // Translatable
+        "shortname" => "M#1",
+        "longname" => "Militant #1",
         "type" => "militant", 
         "habilities" => $militant_habilities
       ),
       "M2" => array(
-        "shortname" => "M#2", // Translatable
-        "longname" => "Militant #2", // Translatable
+        "shortname" => "M#2",
+        "longname" => "Militant #2",
         "type" => "militant", 
         "habilities" => $militant_habilities
       ),
       "M3" => array(
-        "shortname" => "M#3", // Translatable
-        "longname" => "Militant #3", // Translatable
+        "shortname" => "M#3",
+        "longname" => "Militant #3",
         "type" => "militant", 
         "habilities" => $militant_habilities
       ),
       "M4" => array(
-        "shortname" => "M#4", // Translatable
-        "longname" => "Militant #4", // Translatable
+        "shortname" => "M#4",
+        "longname" => "Militant #4",
         "type" => "militant", 
         "habilities" => $militant_habilities
       ),
       "A" => array(
-        "shortname" => "Sni", // Translatable
-        "longname" => "Sniper", // Translatable
+        "shortname" => "Sni",
+        "longname" => "Sniper",
         "type" => "assassin", 
         "habilities" => array("kill_by_attack" => TRUE, "kill_signature" => TRUE, "kill_throne_leader" => TRUE)
       ),
       "D" => array(
-        "shortname" => "Dip", // Translatable
-        "longname" => "Diplomat", // Translatable
+        "shortname" => "Dip",
+        "longname" => "Diplomat",
         "type" => "diplomate", 
         "habilities" => array("move_living_pieces" => TRUE)
       ),
       "N" => array(
-        "shortname" => "Nec", // Translatable
-        "longname" => "Necromobil", // Translatable
+        "shortname" => "Nec",
+        "longname" => "Necromobil",
         "type" => "necromobile",
         "habilities" => array("move_dead_pieces" => TRUE)
       )
@@ -313,6 +314,9 @@ class DjambiBattlefield {
   }
   
   public function changeTurn() {
+    // Log de la fin du tour
+    $last_turn_key = max(array_keys($this->turns));
+    $this->turns[$last_turn_key]["end"] = time();
     // Vérification des conditions de victoire
     $living_factions = array();
     /* @var $faction DjambiPoliticalFaction */
@@ -340,8 +344,13 @@ class DjambiBattlefield {
         if ($control_leader && !$control_necro) {
           $control_leader = $this->checkLeaderFreedom($leaders);
           if (!$control_leader) {
-            $this->logEvent("event", "<span class='faction !class'>!!faction</span>'s side is surrounded by dead pieces and cannot access to power anymore.", // Translatable
-              array("!class" => $faction->getClass(), "!!faction" => $faction->getName()));
+            $this->logEvent(
+              "event", 
+              "SURROUNDED",
+              array(
+                "!class" => $faction->getClass(), 
+                "!!faction" => $faction->getName()
+              ));
             foreach ($leaders as $leader) {
               $leader->setDead();
             }
@@ -355,14 +364,14 @@ class DjambiBattlefield {
     }
     $total = count($living_factions);
     if ($total < 2) {
-      $this->logEvent("event", "End of the game !"); // Translatable
+      $this->logEvent("event", "END");
       if ($total == 0) {
-        $this->logEvent("event", "This is a draw..."); // Translatable
+        $this->logEvent("event", "DRAW");
       }
       else {
         $winner_id = current($living_factions);
         $winner = $this->getFactionById($winner_id);
-        $this->logEvent("event", "<span class='faction !class'>!!faction</span> wins !!!", // Translatable
+        $this->logEvent("event", "THE_WINNER_IS",
           array("!class" => $winner->getClass(), "!!faction" => $winner->getName()));
       }
       $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
@@ -390,53 +399,6 @@ class DjambiBattlefield {
         }
       }
     }
-    // Changement de tour
-    $play_order = $this->getPlayOrder();
-    $is_new_turn = FALSE;
-    if (!empty($this->turns)) {
-      array_shift($play_order);
-      $current_play_order = current($play_order);
-      $now_playing = $current_play_order["side"];
-      $type_turn = $current_play_order["type"];
-      $current_turn_array = end($this->turns);
-      $current_turn = $current_turn_array["turn"];
-      $played_turns = array();
-      foreach ($this->turns as $turn) {
-        if ($turn["turn"] == $current_turn && !empty($turn["side"])) {
-          $played_turns[$turn["side"]] = 1;
-        }
-      }
-      $alive_factions = array();
-      /* @var $faction DjambiPoliticalFaction */
-      foreach ($this->getFactions() as $faction) {
-        if ($faction->isAlive()) {
-          $alive_factions[$faction->getId()] = 1;
-        }
-      }
-      if (array_intersect_key($alive_factions, $played_turns) == $alive_factions) {
-        $current_turn++;
-        $is_new_turn = TRUE;
-      }
-    }
-    else {
-      $now_playing = $play_order[0]["side"];
-      $is_new_turn = TRUE;
-      $current_turn = 1;
-      $type_turn = "std";
-    }
-    $this->turns[] = array(
-      "side" => $now_playing,
-      "begin" => time(),
-      "turn" => $current_turn,
-      "type" => $type_turn
-    );
-    if ($is_new_turn) {
-      $this->logEvent("notice", "Turn !turn begins." // Translatable
-        , array("!turn" => $current_turn));
-    }
-    $faction = $this->getFactionById($now_playing);
-    $this->logEvent("notice", "<span class='faction !class'>!!faction</span> turn begins.", // Translatable
-      array("!class" => $faction->getClass(), "!!faction" => $faction->getName()));
   }
   
   public function getPlayOrder($reset = FALSE) {
@@ -457,116 +419,175 @@ class DjambiBattlefield {
     $selected_faction = NULL;
     $nb_factions = 0;
     foreach ($this->factions as $key => $faction) {
+      $orders["orders"][] = $faction->getStartOrder();
+      $orders["factions"][] = $faction->getId();
+      $orders["alive"][] = $faction->isAlive();
       if ($faction->isAlive()) {
-        $orders["orders"][] = $faction->getStartOrder();
-        $orders["factions"][] = $faction->getId();
         $nb_factions++;
       }
     }
-    array_multisort($orders["orders"], $orders["factions"]);
-    if (count($this->turns) == 0) {
-      foreach($orders["factions"] as $faction) {
-        $this->play_order[] = array("side" => $faction, "type" => "std");
-      }
-      $current_turn = NULL;
-    }
-    else {
-      $turns = $this->turns;
-      $current_turn = array_pop($turns);
-      $already_played_in_this_turn = array();
-      foreach($turns as $key => $turn) {
-        if ($turn["turn"] == $current_turn["turn"] && $turn["type"] == "std" && !in_array($turn["side"], $already_played_in_this_turn)) {
-          $faction = $this->getFactionById($turn["side"]);
-          if ($faction->isAlive()) {
-            $already_played_in_this_turn[] = $turn["side"];
-          }
-        }
-      }
-      $nb_players = count($orders["factions"]);
-      foreach ($already_played_in_this_turn as $key => $faction) {
-        unset($orders["factions"][array_search($faction, $orders["factions"])]);
-        $orders["factions"][] = $faction;
-      }
-      foreach ($orders["factions"] as $faction) {
-        $this->play_order[] = array(
-          "side" => $faction,
-          "type" => "std"
+    $total_factions = count($orders["factions"]);
+    $thrones = $this->getSpecialCells("throne");
+    $nb_thrones = count($thrones);
+    $turn_scheme = array();
+    for ($i = 0 ; $i < $total_factions ; $i++) {
+      $turn_scheme[] = array(
+        "side" => $i,
+        "type" => "std",
+        "played" => FALSE,
+        "playable" => TRUE,
+        "alive" => TRUE
+      );
+      foreach ($thrones as $j => $throne) {
+        $turn_scheme[] = array(
+          "side" => NULL,
+          "type" => "throne",
+          "case" => $throne,
+          "played" => FALSE,
+          "playable" => TRUE,
+          "alive" => TRUE
         );
       }
-      $rulers = array();
-      $thrones = $this->getSpecialCells("throne");
-      if (!empty($thrones)) {
-        foreach ($thrones as $throne) {
-          if (isset($this->cells[$throne]) && !empty($this->cells[$throne]["occupant"])) {
-            $piece = $this->cells[$throne]["occupant"];
-            if ($piece->getHability("access_throne") && $piece->isAlive()) {
-              $rulers[] = $piece->getFaction()->getControl()->getId();
+    }
+    array_multisort($orders["orders"], $orders["factions"], $orders["alive"]);
+    foreach ($orders["factions"] as $order => $faction_key) {
+      foreach ($turn_scheme as $key => $turn) {
+        if ($turn["side"] == $order) {
+          $turn_scheme[$key]["side"] = $faction_key;
+          $turn_scheme[$key]["alive"] = $orders["alive"][$order];
+          break;
+        }
+      }
+    }
+    $rulers = array();
+    if (!empty($thrones)) {
+      foreach ($thrones as $throne) {
+        if (isset($this->cells[$throne]) && !empty($this->cells[$throne]["occupant"])) {
+          $piece = $this->cells[$throne]["occupant"];
+          if ($piece->getHability("access_throne") && $piece->isAlive()) {
+            foreach ($turn_scheme as $key => $turn) {
+              if ($turn["type"] == "throne" && $turn["case"] == $throne) {
+                $turn_scheme[$key]["side"] = $piece->getFaction()->getId();
+                $rulers[] = $piece->getFaction()->getId();
+              }
             }
           }
         }
       }
-      // FIXME l'ordre des tours avec une pièce au pouvoir n'est pas bien géré
-      if (!empty($rulers)) {
-        $rulers = array_unique($rulers);
-        $new_order = array();
-        if($current_turn["type"] == "extra") {
-          $new_order[] = array(
-            "side" => $current_turn["side"],
-            "type" => "extra"
-          );
+      $prev_side = NULL;
+      $last_playable_turn_scheme = NULL;
+      $last_playable_prev_side = NULL;
+      foreach ($turn_scheme as $key => $turn) {
+        if ($turn["side"] == $prev_side) {
+          $turn_scheme[$key]["playable"] = FALSE;
         }
-        foreach ($this->play_order as $order) {
-          $new_order[] = array(
-            "side" => $order["side"],
-            "type" => "std"
-          );
-          foreach ($rulers as $ruler) {
-            if ($order["side"] != $ruler) {
-              $new_order[] = array(
-                "side" => $ruler,
-                "type" => "extra",
-              );
-            }
-          }
+        if ($turn["side"] != NULL && $turn["alive"] && $turn["type"] == "std") {
+          $prev_side = (!$turn_scheme[$key]["playable"] && $nb_factions == 2) ? NULL : $turn["side"];
         }
-        $last = NULL;
-        foreach ($new_order as $key => $order) {
-          if ($order["side"] == $last && $nb_factions > 2) {
-            unset($new_order[$key]);
+        elseif ($turn["type"] != "std" && $turn["side"] != NULL) {
+          $prev_side = $turn["side"];
+        }
+        if($turn["side"] && $turn["alive"] && $turn_scheme[$key]["playable"]) {
+          $last_playable_turn_scheme = $key;
+          $last_playable_prev_side = $prev_side;
+        }
+      }
+      if ($nb_factions > 2 && $turn_scheme[0]["side"] == $last_playable_prev_side) {
+        $turn_scheme[$last_playable_turn_scheme]["playable"] = FALSE;
+      }
+      if ($nb_factions == 2 && !empty($rulers)) {
+        $last_move = $this->moves[max(array_keys($this->moves))];
+        if ($last_move["special_event"] == "throne access" && $last_move["target_faction"] == $turn_scheme[$last_playable_turn_scheme]["side"]) {
+          $turn_scheme[$last_playable_turn_scheme]["playable"] = FALSE;
+        }
+      }
+    }
+    $max_ts = max(array_keys($turn_scheme));
+    $new_turn = FALSE;
+    $new_phase = TRUE;
+    if (!empty($this->turns)) {
+      $last_turn = end($this->turns);
+      $current_scheme_key = $last_turn["turn_scheme"];
+      $current_phase = $last_turn["turn"];
+      $current_side = $last_turn["side"];
+      if (!empty($last_turn["end"])) {
+        $new_turn = TRUE;
+        $current_scheme_key ++;
+      }
+      else {
+        $new_phase = FALSE;
+      }
+      foreach ($turn_scheme as $key => $turn) {
+        if ($current_scheme_key > $key) {
+          $turn_scheme[$key]["played"] = TRUE;
+        }
+        elseif ($turn["playable"] && $turn["alive"] && $turn["side"] != NULL) {
+          $new_phase = FALSE;
+        }
+      }
+      if ($new_phase) {
+        $current_phase = $last_turn["turn"] + 1;
+        foreach ($turn_scheme as $key => $turn) {
+          if ($key == 0 && $turn["side"] == $last_turn["side"] && !in_array($turn["side"], $rulers)) {
+            $turn_scheme[$key]["played"] = TRUE;
           }
           else {
-            $last = $order["side"];
+            $turn_scheme[$key]["played"] = FALSE;
           }
         }
-        $this->play_order = $new_order;
+      }
+    }
+    else {
+      $new_turn = TRUE;
+      $current_phase = 1;
+    }
+    foreach ($turn_scheme as $key => $turn) {
+      if ($turn["playable"] && $turn["alive"] && !$turn["played"] && $turn["side"] != NULL) {
+        $this->play_order[] = array(
+          "side" => $turn["side"],
+          "turn_scheme" => $key
+        );
       }
     }
     $current_order = current($this->play_order);
     $selected_faction = $this->getFactionById($current_order["side"]);
-    $selected_faction->isPlaying(TRUE);
-    if (count($this->play_order) < 4) {
+    if (is_object($selected_faction)) {
+      $selected_faction->isPlaying(TRUE);
+    }
+    if ($new_turn) {
+      $this->turns[] = array(
+        "begin" => time(),
+        "end" => NULL,
+        "side" => $current_order["side"],
+        "turn_scheme" => $current_order["turn_scheme"],
+        "turn" => $current_phase
+      );
+      $this->logEvent("notice", "TURN_BEGIN",
+        array(
+          "!class" => $selected_faction->getClass(), 
+          "!!faction" => $selected_faction->getName()
+        ));
+    }
+    if ($new_phase) {
+      $this->logEvent("notice", "NEW_TURN"
+        , array("!turn" => $current_phase));
+    }
+    $displayed_next_turns = 4;
+    if (count($this->play_order) < $displayed_next_turns) {
       $i = 0;
-      while(count($this->play_order) < 4) {
-        if ($i == 0 && current($orders["factions"])) {
-          $this->play_order[] = array(
-            "side" => current($orders["factions"]),
-            "type" => "std"
-          );
+      while(count($this->play_order) < $displayed_next_turns) {
+        if ($i > $max_ts) {
+          $i = 0;
         }
-        else {
-          $next = next($orders["factions"]);
-          if ($next === FALSE) {
-            $next = reset($orders["factions"]);
-          }
+        if (isset($turn_scheme[$i]) && $turn_scheme[$i]["alive"] && $turn_scheme[$i]["side"] != NULL && $turn_scheme[$i]["playable"]) {
           $this->play_order[] = array(
-            "side" => $next,
-            "type" => "std"
+            "side" => $turn_scheme[$i]["side"],
+            "turn_scheme" => $i
           );
         }
         $i++;
       }
     }
-    //__debug($this->play_order);
   }
   
   private function defineMovablePieces() {
@@ -617,7 +638,6 @@ class DjambiBattlefield {
   
   private function checkLeaderFreedom($leaders) {
     $thrones = $this->getSpecialCells("throne");
-    // FIXME si leader tué par un reporter au pouvoir, les camps n'ayant plus de nécro doivent-ils être éliminés ???
     $checked = array();
     /* @var $leader DjambiPiece */
     foreach ($leaders as $leader) {
@@ -637,7 +657,7 @@ class DjambiBattlefield {
           if (!isset($checked[$alternate_position])) {
             if (!empty($this->cells[$alternate_position]["occupant"])) {
               $occupant = $this->cells[$alternate_position]["occupant"];
-              if (!$occupant->isAlive()) {
+              if (!$occupant->isAlive() && $this->cells[$alternate_position]["type"] != "throne") {
                 $blocked = TRUE;
               }
               elseif(in_array($alternate_position, $thrones)) {
@@ -713,9 +733,6 @@ class DjambiBattlefield {
   public function play() {
     if ($this->status == KW_DJAMBI_STATUS_PENDING) {
       $this->getPlayOrder(TRUE);
-      if (empty($this->turns)) {
-        $this->changeTurn();
-      }
       $this->defineMovablePieces();
     }
   }
@@ -763,28 +780,6 @@ class DjambiBattlefield {
       "special_event" => $special_event
     );
     $this->moves[] = $move;
-  }
-  
-  public static function explainMode($mode, $return_type = "std") {
-    switch($mode) {
-      case(KW_DJAMBI_MODE_SANDBOX):
-        $mode_explained = "Sandbox"; // Translatable
-        break;
-      default:
-        $mode_explained = $mode;
-    }
-    return $return_type == "t" ? t($mode_explained) : $mode_explained;
-  }
-  
-  public static function explainStatus($status, $return_type) {
-    switch($status) {
-      case(KW_DJAMBI_STATUS_PENDING):
-        $status_explained = "Game in progress"; // Translatable
-        break;
-      default:
-        $status_explained = $status;
-    }
-    return $return_type == "t" ? t($status_explained) : $status_explained;
   }
   
   public function toDatabase() {

@@ -22,8 +22,8 @@ class DjambiPoliticalFaction {
     return $this->id;
   }
   
-  public function getName($mode = NULL) {
-    return $mode == "t" ? t($this->name) : $this->name;
+  public function getName() {
+    return $this->name;
   }
   
   public function getClass() {
@@ -63,7 +63,7 @@ class DjambiPoliticalFaction {
         }
       }
       $this->getBattlefield()->logEvent("event", 
-        "The desperate remaining <span class='faction !old_class'>!!old_faction</span> side's partisans are now joining the <span class='faction !new_class'>!!new_faction</span> side !", // Translatable
+        "CHANGING_SIDE",
         array("!old_class" => $this->getClass(), "!!old_faction" => $this->getName(),
           "!new_class" => $faction->getClass(), "!!new_faction" => $faction->getName()
         ));
@@ -81,7 +81,7 @@ class DjambiPoliticalFaction {
   }
   
   public function setDead() {
-    $this->getBattlefield()->logEvent("event", "Game over for <span class='faction !class'>!!faction</span> side !", // Translatable
+    $this->getBattlefield()->logEvent("event", "GAME_OVER",
       array("!class" => $this->getClass(), "!!faction" => $this->getName()));
     return $this->setAlive(FALSE);
   }

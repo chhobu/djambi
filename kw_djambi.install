@@ -111,7 +111,3 @@ function kw_djambi_schema() {
   );
   return $schema;
 }
-
-function kw_djambi_install() {
-  drupal_install_schema("kw_djambi");
-}
