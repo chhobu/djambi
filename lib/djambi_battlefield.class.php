@@ -15,7 +15,7 @@ define("KW_DJAMBI_USER_WAITING", "waiting");
 
 class DjambiBattlefield {
   private $id, $rows, $cols, $cells, $factions, $moves, $mode, $status, $turns, $play_order, $events;
-  
+
   public function __construct($id, $data, DjambiPoliticalFaction $faction1 = NULL, DjambiPoliticalFaction $faction2 = NULL, DjambiPoliticalFaction $faction3 = NULL, DjambiPoliticalFaction $faction4 = NULL) {
     $this->id = $id;
     if (!is_null($data) && is_array($data)) {
@@ -28,7 +28,7 @@ class DjambiBattlefield {
       return FALSE;
     }
   }
-  
+
   private function loadBattlefield($data) {
     $this->rows = $data["rows"];
     $this->cols = $data["cols"];
@@ -60,7 +60,7 @@ class DjambiBattlefield {
     }
     return $this;
   }
-  
+
   private function buildStdField($special_cells = array()) {
     $cells = array();
     for ($x = 1; $x <= $this->cols; $x++) {
@@ -73,7 +73,7 @@ class DjambiBattlefield {
     }
     return $cells;
   }
-  
+
   private function buildNewBattlefieldWith4Factions(DjambiPoliticalFaction $faction1, DjambiPoliticalFaction $faction2, DjambiPoliticalFaction $faction3, DjambiPoliticalFaction $faction4) {
     $this->rows = 9;
     $this->cols = 9;
@@ -81,9 +81,9 @@ class DjambiBattlefield {
     $this->events = array();
     $this->cells = $this->buildStdField(array("E5" => "throne"));
     $this->factions = array(
-      1 => $faction1, 
-      2 => $faction2, 
-      3 => $faction3, 
+      1 => $faction1,
+      2 => $faction2,
+      3 => $faction3,
       4 => $faction4
     );
     $pieces_scheme = $this->createPiecesScheme();
@@ -113,7 +113,7 @@ class DjambiBattlefield {
           "M4" => array("x" => 7, "y" => 2),
           "N"  => array("x" => 7, "y" => 3)
         );
-        
+
       }
       elseif ($key == 3) {
         $start_scheme = array(
@@ -127,7 +127,7 @@ class DjambiBattlefield {
           "M4" => array("x" => 7, "y" => 8),
           "N"  => array("x" => 7, "y" => 7)
         );
-        
+
       }
       elseif ($key == 4) {
         $start_scheme = array(
@@ -148,22 +148,29 @@ class DjambiBattlefield {
     $this->logEvent("info", "NEW_DJAMBI_GAME");
     return $this;
   }
-  
+
   public static function locateCell($position) {
+    if (!is_array($position)) {
+      preg_match('#([A-Z]+)([0-9]+)#', $position, $matches);
+      $position = array();
+      $position['x'] = self::intToAlpha($matches[1], TRUE);
+      $position['y'] = $matches[2];
+      return $position;
+    }
     return DjambiBattlefield::locateCellByXY($position["x"], $position["y"]);
   }
-  
+
   public static function locateCellByXY($x, $y) {
     return DjambiBattlefield::intToAlpha($x) . $y;
   }
-  
+
   private function createPiecesScheme() {
     $militant_habilities = array("limited_move" => 2, "kill_by_attack" => TRUE);
     return array(
       "L" => array(
         "shortname" => "Lea",
         "longname" => "Leader",
-        "type" => "leader", 
+        "type" => "leader",
         "habilities" => array("kill_throne_leader" => TRUE, "access_throne" => TRUE, "kill_by_attack" => TRUE, "must_live" => TRUE)
       ),
       "R" => array(
@@ -175,37 +182,37 @@ class DjambiBattlefield {
       "M1" => array(
         "shortname" => "M#1",
         "longname" => "Militant #1",
-        "type" => "militant", 
+        "type" => "militant",
         "habilities" => $militant_habilities
       ),
       "M2" => array(
         "shortname" => "M#2",
         "longname" => "Militant #2",
-        "type" => "militant", 
+        "type" => "militant",
         "habilities" => $militant_habilities
       ),
       "M3" => array(
         "shortname" => "M#3",
         "longname" => "Militant #3",
-        "type" => "militant", 
+        "type" => "militant",
         "habilities" => $militant_habilities
       ),
       "M4" => array(
         "shortname" => "M#4",
         "longname" => "Militant #4",
-        "type" => "militant", 
+        "type" => "militant",
         "habilities" => $militant_habilities
       ),
       "A" => array(
         "shortname" => "Sni",
         "longname" => "Sniper",
-        "type" => "assassin", 
+        "type" => "assassin",
         "habilities" => array("kill_by_attack" => TRUE, "kill_signature" => TRUE, "kill_throne_leader" => TRUE)
       ),
       "D" => array(
         "shortname" => "Dip",
         "longname" => "Diplomat",
-        "type" => "diplomate", 
+        "type" => "diplomate",
         "habilities" => array("move_living_pieces" => TRUE)
       ),
       "N" => array(
@@ -216,34 +223,37 @@ class DjambiBattlefield {
       )
     );
   }
-  
-  public static function intToAlpha($int) {
+
+  public static function intToAlpha($int, $inverse = FALSE) {
     $alpha = array("#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "F", "G", "H", "I", "J", "K",
       "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z");
+    if ($inverse) {
+      return array_search($int, $alpha);
+    }
     if (isset($alpha[$int])) {
       return $alpha[$int];
     }
     return $alpha[0];
   }
-  
+
   public function placePiece($piece, $old_position = NULL) {
     $this->cells[$this->locateCell($piece->getPosition())]["occupant"] = $piece;
     if (!is_null($old_position) && $piece->getPosition() != $old_position) {
       $old_cell = $this->locateCell($old_position);
-      if (isset($this->cells[$old_cell]["occupant"]) && $piece == $this->cells[$old_cell]["occupant"]) { 
+      if (isset($this->cells[$old_cell]["occupant"]) && $piece == $this->cells[$old_cell]["occupant"]) {
         $this->cells[$old_cell]["occupant"] = NULL;
       }
     }
   }
-  
+
   public function getId() {
     return $this->id;
   }
-  
+
   public function getFactions() {
     return $this->factions;
   }
-  
+
   public function getFactionById($id) {
     foreach($this->factions as $key => $faction) {
       if ($faction->getId() == $id) {
@@ -252,12 +262,12 @@ class DjambiBattlefield {
     }
     return FALSE;
   }
-  
+
   public function getPlayingFaction() {
-    $play_order = $this->getPlayOrder();
-    return $this->getFactionById($play_order[0]["side"]);
+    $play_order = current($this->getPlayOrder());
+    return $this->getFactionById($play_order["side"]);
   }
-  
+
   public function getPieceById($piece_id) {
     list($faction_id, $piece_id) = explode("-", $piece_id, 2);
     $faction = $this->getFactionById($faction_id);
@@ -267,55 +277,101 @@ class DjambiBattlefield {
     }
     return FALSE;
   }
-  
+
   public function getMoves() {
     return $this->moves;
   }
-  
+
   public function getEvents() {
     return $this->events;
   }
-  
+
   public function getRows() {
     return $this->rows;
   }
-  
+
   public function getCols() {
     return $this->cols;
   }
-  
+
   public function getCells() {
     return $this->cells;
   }
-  
+
   public function updateCell($cell, $key, $value) {
     $this->cells[$cell][$key] = $value;
   }
-  
+
   public function getStatus() {
     return $this->status;
   }
-  
+
   public function getMode() {
     return $this->mode;
   }
-  
+
   public function setMode($mode) {
     $this->mode = $mode;
     return $this;
   }
-  
+
   public function getDimensions() {
     return max($this->rows, $this->cols);
   }
-  
+
   public function getTurns() {
     return $this->turns;
   }
-  
+
+  public function cancelLastTurn() {
+    $current_turn_key = $this->getCurrentTurnId();
+    unset($this->turns[$current_turn_key]);
+    $last_turn = end($this->turns);
+    $last_turn_key = $this->getCurrentTurnId();
+    $last_turn['end'] = NULL;
+    $this->turns[$last_turn_key] = $last_turn;
+    foreach ($this->moves as $key => $move) {
+      if ($move['turn'] == $last_turn_key || $move['turn'] == $current_turn_key) {
+        $piece = $this->getPieceById($move['target']);
+        $position = self::locateCell($move['from']);
+        $piece->setPosition($position['x'], $position['y']);
+        if ($move['type'] == 'murder') {
+          $piece->setDead(TRUE);
+        }
+        if ($move['turn'] == $current_turn_key && $move['type'] == 'move' && !empty($move['acting'])) {
+          $piece2 = $this->getPieceById($move['acting']);
+          $position = self::locateCell($move['to']);
+          $piece2->setPosition($position['x'], $position['y']);
+        }
+        unset($this->moves[$key]);
+      }
+    }
+    foreach ($this->events as $key => $event) {
+      if ($event['turn'] == $last_turn_key || $event['turn'] == $current_turn_key) {
+        if ($event['event'] == 'GAME_OVER') {
+          $faction = $this->getFactionById($event['args']['!id']);
+          $faction->setAlive(TRUE);
+        }
+        if ($event['event'] == 'CHANGING_SIDE') {
+          $faction = $this->getFactionById($event['args']['!old_id']);
+          $faction->setControl($faction, FALSE);
+          if (!empty($events['args']['!controlled'])) {
+            foreach ($events['args']['!controlled'] as $controlled_faction) {
+              $controlled_faction->setControl($faction, FALSE);
+            }
+          }
+        }
+        if ($event['turn'] == $last_turn_key && in_array($event['event'], array('NEW_DJAMBI_GAME', 'NEW_TURN', 'TURN_BEGIN'))) {
+          continue;
+        }
+        unset($this->events[$key]);
+      }
+    }
+  }
+
   public function changeTurn() {
     // Log de la fin du tour
-    $last_turn_key = max(array_keys($this->turns));
+    $last_turn_key = $this->getCurrentTurnId();
     $this->turns[$last_turn_key]["end"] = time();
     // Vérification des conditions de victoire
     $living_factions = array();
@@ -345,10 +401,10 @@ class DjambiBattlefield {
           $control_leader = $this->checkLeaderFreedom($leaders);
           if (!$control_leader) {
             $this->logEvent(
-              "event", 
+              "event",
               "SURROUNDED",
               array(
-                "!class" => $faction->getClass(), 
+                "!class" => $faction->getClass(),
                 "!!faction" => $faction->getName()
               ));
             foreach ($leaders as $leader) {
@@ -400,7 +456,7 @@ class DjambiBattlefield {
       }
     }
   }
-  
+
   public function getPlayOrder($reset = FALSE) {
     if (empty($this->play_order) || $reset) {
       $this->definePlayOrder();
@@ -408,11 +464,11 @@ class DjambiBattlefield {
     reset($this->play_order);
     return $this->play_order;
   }
-  
+
   public function setStatus($status) {
     $this->status = $status;
   }
-  
+
   private function definePlayOrder() {
     $this->play_order = array();
     $orders = array();
@@ -549,11 +605,16 @@ class DjambiBattlefield {
         );
       }
     }
-    $current_order = current($this->play_order);
-    $selected_faction = $this->getFactionById($current_order["side"]);
-    if (is_object($selected_faction)) {
-      $selected_faction->isPlaying(TRUE);
+    if (empty($this->play_order)) {
+      return FALSE;
     }
+    $current_order = current($this->play_order);
+    if ($new_turn && $nb_factions > 2 && !empty($this->turns) && $this->turns[$this->getCurrentTurnId()]['side'] == $current_order['side']) {
+      unset($this->play_order[key($this->play_order)]);
+      $current_order = current($this->play_order);
+    }
+    $selected_faction = $this->getFactionById($current_order["side"]);
+    $selected_faction->isPlaying(TRUE);
     if ($new_turn) {
       $this->turns[] = array(
         "begin" => time(),
@@ -564,9 +625,10 @@ class DjambiBattlefield {
       );
       $this->logEvent("notice", "TURN_BEGIN",
         array(
-          "!class" => $selected_faction->getClass(), 
+          "!class" => $selected_faction->getClass(),
           "!!faction" => $selected_faction->getName()
-        ));
+        )
+      );
     }
     if ($new_phase) {
       $this->logEvent("notice", "NEW_TURN"
@@ -588,8 +650,9 @@ class DjambiBattlefield {
         $i++;
       }
     }
+    return TRUE;
   }
-  
+
   private function defineMovablePieces() {
     /* @var $active_faction DjambiPoliticalFaction */
     $current_order = current($this->play_order);
@@ -599,7 +662,7 @@ class DjambiBattlefield {
       $piece->buildAllowableMoves();
     }
   }
-  
+
   public function checkAvailableCell(DjambiPiece $piece, $cell, $allow_interactions) {
     $move_ok = FALSE;
     if (isset($this->cells[$cell]["occupant"])) {
@@ -635,7 +698,7 @@ class DjambiBattlefield {
     }
     return $move_ok;
   }
-  
+
   private function checkLeaderFreedom($leaders) {
     $thrones = $this->getSpecialCells("throne");
     $checked = array();
@@ -678,7 +741,7 @@ class DjambiBattlefield {
     }
     return FALSE;
   }
-  
+
   public function findNeighbourCells($position, $use_diagonals = TRUE) {
     $next_positions = array();
     if ($position["x"] + 1 <= $this->cols) {
@@ -707,7 +770,7 @@ class DjambiBattlefield {
     }
     return $next_positions;
   }
-  
+
   public function getSpecialCells($type) {
     $special_cells = array();
     foreach ($this->cells as $key => $cell) {
@@ -717,7 +780,7 @@ class DjambiBattlefield {
     }
     return $special_cells;
   }
-  
+
   public function getFreeCells(DjambiPiece $piece, $keep_alive = TRUE) {
     $freecells = array();
     foreach ($this->cells as $key => $cell) {
@@ -729,16 +792,17 @@ class DjambiBattlefield {
     }
     return $freecells;
   }
-  
+
   public function play() {
     if ($this->status == KW_DJAMBI_STATUS_PENDING) {
       $this->getPlayOrder(TRUE);
       $this->defineMovablePieces();
     }
   }
-  
+
   public function logEvent($type, $event_txt, $event_args = NULL, DjambiPoliticalFaction $from = NULL, DjambiPoliticalFaction $to = NULL) {
     $event = array(
+      "turn" => $this->getCurrentTurnId(),
       "time" => time(),
       "type" => $type,
       "event" => $event_txt,
@@ -752,7 +816,11 @@ class DjambiBattlefield {
     }
     $this->events[] = $event;
   }
-  
+
+  private function getCurrentTurnId() {
+    return empty($this->turns) ? 0 : max(array_keys($this->turns));
+  }
+
   public function logMove(DjambiPiece $target_piece, $destination, $type = "move", DjambiPiece $acting_piece = NULL) {
     $destination_cell = self::locateCell($destination);
     $origin_cell = self::locateCell($target_piece->getPosition());
@@ -769,6 +837,7 @@ class DjambiBattlefield {
       $special_event = NULL;
     }
     $move = array(
+      "turn" => $this->getCurrentTurnId(),
       "time" => time(),
       "target_faction" => $target_piece->getFaction()->getControl()->getId(),
       "target" => $target_piece->getId(),
@@ -781,7 +850,7 @@ class DjambiBattlefield {
     );
     $this->moves[] = $move;
   }
-  
+
   public function toDatabase() {
     $positions = array();
     $pieces = array();
@@ -820,7 +889,7 @@ class DjambiBattlefield {
       "events" => $this->events
     );
   }
-  
+
   public function toHtml() {
     return drupal_get_form("kw_djambi_game_form", $this);
   }

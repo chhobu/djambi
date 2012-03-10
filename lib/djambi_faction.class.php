@@ -1,9 +1,9 @@
 <?php
 class DjambiPoliticalFaction {
   private $uid, $id, $name, $class, $control, $alive, $pieces, $battlefield = NULL, $start_order, $playing;
-  
+
   public function __construct($uid, $id, $name, $class, $start_order) {
-    $this->uid = $uid; 
+    $this->uid = $uid;
     $this->id = $id;
     $this->name = $name;
     $this->class = $class;
@@ -13,35 +13,35 @@ class DjambiPoliticalFaction {
     $this->start_order = $start_order;
     $this->playing = FALSE;
   }
-  
+
   public function getUid() {
     return $this->uid;
   }
-  
+
   public function getId() {
     return $this->id;
   }
-  
+
   public function getName() {
     return $this->name;
   }
-  
+
   public function getClass() {
     return $this->class;
   }
-  
+
   public function getStartOrder() {
     return $this->start_order;
   }
-  
+
   public function getPieces() {
     return $this->pieces;
   }
-  
+
   public function getControl() {
     return $this->control;
   }
-  
+
   public function getControlledPieces() {
     $pieces = array();
     foreach ($this->battlefield->getFactions() as $faction) {
@@ -53,56 +53,61 @@ class DjambiPoliticalFaction {
     }
     return $pieces;
   }
-  
+
   public function setControl(DjambiPoliticalFaction $faction, $log = TRUE) {
+    $old_control = $this->control;
     $this->control = $faction;
-    if ($this != $faction && $log) {
-      foreach ($this->getBattlefield()->getFactions() as $key => $f) {
-        if ($f->getControl()->getId() == $this->getId()) {
-          $f->setControl($faction, FALSE);
-        }
+    foreach ($this->getBattlefield()->getFactions() as $key => $f) {
+      $controlled = array();
+      if ($f->getId() != $this->getId() && $f->getControl()->getId() == $this->getId()) {
+        $f->setControl($faction, FALSE);
+        $controlled[] = $f->getId();
       }
-      $this->getBattlefield()->logEvent("event", 
+    }
+    if ($log) {
+      $this->getBattlefield()->logEvent("event",
         "CHANGING_SIDE",
-        array("!old_class" => $this->getClass(), "!!old_faction" => $this->getName(),
-          "!new_class" => $faction->getClass(), "!!new_faction" => $faction->getName()
-        ));
+        array("!old_id" => $this->getId(), "!old_class" => $this->getClass(), "!!old_faction" => $this->getName(),
+            "!new_id" => $faction->getId(), "!new_class" => $faction->getClass(), "!!new_faction" => $faction->getName(),
+            "!controlled" => $controlled
+        )
+      );
     }
     return $this;
   }
-  
+
   public function isPlaying() {
     return $this->playing;
   }
-  
+
   public function setPlaying($playing) {
     $this->playing = $playing;
     return $this;
   }
-  
+
   public function setDead() {
     $this->getBattlefield()->logEvent("event", "GAME_OVER",
-      array("!class" => $this->getClass(), "!!faction" => $this->getName()));
+      array("!id" => $this->getId(), "!class" => $this->getClass(), "!!faction" => $this->getName()));
     return $this->setAlive(FALSE);
   }
-  
+
   public function isAlive() {
     return $this->alive;
   }
-  
+
   public function setAlive($alive) {
     $this->alive = $alive;
     return $this;
   }
-  
+
   public function getBattlefield() {
     return $this->battlefield;
   }
-  
+
   public function setBattlefield(DjambiBattlefield $bt) {
     $this->battlefield = $bt;
   }
-  
+
   public function createPieces($pieces_scheme, $start_scheme, $deads = NULL) {
     foreach($pieces_scheme as $key => $scheme) {
       $alive = TRUE;
@@ -111,7 +116,7 @@ class DjambiPoliticalFaction {
           $alive = FALSE;
         }
       }
-      $piece = new DjambiPiece($this, $scheme["shortname"], $scheme["longname"], 
+      $piece = new DjambiPiece($this, $scheme["shortname"], $scheme["longname"],
         $scheme["type"], $start_scheme[$key]["x"], $start_scheme[$key]["y"], $alive);
       if (isset($scheme["habilities"]) && is_array($scheme["habilities"])) {
         foreach($scheme["habilities"] as $hability => $value) {
@@ -121,7 +126,7 @@ class DjambiPoliticalFaction {
       $this->pieces[$key] = $piece;
     }
   }
-  
+
   public function toDatabase() {
     return array(
       "name" => $this->name,

@@ -111,3 +111,7 @@ function kw_djambi_schema() {
   );
   return $schema;
 }
+
+function kw_djambi_uninstall() {
+  variable_del('kw_djambi_game_sequence');
+}
