@@ -351,6 +351,12 @@ class DjambiBattlefield {
         if ($event['event'] == 'GAME_OVER') {
           $faction = $this->getFactionById($event['args']['!id']);
           $faction->setAlive(TRUE);
+          $pieces = $faction->getPieces();
+          foreach ($pieces as $key => $piece) {
+            if ($piece->getHability('must_live')) {
+              $piece->setDead(TRUE);
+            }
+          }
         }
         if ($event['event'] == 'CHANGING_SIDE') {
           $faction = $this->getFactionById($event['args']['!old_id']);
@@ -511,6 +517,9 @@ class DjambiBattlefield {
         if ($turn["side"] == $order) {
           $turn_scheme[$key]["side"] = $faction_key;
           $turn_scheme[$key]["alive"] = $orders["alive"][$order];
+          foreach ($thrones as $tk => $case) {
+            $turn_scheme[$key + $tk +1]["alive"] = $orders["alive"][$order];
+          }
           break;
         }
       }
@@ -550,12 +559,6 @@ class DjambiBattlefield {
       }
       if ($nb_factions > 2 && $turn_scheme[0]["side"] == $last_playable_prev_side) {
         $turn_scheme[$last_playable_turn_scheme]["playable"] = FALSE;
-      }
-      if ($nb_factions == 2 && !empty($rulers)) {
-        $last_move = $this->moves[max(array_keys($this->moves))];
-        if ($last_move["special_event"] == "throne access" && $last_move["target_faction"] == $turn_scheme[$last_playable_turn_scheme]["side"]) {
-          $turn_scheme[$last_playable_turn_scheme]["playable"] = FALSE;
-        }
       }
     }
     $max_ts = max(array_keys($turn_scheme));
@@ -609,10 +612,37 @@ class DjambiBattlefield {
       return FALSE;
     }
     $current_order = current($this->play_order);
+    // Un camp ne peut pas jouer deux fois de suite après avoir tué un chef ennemi
     if ($new_turn && $nb_factions > 2 && !empty($this->turns) && $this->turns[$this->getCurrentTurnId()]['side'] == $current_order['side']) {
       unset($this->play_order[key($this->play_order)]);
-      $current_order = current($this->play_order);
     }
+    // Un camp ne peut pas jouer immédiatement après avoir accédé au pouvoir
+    elseif ($new_turn && $nb_factions == 2) {
+      $last_turn_id = $this->getCurrentTurnId();
+      foreach($this->moves as $move) {
+        if ($move['turn'] == $last_turn_id && in_array($move['special_event'], array('throne access', 'throne retreat')) && $this->turns[$last_turn_id]['side'] == $current_order['side']) {
+          unset($this->play_order[key($this->play_order)]);
+          break;
+        }
+      }
+    }
+    $displayed_next_turns = 4;
+    if (count($this->play_order) < $displayed_next_turns) {
+      $i = 0;
+      while(count($this->play_order) < $displayed_next_turns) {
+        if ($i > $max_ts) {
+          $i = 0;
+        }
+        if (isset($turn_scheme[$i]) && $turn_scheme[$i]["alive"] && $turn_scheme[$i]["side"] != NULL && $turn_scheme[$i]["playable"]) {
+          $this->play_order[] = array(
+              "side" => $turn_scheme[$i]["side"],
+              "turn_scheme" => $i
+          );
+        }
+        $i++;
+      }
+    }
+    $current_order = current($this->play_order);
     $selected_faction = $this->getFactionById($current_order["side"]);
     $selected_faction->isPlaying(TRUE);
     if ($new_turn) {
@@ -633,22 +663,6 @@ class DjambiBattlefield {
     if ($new_phase) {
       $this->logEvent("notice", "NEW_TURN"
         , array("!turn" => $current_phase));
-    }
-    $displayed_next_turns = 4;
-    if (count($this->play_order) < $displayed_next_turns) {
-      $i = 0;
-      while(count($this->play_order) < $displayed_next_turns) {
-        if ($i > $max_ts) {
-          $i = 0;
-        }
-        if (isset($turn_scheme[$i]) && $turn_scheme[$i]["alive"] && $turn_scheme[$i]["side"] != NULL && $turn_scheme[$i]["playable"]) {
-          $this->play_order[] = array(
-            "side" => $turn_scheme[$i]["side"],
-            "turn_scheme" => $i
-          );
-        }
-        $i++;
-      }
     }
     return TRUE;
   }

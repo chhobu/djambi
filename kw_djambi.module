@@ -258,7 +258,14 @@ function kw_djambi_preprocess_page(&$variables) {
 function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
   global $user;
   $form["#theme"] = array("djambi_grid");
-  $form["#grid"] = $grid;
+  if (!empty($form_state["kw_djambi"]["selected_piece"])) {
+    $piece = $form_state["kw_djambi"]["selected_piece"];
+    $form['#grid'] = $piece->getFaction()->getBattlefield();
+    $grid = $form['#grid'];
+  }
+  else {
+    $form["#grid"] = $grid;
+  }
   $form["grid"] = array(
     '#type' => 'fieldset',
     '#title' => t('Djambi grid'),
@@ -272,7 +279,14 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
   $phase_text = NULL;
   if ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING) {
     $actions = array();
-    if ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX && count($grid->getTurns()) > 1) {
+    if (!empty($form_state["kw_djambi"]) && in_array($form_state["kw_djambi"]["phase"], array('move_interactions', 'piece_destination'))) {
+      $actions['cancel_selection'] = array(
+        '#type' => 'submit',
+        '#value' => t('Cancel piece selection'),
+        '#submit' => array('kw_djambi_game_form_cancel_selection_submit')
+      );
+    }
+    elseif ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX && count($grid->getTurns()) > 1) {
       $actions['cancel_last_turn'] = array(
         '#type' => 'submit',
         '#value' => t('Cancel last move'),
@@ -702,11 +716,12 @@ function kw_djambi_piece_evacuation_validate(&$errors, DjambiBattlefield $grid, 
 /**
  * Soumission du formulaire de jeu
  */
-function kw_djambi_game_form_submit(&$form, &$form_state) {
+function kw_djambi_game_form_submit($form, &$form_state) {
   $change_turn = FALSE;
+  $grid = $form["#grid"];
   switch ($form_state["kw_djambi"]["phase"]) {
     case("piece_destination") :
-      $form_state["rebuild"] = TRUE;
+      $form_state['rebuild'] = TRUE;
       break;
     case("interaction_result") :
       $interaction = current($form_state["kw_djambi"]["interactions"]);
@@ -714,28 +729,28 @@ function kw_djambi_game_form_submit(&$form, &$form_state) {
       if ($interaction["type"] == "murder") {
         $victim_piece = $interaction["target"];
         $piece->kill($victim_piece, $form_state["kw_djambi"]["selected_interaction"]);
-        $form["#grid"] = $piece->getFaction()->getBattlefield();
+        $grid = $piece->getFaction()->getBattlefield();
       }
       elseif ($interaction["type"] == "necromobility") {
         $victim_piece = $interaction["target"];
         $piece->necromove($victim_piece, $form_state["kw_djambi"]["selected_interaction"]);
-        $form["#grid"] = $piece->getFaction()->getBattlefield();
+        $grid = $piece->getFaction()->getBattlefield();
       }
       elseif ($interaction["type"] == "manipulation") {
         $manipulated_piece = $interaction["target"];
         $piece->manipulate($manipulated_piece, $form_state["kw_djambi"]["selected_interaction"]);
-        $form["#grid"] = $piece->getFaction()->getBattlefield();
+        $grid = $piece->getFaction()->getBattlefield();
       }
       elseif ($interaction["type"] == "reportage") {
         $grid = $piece->getFaction()->getBattlefield();
         $cells = $grid->getCells();
         $victim = $cells[$form_state["kw_djambi"]["selected_interaction"]]["occupant"];
         $piece->kill($victim, $form_state["kw_djambi"]["selected_interaction"]);
-        $form["#grid"] = $piece->getFaction()->getBattlefield();
+        $grid = $piece->getFaction()->getBattlefield();
       }
       elseif ($interaction["type"] == "throne_evacuation") {
         $piece->move($form_state["kw_djambi"]["selected_interaction"], FALSE);
-        $form["#grid"] = $piece->getFaction()->getBattlefield();
+        $grid = $piece->getFaction()->getBattlefield();
       }
       $interaction_key = key($form_state["kw_djambi"]["interactions"]);
       unset($form_state["kw_djambi"]["interactions"][$interaction_key]);
@@ -752,7 +767,7 @@ function kw_djambi_game_form_submit(&$form, &$form_state) {
       /* @var $piece DjambiPiece */
       $piece = $form_state["kw_djambi"]["selected_piece"];
       $move_results = $piece->move($form_state["kw_djambi"]["selected_destination"]);
-      $form["#grid"] = $piece->getFaction()->getBattlefield();
+      $grid = $piece->getFaction()->getBattlefield();
       $form_state["kw_djambi"]["selected_piece"] = $piece;
       if (!empty($move_results)) {
         $form_state["kw_djambi"]["phase"] = "move_interactions";
@@ -766,16 +781,21 @@ function kw_djambi_game_form_submit(&$form, &$form_state) {
   }
   if ($change_turn) {
     /* @var $grid DjambiBattlefield */
-    $grid = $form["#grid"];
     $grid->changeTurn();
     _kw_djambi_save_game($grid);
+  }
+}
+
+function kw_djambi_game_form_cancel_selection_submit($form, &$form_state) {
+  if (isset($form_state['kw_djambi'])) {
+    unset($form_state['kw_djambi']);
   }
 }
 
 /**
  * Soumission du bouton d'annulation du dernier tour du jeu
  */
-function kw_djambi_game_form_cancel_last_turn_submit(&$form, &$form_state) {
+function kw_djambi_game_form_cancel_last_turn_submit($form, &$form_state) {
   $grid = $form['#grid'];
   $grid->cancelLastTurn();
   _kw_djambi_save_game($grid);
