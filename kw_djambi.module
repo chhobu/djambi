@@ -176,13 +176,16 @@ function kw_djambi_node_delete($node) {
  */
 function kw_djambi_node_view($node, $view_mode) {
   // Modification de l'affichage des contenus de type kw_djambi
-  if ($node->type == "kw_djambi" && (in_array($view_mode, array("full", "teaser")))) {
+  if ($node->type == "kw_djambi" && $view_mode =="full") {
     // Ajout du javascript et de la feuille de style qui vont bien
     drupal_add_css(drupal_get_path("module", "kw_djambi")."/kw_djambi.css");
     drupal_add_js(drupal_get_path("module", "kw_djambi")."/js/kw_djambi.js");
     // Et enfin, le gros du morceau, le chargement et l'affichage de l'échiquier
     $battlefield = kw_djambi_build_battlefield($node);
     $node->content["grid"] = $battlefield->toHtml();
+  }
+  if ($node->type == 'kw_djambi' && $view_mode == 'teaser') {
+
   }
 }
 
@@ -271,10 +274,17 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
     '#title' => t('Djambi grid'),
     '#weight' => 0
   );
+  $form['stats'] = array(
+    '#type' => 'fieldset',
+    '#title' => $grid->getStatus() == KW_DJAMBI_STATUS_FINISHED ? t('Stats and awards') : t('Stats'),
+    '#weight' => 5
+  );
   $form['log'] = array(
     '#type' => 'fieldset',
     '#title' => t('Treachery log'),
-    '#weight' => 10
+    '#weight' => 10,
+    '#collapsible' => $grid->getStatus() == KW_DJAMBI_STATUS_FINISHED ? TRUE : FALSE,
+    '#collapsed' => $grid->getStatus() == KW_DJAMBI_STATUS_FINISHED ? TRUE : FALSE
   );
   $phase_text = NULL;
   if ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING) {
@@ -454,6 +464,17 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
       "#value" => $phase_text
     );
   }
+  // Log des événements
+  $log = _kw_djambi_build_log($grid);
+  $form['log']['history'] = array(
+      '#markup' => theme('item_list', array('items' => $log['msg']))
+  );
+  // Afichage des stats
+  $stats = _kw_djambi_build_stats($grid);
+  $form['stats']['items'] = array(
+      '#markup' => theme('item_list', array('items' => $stats))
+      );
+  // Redirection
   $form["#action"] = "#DjambiGrid" . $grid->getId();
   return $form;
 }
@@ -836,4 +857,292 @@ function _kw_djambi_get_full_piece_name(DjambiPiece $piece) {
  */
 function _kw_djambi_autodelete_time($mode) {
   return time() + 3600;
+}
+
+/**
+ * Renvoie une liste d'événements survenus lors d'une partie
+ * @param DjambiBattlefield $grid
+ */
+function _kw_djambi_build_log(DjambiBattlefield $grid) {
+  $log = array();
+  foreach ($grid->getEvents() as $key => $event) {
+    $args = array();
+    if (is_array($event["args"])) {
+      foreach ($event["args"] as $key => $arg) {
+        if (substr($key, 0, 2) == "!!") {
+          $arg = _kw_djambi_get_translatable_messages($arg);
+        }
+        $args[$key] = $arg;
+      }
+    }
+    $msg = _kw_djambi_get_translatable_messages($event["event"], $args);
+    $log["time"][] = $event["time"];
+    $log["msg"][] = "<div class='event ". $event["type"] . "'><span class=''>" . format_date($event["time"], "short") . " :</span> " . $msg . "</div>";
+  }
+  foreach ($grid->getMoves() as $key => $move) {
+    $msg = NULL;
+    $piece = $grid->getPieceById($move["target"]);
+    if ($move["type"] == "move") {
+      $faction = $grid->getFactionById($move["target_faction"]);
+      $msg = t("!faction has moved !piece from !origin to !destination.", array(
+          "!faction" => "<span class='faction " . $faction->getClass() . "'>" . $faction->getName("t") . "</span>",
+          "!piece" =>  "<span class='piece " . $piece->getType() . "'>" . _kw_djambi_get_full_piece_name($piece) . "</span>",
+          "!origin" => $move["from"],
+          "!destination" => $move["to"]
+      ));
+    }
+    elseif ($move["type"] == "murder") {
+      $victim = $piece;
+      $responsable = $grid->getPieceById($move["acting"]);
+      $msg = t("!victim has been killed by !piece. The crime took place in !origin, and the victim body was found in !destination.", array(
+          "!victim" => "<span class='piece " . $victim->getType() . "'>" . _kw_djambi_get_full_piece_name($victim) . "</span>",
+          "!piece" =>  "<span class='piece " . $responsable->getType() . "'>" . _kw_djambi_get_full_piece_name($responsable) . "</span>",
+          "!origin" => $move["from"],
+          "!destination" => $move["to"]
+      ));
+    }
+    elseif ($move["type"] == "necromobility") {
+      $responsable = $grid->getPieceById($move["acting"]);
+      $msg = t("!piece has exhumed a dead body from !origin. Its new burial place is located in !destination.", array(
+          "!piece" =>  "<span class='piece " . $responsable->getType() . "'>" . _kw_djambi_get_full_piece_name($responsable) . "</span>",
+          "!origin" => $move["from"],
+          "!destination" => $move["to"]
+      ));
+    }
+    elseif ($move["type"] == "manipulation") {
+      $victim = $piece;
+      $responsable = $grid->getPieceById($move["acting"]);
+      $msg = t("!victim has been manipulated by !piece from !origin to !destination.", array(
+          "!victim" => "<span class='piece " . $victim->getType() . "'>" . _kw_djambi_get_full_piece_name($victim) . "</span>",
+          "!piece" =>  "<span class='piece " . $responsable->getType() . "'>" . _kw_djambi_get_full_piece_name($responsable) . "</span>",
+          "!origin" => $move["from"],
+          "!destination" => $move["to"]
+      ));
+    }
+    if (!empty($msg)) {
+      $log["time"][] = $move["time"];
+      $log["msg"][] = "<div class='" . $move["type"] . "'><span class=''>" . format_date($move["time"], "short") . " :</span>  " . $msg . "</div>";
+    }
+    if (!empty($move["special_event"])) {
+      $msg2 = _kw_djambi_get_translatable_messages($move["special_event"],
+          array("!piece" => _kw_djambi_get_full_piece_name($piece)));
+      $log["time"][] = $move["time"];
+      $log["msg"][] = "<div class='event'> " . $msg2 . "</div>";
+    }
+  }
+  array_multisort($log["time"], SORT_DESC, $log["msg"]);
+  return $log;
+}
+
+function _kw_djambi_build_stats(DjambiBattlefield $grid) {
+  $items = array();
+  $factions = $grid->getFactions();
+  $throne = NULL;
+  if ($grid->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
+    $ranking = array();
+    $j = 0;
+    foreach ($grid->getEvents() as $event) {
+      if ($event['event'] == 'GAME_OVER') {
+        $ranking[count($factions) - count($ranking)] = $event['args']['!id'];
+      }
+      elseif ($event['event'] == 'THE_WINNER_IS' && isset($event['args']['!id'])) {
+        $ranking[1] = $event['args']['!id'];
+      }
+    }
+    ksort($ranking);
+  }
+  foreach ($grid->getTurns() as $turn) {
+    if (!empty($turn['end'])) {
+      @$stats['playtime'][$turn['side']] += $turn['end'] - $turn['begin'];
+      @$stats['moves']['turns'][$turn['side']] ++;
+    }
+  }
+  foreach ($grid->getMoves() as $key => $move) {
+    if ($move['type'] == 'move') {
+      $cells = $grid->getCells();
+      $distance = max(
+          abs($cells[$move['from']]['x'] - $cells[$move['to']]['x']),
+          abs($cells[$move['from']]['y'] - $cells[$move['to']]['y']));
+      @$stats['mobility'][$move['target']] += $distance;
+      @$stats['moves']['distance'][$move['target_faction']] += $distance;
+      if ($move['special_event'] == 'throne access') {
+        $throne = $move['target_faction'];
+      }
+      elseif ($move['special_event'] == 'throne retreat' || $move['special_event'] == 'throne evacuation') {
+        $throne = NULL;
+      }
+      if (!is_null($throne)) {
+        @$stats['throne'][$throne]++;
+      }
+    }
+    elseif ($move['type'] == 'murder') {
+      @$stats['murders'][$move['acting_faction']][$move['target_faction']]++;
+      @$stats['terminator'][$move['acting']]++;
+      if ($grid->getPieceById($move['acting'])->getType() == 'reporter') {
+        @$stats['pulitzer'][$move['acting']]++;
+      }
+    }
+    elseif ($move['type'] == 'manipulation') {
+      @$stats['manipulation'][$move['acting_faction']]++;
+    }
+    elseif ($move['type'] == 'necromobility') {
+      @$stats['necromobility'][$move['acting_faction']]++;
+    }
+  }
+  if ($grid->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
+    // TODO Tableau d'honneur
+    $header = array(
+      array('data' => t('Award')),
+      array('data' => t('Awarded to'))
+    );
+    $rows = array();
+    $rows[] = array(
+      'data' => array(
+          array('data' => t('Great Beloved Ruler of Djambi'), 'header' => TRUE),
+          array('data' => '?')
+      ));
+    $rows[] = array(
+      'data' => array(
+          array('data' => t('Forrest Gump Price of mobility'), 'header' => TRUE),
+          array('data' => '?')
+      ));
+    arsort($stats['terminator']);
+    $winner = $grid->getPieceById(key($stats['terminator']));
+    $rows[] = array(
+      'data' => array(
+          array('data' => t('Sarah Connor Price of best serial killer'), 'header' => TRUE),
+          array('data' => t('!piece, with !nb victims', array(
+              '!piece' => '<span class="piece ' . $winner->getType() . ' ' . $winner->getFaction()->getClass() . '">' . _kw_djambi_get_full_piece_name($winner) . '</span>',
+              '!nb' => current($stats['terminator'])))
+          )
+      ));
+    $rows[] = array(
+      'data' => array(
+          array('data' => t('Disgusting Price of dead bodies exhumation'), 'header' => TRUE),
+          array('data' => '?')
+      ));
+    $rows[] = array(
+      'data' => array(
+          array('data' => t('Machiavelli Price of manipulation'), 'header' => TRUE),
+          array('data' => '?')
+      ));
+    $rows[] = array(
+      'data' => array(
+          array('data' => t('Nobel Price of peace'), 'header' => TRUE),
+          array('data' => '?')
+      ));
+    $rows[] = array(
+      'data' => array(
+          array('data' => t('Pulitzer Price'), 'header' => TRUE),
+          array('data' => '?')
+      ));
+    $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => 'Table of honours'));
+    //   Classement
+    //   Grand Prix Forrest Gump de la Mobilité (OK)
+    //   Grand Prix Sarah Connor de l'Assassinat (OK)
+    //   Grand Prix Machiavel du Meilleur Manipulateur (OK)
+    //   Grand Prix Formose du Meilleur Fossoyeur (OK)
+    //   Prix Nobel de la Paix (OK)
+    //   Prix Pulitzer (OK)
+  }
+  // Tableau des victimes
+  $header['FirstLine'] = array('data' => t('Sides'));
+  $rows = array();
+  $global_total = array(
+      'FirstLine' => array('data' => 'Total', 'header' => TRUE),
+  );
+  $global_total_data = 0;
+  foreach ($factions as $key => $faction) {
+    $header[$key] = array(
+        'data' => t('!faction deaths', array('!faction' => $faction->getId())),
+        'class' => array($faction->getClass(), 'faction', 'stats')
+        );
+    $row = array();
+    $row['FirstLine'] = array(
+        'class' => array($faction->getClass(), 'faction'),
+        'data' => t('!faction murders', array('!faction' => $faction->getName())),
+        'header' => TRUE);
+    $total = 0;
+    foreach ($factions as $subkey => $subfaction) {
+      $murders = isset($stats['murders'][$faction->getId()][$subfaction->getId()]) ?
+        $stats['murders'][$faction->getId()][$subfaction->getId()] : 0;
+      $total += $murders;
+      $row[$subkey] = ($key != $subkey) ? array('data' => $murders, 'class' => array('number'))
+        : array('data' => '-', 'class' => array('locked'));
+      if (!isset($global_total[$subfaction->getId()])) {
+        $global_total[$subfaction->getId()] = array(
+            'data' => 0,
+            'class' => array('total', 'number')
+            );
+      }
+      $global_total[$subfaction->getId()]['data'] += $murders;
+    }
+    $row['Total'] = array('data' => $total, 'class' => array('total', 'number'));
+    $global_total_data += $total;
+    $rows[] = $row;
+  }
+  $global_total['Total'] = array('data' => $global_total_data, 'class' => array('number'));
+  $rows[] = array('data' => $global_total, 'class' => array('total'));
+  $header['Total'] = array('data' => t('Total'));
+  $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => t('Table of dead pieces')));
+  // Tableau des déplacements
+  $header = array(
+      array('data' => t('Sides')),
+      array('data' => t('Moves')),
+      array('data' => t('Distance')),
+      array('data' => t('Rule length')),
+      array('data' => t('Play time')),
+      array('data' => t('Avg t.d.'))
+      );
+  $rows = array();
+  $total = array(
+      'class' => array('total'),
+      'data' => array(
+          0 => array('data' => 'Total'),
+          1 => array('data' => 0, 'class' => array('number')),
+          2 => array('data' => 0, 'class' => array('number')),
+          3 => array('data' => 0, 'class' => array('number')),
+          4 => array('data' => 0, 'class' => array('number')),
+          5 => array('data' => '-', 'class' => array('number'))
+      )
+  );
+  foreach ($factions as $faction) {
+    $row = array();
+    $row[0] = array(
+        'data' => t('!faction', array('!faction' => $faction->getName())),
+        'class' => array($faction->getClass(), 'faction', 'stats'),
+        'header' => TRUE
+        );
+    $row[1] = array(
+        'data' => !empty($stats['moves']['turns'][$faction->getId()]) ? $stats['moves']['turns'][$faction->getId()] : 0,
+        'class' => 'number');
+    $total['data'][1]['data'] += $row[1]['data'];
+    $row[2] = array(
+        'data' => !empty($stats['moves']['distance'][$faction->getId()]) ? $stats['moves']['distance'][$faction->getId()] : 0,
+        'class' => 'number');
+    $total['data'][2]['data'] += $row[2]['data'];
+    $row[3] = array(
+        'data' => !empty($stats['throne'][$faction->getId()]) ? $stats['throne'][$faction->getId()] : 0,
+        'class' => 'number');
+    $total['data'][3]['data'] += $row[3]['data'];
+    $row[4] = array(
+        'data' => !empty($stats['playtime'][$faction->getId()]) ?
+          kw_tools_duration($stats['playtime'][$faction->getId()]) : 0,
+        'class' => 'number');
+    if (isset($stats['playtime'][$faction->getId()])) {
+      $total['data'][4]['data'] += $stats['playtime'][$faction->getId()];
+    }
+    $row[5] = array(
+        'data' => !empty($stats['playtime'][$faction->getId()]) && !empty($stats['moves']['turns'][$faction->getId()]) ?
+          kw_tools_duration($stats['playtime'][$faction->getId()] / $stats['moves']['turns'][$faction->getId()]) : '-',
+        'class' => 'number');
+    $rows[] = $row;
+  }
+  if ($total['data'][1]['data'] > 0) {
+    $total['data'][5]['data'] = kw_tools_duration($total['data'][4]['data'] / $total['data'][1]['data']);
+  }
+  $total['data'][4]['data'] = kw_tools_duration($total['data'][4]['data']);
+  $rows[] = $total;
+  $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => 'Table of moves'));
+  return $items;
 }

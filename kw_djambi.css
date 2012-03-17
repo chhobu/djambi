@@ -35,7 +35,7 @@ table.djambigrid {
 .djambigrid div.piece input {
   border: 0px;
   background: none;}
-.faction {
+span.faction {
   border: 1px solid #999;
   -moz-border-radius: 5px;
   -webkit-border-radius: 5px;
@@ -134,3 +134,13 @@ span.piece.assassin {
   background: url(img/assassin16.png) no-repeat 2px 50%;}
 span.piece.reporter {
   background: url(img/reporter16.png) no-repeat 2px 50%;}
+table .number {
+  text-align: right;}
+table .total {
+  font-weight: bold;
+  background-color: #ccc;}
+table .entete {
+  font-weight: bold;}
+table .locked {
+  background-color: #ccc;
+  text-align: center;}

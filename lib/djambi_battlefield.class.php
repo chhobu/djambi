@@ -150,13 +150,6 @@ class DjambiBattlefield {
   }
 
   public static function locateCell($position) {
-    if (!is_array($position)) {
-      preg_match('#([A-Z]+)([0-9]+)#', $position, $matches);
-      $position = array();
-      $position['x'] = self::intToAlpha($matches[1], TRUE);
-      $position['y'] = $matches[2];
-      return $position;
-    }
     return DjambiBattlefield::locateCellByXY($position["x"], $position["y"]);
   }
 
@@ -330,10 +323,11 @@ class DjambiBattlefield {
     $last_turn_key = $this->getCurrentTurnId();
     $last_turn['end'] = NULL;
     $this->turns[$last_turn_key] = $last_turn;
+    $cells = $this->getCells();
     foreach ($this->moves as $key => $move) {
       if ($move['turn'] == $last_turn_key || $move['turn'] == $current_turn_key) {
         $piece = $this->getPieceById($move['target']);
-        $position = self::locateCell($move['from']);
+        $position = $cells[$move['from']];
         $piece->setPosition($position['x'], $position['y']);
         if ($move['type'] == 'murder') {
           $piece->setDead(TRUE);
@@ -433,8 +427,8 @@ class DjambiBattlefield {
       else {
         $winner_id = current($living_factions);
         $winner = $this->getFactionById($winner_id);
-        $this->logEvent("event", "THE_WINNER_IS",
-          array("!class" => $winner->getClass(), "!!faction" => $winner->getName()));
+        $this->logEvent('event', 'THE_WINNER_IS',
+          array('!id' => $winner->getId(), '!class' => $winner->getClass(), '!!faction' => $winner->getName()));
       }
       $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
       return;
