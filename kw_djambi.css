@@ -144,3 +144,10 @@ table .entete {
 table .locked {
   background-color: #ccc;
   text-align: center;}
+ul.stats {
+  list-style-type: none;}
+ul.stats > li {
+  margin: 1em 0;}
+ul.stats caption {
+  font-size: 150%;
+  border-bottom: 2px solid #000;}

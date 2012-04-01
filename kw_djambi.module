@@ -472,7 +472,7 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
   // Afichage des stats
   $stats = _kw_djambi_build_stats($grid);
   $form['stats']['items'] = array(
-      '#markup' => theme('item_list', array('items' => $stats))
+      '#markup' => theme('item_list', array('items' => $stats, 'attributes' => array('class' => array('stats'))))
       );
   // Redirection
   $form["#action"] = "#DjambiGrid" . $grid->getId();
@@ -938,18 +938,40 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
   $items = array();
   $factions = $grid->getFactions();
   $throne = NULL;
+  $ranking = array();
+  foreach ($grid->getFactions() as $faction) {
+    $ranking[$faction->getId()] = -1;
+    $stats['peace'][$faction->getId()] = 0;
+  }
   if ($grid->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
-    $ranking = array();
     $j = 0;
     foreach ($grid->getEvents() as $event) {
       if ($event['event'] == 'GAME_OVER') {
-        $ranking[count($factions) - count($ranking)] = $event['args']['!id'];
-      }
-      elseif ($event['event'] == 'THE_WINNER_IS' && isset($event['args']['!id'])) {
-        $ranking[1] = $event['args']['!id'];
+        $ranking[$event['args']['!id']] = $event['turn'];
       }
     }
-    ksort($ranking);
+    asort($ranking);
+    $i = 0;
+    $last_turn = NULL;
+    foreach ($ranking as $faction_id => $turn) {
+      if ($turn == -1) {
+        $ranking[$faction_id] = 1;
+      }
+      else {
+        $ranking[$faction_id] = count($ranking) - $i++;
+        if ($turn == $last_turn) {
+          foreach ($last_faction as $eq_faction_id) {
+            $ranking[$eq_faction_id] = $ranking[$eq_faction_id] -= 1;
+          }
+          $last_faction[] = $faction_id;
+        }
+        else {
+          $last_turn = $turn;
+          $last_faction = array($faction_id);
+        }
+      }
+    }
+    asort($ranking);
   }
   foreach ($grid->getTurns() as $turn) {
     if (!empty($turn['end'])) {
@@ -977,9 +999,20 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
     }
     elseif ($move['type'] == 'murder') {
       @$stats['murders'][$move['acting_faction']][$move['target_faction']]++;
+      $stats['peace'][$move['acting_faction']]++;
       @$stats['terminator'][$move['acting']]++;
       if ($grid->getPieceById($move['acting'])->getType() == 'reporter') {
+        $target = $grid->getPieceById($move['target']);
         @$stats['pulitzer'][$move['acting']]++;
+        if ($target->getHability('must_live')) {
+          $stats['pulitzer'][$move['acting']] += 4;
+        }
+        if ($target->getHability('move_dead_pieces')) {
+          $stats['pulitzer'][$move['acting']] += 1;
+        }
+        if (!$target->getHability('limited_move')) {
+          $stats['pulitzer'][$move['acting']] += 2;
+        }
       }
     }
     elseif ($move['type'] == 'manipulation') {
@@ -990,75 +1023,115 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
     }
   }
   if ($grid->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
-    // TODO Tableau d'honneur
     $header = array(
       array('data' => t('Award')),
       array('data' => t('Awarded to'))
     );
     $rows = array();
+    $winners_array = array_keys($ranking, 1, TRUE);
+    $winners = array();
+    foreach ($winners_array as $winner) {
+      $faction = $grid->getFactionById($winner);
+      $winners[] = '<span class="faction ' . $faction->getClass() . '">' . $faction->getName() . '</span>';
+    }
     $rows[] = array(
       'data' => array(
           array('data' => t('Great Beloved Ruler of Djambi'), 'header' => TRUE),
-          array('data' => '?')
-      ));
-    $rows[] = array(
-      'data' => array(
-          array('data' => t('Forrest Gump Price of mobility'), 'header' => TRUE),
-          array('data' => '?')
-      ));
-    arsort($stats['terminator']);
-    $winner = $grid->getPieceById(key($stats['terminator']));
-    $rows[] = array(
-      'data' => array(
-          array('data' => t('Sarah Connor Price of best serial killer'), 'header' => TRUE),
-          array('data' => t('!piece, with !nb victims', array(
-              '!piece' => '<span class="piece ' . $winner->getType() . ' ' . $winner->getFaction()->getClass() . '">' . _kw_djambi_get_full_piece_name($winner) . '</span>',
-              '!nb' => current($stats['terminator'])))
+          array('data' => t('!pieces', array(
+              '!pieces' => implode(', ', $winners)))
           )
       ));
+    $ranking_array = array();
+    foreach ($ranking as $side => $rank) {
+      if ($rank == 1) {
+        continue;
+      }
+      $faction = $grid->getFactionById($side);
+      $ranking_array[] = t('Rank !rank :  !side', array(
+            '!rank' => $rank,
+            '!side' => '<span class="faction ' . $faction->getClass() . '">' . $faction->getName() . '</span>'
+          ));
+    }
     $rows[] = array(
       'data' => array(
-          array('data' => t('Disgusting Price of dead bodies exhumation'), 'header' => TRUE),
-          array('data' => '?')
+          array('data' => t('Ashamed loser opponents'), 'header' => TRUE),
+          array('data' => theme('item_list', array('items' => $ranking_array)))
+      )
+    );
+    if (!empty($stats['mobility']) && max($stats['mobility']) > 1) {
+      $move =
+      $rows[] = array(
+        'data' => array(
+          array('data' => t('Forrest Gump Price of mobility'), 'header' => TRUE),
+          array('data' => t('!pieces, with !nb cases crossed', array(
+              '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'mobility', $stats)),
+              '!nb' => max($stats['mobility'])))
+          )
       ));
-    $rows[] = array(
-      'data' => array(
+    }
+    if (!empty($stats['terminator']) && max($stats['terminator']) > 1) {
+      $rows[] = array(
+        'data' => array(
+          array('data' => t('Sarah Connor Price of best serial killer'), 'header' => TRUE),
+          array('data' => t('!pieces, with !nb victims', array(
+              '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'terminator', $stats)),
+              '!nb' => max($stats['terminator'])))
+          )
+      ));
+    }
+    if (!empty($stats['necromobility'])) {
+      $nmove = max($stats['necromobility']);
+      $rows[] = array(
+        'data' => array(
+          array('data' => t('Pope Formose Price of dead bodies exhumation'), 'header' => TRUE),
+          array('data' => format_plural($nmove, '!pieces, with !nb exhumation', '!pieces, with !nb exhumations', array(
+              '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'necromobility', $stats, 'faction')),
+              '!nb' => $nmove)))
+      ));
+    }
+    if (!empty($stats['manipulation'])) {
+      $manipulations = max($stats['manipulation']);
+      $rows[] = array(
+        'data' => array(
           array('data' => t('Machiavelli Price of manipulation'), 'header' => TRUE),
-          array('data' => '?')
+          array('data' => format_plural($manipulations, '!pieces, with !nb manipulated piece', '!pieces, with !nb manipulated pieces', array(
+              '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'manipulation', $stats, 'faction')),
+              '!nb' => $manipulations))
+          )
       ));
-    $rows[] = array(
+    }
+    if (!empty($stats['peace']) && min($stats['peace']) < 2) {
+      $rows[] = array(
       'data' => array(
           array('data' => t('Nobel Price of peace'), 'header' => TRUE),
-          array('data' => '?')
+          array('data' => implode(', ', _kw_djambi_stats_get_winners($grid, 'peace', $stats, 'faction', 'min')))
       ));
-    $rows[] = array(
-      'data' => array(
+    }
+    if (!empty($stats['pulitzer'])) {
+      $scandals = max($stats['pulitzer']);
+      $rows[] = array(
+        'data' => array(
           array('data' => t('Pulitzer Price'), 'header' => TRUE),
-          array('data' => '?')
+          array('data' => implode(', ', _kw_djambi_stats_get_winners($grid, 'pulitzer', $stats)))
       ));
+    }
     $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => 'Table of honours'));
-    //   Classement
-    //   Grand Prix Forrest Gump de la Mobilité (OK)
-    //   Grand Prix Sarah Connor de l'Assassinat (OK)
-    //   Grand Prix Machiavel du Meilleur Manipulateur (OK)
-    //   Grand Prix Formose du Meilleur Fossoyeur (OK)
-    //   Prix Nobel de la Paix (OK)
-    //   Prix Pulitzer (OK)
   }
   // Tableau des victimes
-  $header['FirstLine'] = array('data' => t('Sides'));
+  $header = array();
+  $header['Sides'] = array('data' => t('Sides'));
   $rows = array();
   $global_total = array(
-      'FirstLine' => array('data' => 'Total', 'header' => TRUE),
+      'Sides' => array('data' => 'Total', 'header' => TRUE),
   );
   $global_total_data = 0;
   foreach ($factions as $key => $faction) {
-    $header[$key] = array(
+    $header[$faction->getId()] = array(
         'data' => t('!faction deaths', array('!faction' => $faction->getId())),
         'class' => array($faction->getClass(), 'faction', 'stats')
         );
     $row = array();
-    $row['FirstLine'] = array(
+    $row['Sides'] = array(
         'class' => array($faction->getClass(), 'faction'),
         'data' => t('!faction murders', array('!faction' => $faction->getName())),
         'header' => TRUE);
@@ -1067,7 +1140,7 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
       $murders = isset($stats['murders'][$faction->getId()][$subfaction->getId()]) ?
         $stats['murders'][$faction->getId()][$subfaction->getId()] : 0;
       $total += $murders;
-      $row[$subkey] = ($key != $subkey) ? array('data' => $murders, 'class' => array('number'))
+      $row[$subfaction->getId()] = ($faction->getId() != $subfaction->getId()) ? array('data' => $murders, 'class' => array('number'))
         : array('data' => '-', 'class' => array('locked'));
       if (!isset($global_total[$subfaction->getId()])) {
         $global_total[$subfaction->getId()] = array(
@@ -1145,4 +1218,20 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
   $rows[] = $total;
   $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => 'Table of moves'));
   return $items;
+}
+
+function _kw_djambi_stats_get_winners($grid, $price, $stats, $type = 'piece', $order = 'max') {
+  $winners = array_keys($stats[$price], $order == 'min' ? min($stats[$price]) : max($stats[$price]));
+  $winners_string_array = array();
+  foreach ($winners as $winner) {
+    if ($type == 'piece') {
+      $piece = $grid->getPieceById($winner);
+      $winners_string_array[] = '<span class="piece ' . $piece->getType() . ' ' . $piece->getFaction()->getClass() . '">' . _kw_djambi_get_full_piece_name($piece) . '</span>';
+    }
+    elseif ($type == 'faction') {
+      $faction = $grid->getFactionById($winner);
+      $winners_string_array[] = '<span class="faction ' . $faction->getClass() . '">' . $faction->getName() . '</span>';
+    }
+  }
+  return $winners_string_array;
 }
