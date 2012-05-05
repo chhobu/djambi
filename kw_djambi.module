@@ -42,7 +42,7 @@ function kw_djambi_game_access($mode) {
  */
 function kw_djambi_new_game($mode) {
   global $language, $user;
-  kw_djambi_load_library();
+  //kw_djambi_load_library();
   $mode_ok = FALSE;
   $node = new stdClass();
   $node->type = "kw_djambi";
@@ -50,6 +50,7 @@ function kw_djambi_new_game($mode) {
   $game_id = variable_get('kw_djambi_game_sequence', 0);
   $game_id++;
   $node->title = t("Machiavelli chess - Game #!i", array("!i" => $game_id));
+  $grid = new DjambiBattlefield('empty', NULL);
   if ($mode == KW_DJAMBI_MODE_SANDBOX) {
     if($user->uid > 0) { // TODO : si joueur non identifié, création d'un cookie
       $q = db_select("djambi_users", "u");
@@ -175,14 +176,10 @@ function kw_djambi_node_delete($node) {
  * Implements hook_node_view().
  */
 function kw_djambi_node_view($node, $view_mode) {
-  // Modification de l'affichage des contenus de type kw_djambi
   if ($node->type == "kw_djambi" && $view_mode =="full") {
-    // Ajout du javascript et de la feuille de style qui vont bien
     drupal_add_css(drupal_get_path("module", "kw_djambi")."/kw_djambi.css");
     drupal_add_js(drupal_get_path("module", "kw_djambi")."/js/kw_djambi.js");
-    // Et enfin, le gros du morceau, le chargement et l'affichage de l'échiquier
-    $battlefield = kw_djambi_build_battlefield($node);
-    $node->content["grid"] = $battlefield->toHtml();
+    $node->content["grid"] = drupal_get_form("kw_djambi_game_form", $node);
   }
   if ($node->type == 'kw_djambi' && $view_mode == 'teaser') {
 
@@ -195,7 +192,6 @@ function kw_djambi_node_view($node, $view_mode) {
  * @return DjambiBattlefield
  */
 function kw_djambi_build_battlefield($node, $players = 4) {
-  kw_djambi_load_library();
   if (!isset($node->nid)) {
     if ($players == 4) {
       $faction2 = new DjambiPoliticalFaction($node->dj_users[3]["user"]->uid, "J", "Yellow", "jaune", 3);
@@ -237,16 +233,6 @@ function kw_djambi_build_battlefield($node, $players = 4) {
 }
 
 /**
- * Chargement des classes d'un jeu
- */
-function kw_djambi_load_library() {
-  module_load_include("class.php", "kw_djambi", "lib/djambi_faction");
-  module_load_include("class.php", "kw_djambi", "lib/djambi_battlefield");
-  module_load_include("class.php", "kw_djambi", "lib/djambi_pieces");
-  module_load_include("inc", "kw_djambi", "kw_djambi.messages");
-}
-
-/**
  * Implements hook_preprocess_page().
  * Ajoute un texte alternatif sur le logo
  * @param array $variables
@@ -258,18 +244,24 @@ function kw_djambi_preprocess_page(&$variables) {
 /**
  * Formulaire créant une grille de Djambi
  */
-function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
+function kw_djambi_game_form($form, &$form_state, $node) {
   global $user;
-  $form["#theme"] = array("djambi_grid");
-  if (!empty($form_state["kw_djambi"]["selected_piece"])) {
-    $piece = $form_state["kw_djambi"]["selected_piece"];
+  $form['#theme'] = array('djambi_grid');
+  if (!empty($form_state['kw_djambi']['selected_piece']) && !$form_state['kw_djambi']['change_turn']) {
+    $piece = $form_state['kw_djambi']['selected_piece'];
     $form['#grid'] = $piece->getFaction()->getBattlefield();
     $grid = $form['#grid'];
   }
   else {
-    $form["#grid"] = $grid;
+    $grid = kw_djambi_build_battlefield($node);
+    $form['#grid'] = $grid;
+    if (isset($form_state['kw_djambi']['change_turn'])) {
+      unset($form_state['kw_djambi']);
+    }
   }
-  $form["grid"] = array(
+  $form['#prefix'] = '<div id="GridDiv' . $grid->getId() . '">';
+  $form['#suffix'] = '</div>';
+  $form['grid'] = array(
     '#type' => 'fieldset',
     '#title' => t('Djambi grid'),
     '#weight' => 0
@@ -286,6 +278,12 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
     '#collapsible' => $grid->getStatus() == KW_DJAMBI_STATUS_FINISHED ? TRUE : FALSE,
     '#collapsed' => $grid->getStatus() == KW_DJAMBI_STATUS_FINISHED ? TRUE : FALSE
   );
+  $ajax_settings = array(
+    'callback' => 'kw_djambi_ajax_callback',
+    'wrapper' => 'GridDiv' . $grid->getId(),
+    'effect' => 'none',
+    'method' => 'replace',
+  );
   $phase_text = NULL;
   if ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING) {
     $actions = array();
@@ -293,14 +291,16 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
       $actions['cancel_selection'] = array(
         '#type' => 'submit',
         '#value' => t('Cancel piece selection'),
-        '#submit' => array('kw_djambi_game_form_cancel_selection_submit')
+        '#submit' => array('kw_djambi_game_form_cancel_selection_submit'),
+        '#ajax' => $ajax_settings
       );
     }
     elseif ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX && count($grid->getTurns()) > 1) {
       $actions['cancel_last_turn'] = array(
         '#type' => 'submit',
         '#value' => t('Cancel last move'),
-        '#submit' => array('kw_djambi_game_form_cancel_last_turn_submit')
+        '#submit' => array('kw_djambi_game_form_cancel_last_turn_submit'),
+        '#ajax' => $ajax_settings
       );
     }
     if (!empty($actions)) {
@@ -313,41 +313,46 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
         $form['actions'][$key] = $value;
       }
     }
-    if (!isset($form_state["kw_djambi"])) {
-      $form_state["kw_djambi"] = array(
-        "phase" => "piece_selection"
+    if (!isset($form_state['kw_djambi'])) {
+      $form_state['kw_djambi'] = array(
+        'phase' => 'piece_selection'
       );
     }
     $faction = $grid->getPlayingFaction();
-    $piece_selection_phases = array("piece_selection", "piece_destination");
-    if ($faction->getUid() == $user->uid && in_array($form_state["kw_djambi"]["phase"], $piece_selection_phases)) {
+    // Sélection des pièces
+    $piece_selection_phases = array('piece_selection', 'piece_destination');
+    if ($faction->getUid() == $user->uid && in_array($form_state['kw_djambi']['phase'], $piece_selection_phases)) {
       /* @var $piece DjambiPiece */
       foreach($faction->getControlledPieces() as $key => $piece) {
         if ($piece->isMovable()) {
-          $form["pieces"]["movable"][$piece->getId()] = array(
-            "#type" => "image_button",
-            "#return_value" => $piece->getId(),
-            "#src" => $piece->getImage(),
-            "#attributes" => array("alt" => t("Move !piece", array("!piece" => $piece->getShortname("t"))))
+          $form['pieces']['movable'][$piece->getId()] = array(
+            '#type' => 'image_button',
+            '#return_value' => $piece->getId(),
+            '#src' => $piece->getImage(),
+            '#attributes' => array('alt' => t('Move !piece', array('!piece' => $piece->getShortname('t')))),
+            '#ajax' => $ajax_settings
           );
         }
       }
     }
-    if ($form_state["kw_djambi"]["phase"] == "piece_destination") {
+    // Destination des pièces
+    if ($form_state['kw_djambi']['phase'] == 'piece_destination') {
       /* @var $selected_piece DjambiPiece */
-      $selected_piece = $form_state["kw_djambi"]["selected_piece"];
-      $form["pieces"]["destination"]["#selected_piece_id"] = $selected_piece->getId();
+      $selected_piece = $form_state['kw_djambi']['selected_piece'];
+      $form['pieces']['destination']['#selected_piece_id'] = $selected_piece->getId();
       $reachable_cells = $selected_piece->getAllowableMoves();
       foreach ($reachable_cells as $key => $cell) {
-        $cell_key = DjambiBattlefield::locateCellByXY($cell["x"], $cell["y"]);
-        $alt_text = t("Move the !piece here (!case).", array(
-            "!piece" => _kw_djambi_get_full_piece_name($selected_piece), "!case" => $cell_key
+        $cell_key = DjambiBattlefield::locateCellByXY($cell['x'], $cell['y']);
+        $alt_text = t('Move the !piece here (!case).', array(
+            '!piece' => _kw_djambi_get_full_piece_name($selected_piece), '!case' => $cell_key
           ));
-        $form["pieces"]["destination"]["cell-" . $cell_key] = array(
-          "#type" => "image_button",
-          "#return_value" => $cell_key,
-          "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/apply.png",
-          "#attributes" => array("alt" => $alt_text, "title" => $alt_text)
+        // FIXME Ajax - potentiellement plus d'impact
+        $form['pieces']['destination']['cell-' . $cell_key] = array(
+          '#type' => 'image_button',
+          '#return_value' => $cell_key,
+          '#src' => base_path() . drupal_get_path('module', 'kw_djambi') . '/img/apply.png',
+          '#attributes' => array('alt' => $alt_text, 'title' => $alt_text),
+          '#ajax' => $ajax_settings
         );
       }
       $form["pieces"]["movable"][$selected_piece->getId()]["#attributes"]["class"][] = "selected";
@@ -355,30 +360,34 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
         array("!piece" => "<span class='piece " . $selected_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($selected_piece) . "</span>")
       );
     }
-    elseif ($form_state["kw_djambi"]["phase"] == "move_interactions") {
-      $current_interaction = current($form_state["kw_djambi"]["interactions"]);
-      $selected_piece = $form_state["kw_djambi"]["selected_piece"];
-      if ($current_interaction["type"] == "murder") {
-        $form["pieces"]["murder"]["#selected_piece_id"] = $selected_piece->getId();
-        $victim_piece = $current_interaction["target"];
+    // Résultat du déplacement
+    elseif ($form_state['kw_djambi']['phase'] == 'move_interactions') {
+      $current_interaction = current($form_state['kw_djambi']['interactions']);
+      $selected_piece = $form_state['kw_djambi']['selected_piece'];
+      // Cas 1 : placement d'une pièce tuée
+      if ($current_interaction['type'] == 'murder') {
+        $form['pieces']['murder']['#selected_piece_id'] = $selected_piece->getId();
+        $victim_piece = $current_interaction['target'];
         $free_cells = $grid->getFreeCells($victim_piece, FALSE);
         foreach ($free_cells as $cell) {
-          $alt_text = t("Bury !piece in !case", array(
-            "!piece" => _kw_djambi_get_full_piece_name($victim_piece), "!case" => $cell
+          $alt_text = t('Bury !piece in !case', array(
+            '!piece' => _kw_djambi_get_full_piece_name($victim_piece), '!case' => $cell
           ));
-          $form["pieces"]["murder"]["cell-" . $cell] = array(
-            "#type" => "image_button",
-            "#return_value" => $cell,
-            "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/flag_black.png",
-            "#attributes" => array("alt" => $alt_text, "title" => $alt_text)
+          $form['pieces']['murder']['cell-' . $cell] = array(
+            '#type' => 'image_button',
+            '#return_value' => $cell,
+            '#src' => base_path() . drupal_get_path('module', 'kw_djambi') . '/img/flag_black.png',
+            '#attributes' => array('alt' => $alt_text, 'title' => $alt_text),
+            '#ajax' => $ajax_settings
           );
         }
-        $phase_text = t("Your !piece has killed the !victim, select now the case where you victim will rest in peace.",
+        $phase_text = t('Your !piece has killed the !victim, select now the case where you victim will rest in peace.',
           array(
-          "!piece" => "<span class='piece " . $selected_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($selected_piece) . "</span>",
-          "!victim" => "<span class='piece " . $victim_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($victim_piece) . "</span>"
+          '!piece' => '<span class="piece ' . $selected_piece->getType() . '">' . _kw_djambi_get_full_piece_name($selected_piece) . '</span>',
+          '!victim' => '<span class="piece ' . $victim_piece->getType() . '">' . _kw_djambi_get_full_piece_name($victim_piece) . '</span>'
          ));
       }
+      // Cas 2 : placement d'une pièce tuée déplacée
       elseif ($current_interaction["type"] == "necromobility") {
         $form["pieces"]["necromobility"]["#selected_piece_id"] = $selected_piece->getId();
         $victim_piece = $current_interaction["target"];
@@ -389,13 +398,15 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
             "#type" => "image_button",
             "#return_value" => $cell,
             "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/flag_black.png",
-            "#attributes" => array("alt" => $alt_text, "title" => $alt_text)
+            "#attributes" => array("alt" => $alt_text, "title" => $alt_text),
+            '#ajax' => $ajax_settings
           );
         }
         $phase_text = t("Your !piece has exhumed an old dead piece, select now its new burial place.", array(
           "!piece" => "<span class='piece " . $selected_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($selected_piece) . "</span>"
         ));
       }
+      // Cas 3 : placement d'une pièce manipulée
       elseif ($current_interaction["type"] == "manipulation") {
         $form["pieces"]["manipulation"]["#selected_piece_id"] = $selected_piece->getId();
         $manipulated_piece = $current_interaction["target"];
@@ -408,7 +419,8 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
             "#type" => "image_button",
             "#return_value" => $cell,
             "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/note2.png",
-            "#attributes" => array("alt" => $alt_text, "title" => $alt_text)
+            "#attributes" => array("alt" => $alt_text, "title" => $alt_text),
+            '#ajax' => $ajax_settings
           );
         }
         $phase_text = t("Your !diplomat is manipulating the !piece, select now the destination case for your subjucated victim.",
@@ -417,6 +429,7 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
           "!piece" => "<span class='piece " . $manipulated_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($manipulated_piece) . "</span>"
          ));
       }
+      // Cas 4 : sélection de la victime d'un reportage
       elseif ($current_interaction["type"] == "reportage") {
         $form["pieces"]["reportage"]["#selected_piece_id"] = $selected_piece->getId();
         foreach ($current_interaction["victims"] as $victim) {
@@ -428,12 +441,14 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
             "#type" => "image_button",
             "#return_value" => $position,
             "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/flag_black.png",
-            "#attributes" => array("alt" => $alt_text, "title" => $alt_text)
+            "#attributes" => array("alt" => $alt_text, "title" => $alt_text),
+            '#ajax' => $ajax_settings
           );
         }
         $phase_text = t("Your !reporter has to choose beetween several victims...",
           array("!reporter" => "<span class='piece " . $selected_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($selected_piece) . "</span>"));
       }
+      // Cas 5 : évacuation du trône
       elseif ($current_interaction["type"] == "throne_evacuation") {
         $form["pieces"]["throne_evacuation"]["#selected_piece_id"] = $selected_piece->getId();
         $selected_piece->buildAllowableMoves(FALSE);
@@ -447,14 +462,17 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
             "#type" => "image_button",
             "#return_value" => $position,
             "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/apply.png",
-            "#attributes" => array("alt" => $alt_text, "title" => $alt_text)
+            "#attributes" => array("alt" => $alt_text, "title" => $alt_text),
+            '#ajax' => $ajax_settings
           );
         }
         $phase_text = t("Your !piece has nothing to do here now. Let the throne case free now !",
           array("!piece" => "<span class='piece " . $selected_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($selected_piece) . "</span>"));
       }
     }
+    // Attente du mouvement...
     elseif ($form_state["kw_djambi"]["phase"] == "piece_selection") {
+      // FIXME changer le message s'il ne s'agit pas d'un joueur actif
       $phase_text = t("It's your turn. Select a movable piece in the grid...");
     }
   }
@@ -465,18 +483,79 @@ function kw_djambi_game_form($form, &$form_state, DjambiBattlefield $grid) {
     );
   }
   // Log des événements
+  $default_value = 20;
+  $nb_current_msg = !isset($form_state['kw_logs']['end']) ? $default_value : $form_state['kw_logs']['end'];
   $log = _kw_djambi_build_log($grid);
-  $form['log']['history'] = array(
-      '#markup' => theme('item_list', array('items' => $log['msg']))
+  $nb_total_msg = count($log['msg']);
+  $ajax_log_settings = array(
+      'callback' => 'kw_djambi_ajax_log_callback',
+      'wrapper' => 'GridLog' . $grid->getId(),
+      'effect' => 'fade',
+      'method' => 'replace',
   );
+  if ($nb_current_msg == -1) {
+    $nb_current_msg = $nb_total_msg;
+    $offset_length = $nb_total_msg;
+  }
+  else {
+    $offset_length = $default_value;
+  }
+  $msg = array_slice($log['msg'], isset($form_state['kw_logs']['begin']) ? $form_state['kw_logs']['begin'] : 0, $offset_length, TRUE);
+  $form['log']['container'] = array(
+      'history' => array(
+        '#markup' => theme('item_list', array('items' => $msg))),
+      'more' => array(
+        '#type' => 'container',
+        '#attributes' => array('id' => 'GridLog' . $grid->getId())
+      )
+  );
+  if ($nb_total_msg > ($nb_current_msg + 20)) {
+    $form['log']['container']['more']['load_more_logs'] = array(
+      '#type' => 'submit',
+      '#value' => t('Load 20 older logs'),
+      '#submit' => array('kw_djambi_load_more_logs'),
+      '#ajax' => $ajax_log_settings
+    );
+  }
+  if ($nb_total_msg > $nb_current_msg) {
+    $form['log']['container']['more']['load_all_logs'] = array(
+        '#type' => 'submit',
+        '#value' => t('Load all logs'),
+        '#submit' => array('kw_djambi_load_all_logs'),
+        '#ajax' => $ajax_log_settings
+    );
+  }
   // Afichage des stats
   $stats = _kw_djambi_build_stats($grid);
   $form['stats']['items'] = array(
       '#markup' => theme('item_list', array('items' => $stats, 'attributes' => array('class' => array('stats'))))
-      );
+  );
   // Redirection
   $form["#action"] = "#DjambiGrid" . $grid->getId();
   return $form;
+}
+
+function kw_djambi_load_more_logs($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  if (!isset($form_state['kw_logs']) || $form_state['kw_logs']['end'] == -1) {
+    $form_state['kw_logs']['end'] = 20;
+  }
+  $form_state['kw_logs']['begin'] = $form_state['kw_logs']['end'];
+  $form_state['kw_logs']['end'] += 20;
+}
+
+function kw_djambi_load_all_logs($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  $form_state['kw_logs']['begin'] = isset($form_state['kw_logs']['end']) ? $form_state['kw_logs']['end'] : 20;
+  $form_state['kw_logs']['end'] = -1;
+}
+
+function kw_djambi_ajax_callback($form, $form_state) {
+  return $form;
+}
+
+function kw_djambi_ajax_log_callback($form, $form_state) {
+  return $form['log']['container'];
 }
 
 /**
@@ -739,61 +818,57 @@ function kw_djambi_piece_evacuation_validate(&$errors, DjambiBattlefield $grid, 
  */
 function kw_djambi_game_form_submit($form, &$form_state) {
   $change_turn = FALSE;
-  $grid = $form["#grid"];
-  switch ($form_state["kw_djambi"]["phase"]) {
-    case("piece_destination") :
-      $form_state['rebuild'] = TRUE;
-      break;
-    case("interaction_result") :
-      $interaction = current($form_state["kw_djambi"]["interactions"]);
-      $piece = $form_state["kw_djambi"]["selected_piece"];
-      if ($interaction["type"] == "murder") {
-        $victim_piece = $interaction["target"];
-        $piece->kill($victim_piece, $form_state["kw_djambi"]["selected_interaction"]);
+  $grid = $form['#grid'];
+  $form_state['rebuild'] = TRUE;
+  switch ($form_state['kw_djambi']['phase']) {
+    case('interaction_result') :
+      $interaction = current($form_state['kw_djambi']['interactions']);
+      $piece = $form_state['kw_djambi']['selected_piece'];
+      if ($interaction['type'] == 'murder') {
+        $victim_piece = $interaction['target'];
+        $piece->kill($victim_piece, $form_state['kw_djambi']['selected_interaction']);
         $grid = $piece->getFaction()->getBattlefield();
       }
-      elseif ($interaction["type"] == "necromobility") {
-        $victim_piece = $interaction["target"];
-        $piece->necromove($victim_piece, $form_state["kw_djambi"]["selected_interaction"]);
+      elseif ($interaction['type'] == 'necromobility') {
+        $victim_piece = $interaction['target'];
+        $piece->necromove($victim_piece, $form_state['kw_djambi']['selected_interaction']);
         $grid = $piece->getFaction()->getBattlefield();
       }
-      elseif ($interaction["type"] == "manipulation") {
-        $manipulated_piece = $interaction["target"];
-        $piece->manipulate($manipulated_piece, $form_state["kw_djambi"]["selected_interaction"]);
+      elseif ($interaction['type'] == 'manipulation') {
+        $manipulated_piece = $interaction['target'];
+        $piece->manipulate($manipulated_piece, $form_state['kw_djambi']['selected_interaction']);
         $grid = $piece->getFaction()->getBattlefield();
       }
-      elseif ($interaction["type"] == "reportage") {
+      elseif ($interaction['type'] == 'reportage') {
         $grid = $piece->getFaction()->getBattlefield();
         $cells = $grid->getCells();
-        $victim = $cells[$form_state["kw_djambi"]["selected_interaction"]]["occupant"];
-        $piece->kill($victim, $form_state["kw_djambi"]["selected_interaction"]);
+        $victim = $cells[$form_state['kw_djambi']['selected_interaction']]['occupant'];
+        $piece->kill($victim, $form_state['kw_djambi']['selected_interaction']);
         $grid = $piece->getFaction()->getBattlefield();
       }
-      elseif ($interaction["type"] == "throne_evacuation") {
-        $piece->move($form_state["kw_djambi"]["selected_interaction"], FALSE);
+      elseif ($interaction['type'] == 'throne_evacuation') {
+        $piece->move($form_state['kw_djambi']['selected_interaction'], FALSE);
         $grid = $piece->getFaction()->getBattlefield();
       }
-      $interaction_key = key($form_state["kw_djambi"]["interactions"]);
-      unset($form_state["kw_djambi"]["interactions"][$interaction_key]);
-      unset($form_state["kw_djambi"]["selected_interaction"]);
-      if (empty($form_state["kw_djambi"]["interactions"])) {
+      $interaction_key = key($form_state['kw_djambi']['interactions']);
+      unset($form_state['kw_djambi']['interactions'][$interaction_key]);
+      unset($form_state['kw_djambi']['selected_interaction']);
+      if (empty($form_state['kw_djambi']['interactions'])) {
         $change_turn = TRUE;
       }
       else {
-        $form_state["kw_djambi"]["phase"] = "move_interactions";
-        $form_state["rebuild"] = TRUE;
+        $form_state['kw_djambi']['phase'] = 'move_interactions';
       }
       break;
-    case("move_result") :
+    case('move_result') :
       /* @var $piece DjambiPiece */
-      $piece = $form_state["kw_djambi"]["selected_piece"];
-      $move_results = $piece->move($form_state["kw_djambi"]["selected_destination"]);
+      $piece = $form_state['kw_djambi']['selected_piece'];
+      $move_results = $piece->move($form_state['kw_djambi']['selected_destination']);
       $grid = $piece->getFaction()->getBattlefield();
-      $form_state["kw_djambi"]["selected_piece"] = $piece;
+      $form_state['kw_djambi']['selected_piece'] = $piece;
       if (!empty($move_results)) {
-        $form_state["kw_djambi"]["phase"] = "move_interactions";
-        $form_state["kw_djambi"]["interactions"] = $move_results;
-        $form_state["rebuild"] = TRUE;
+        $form_state['kw_djambi']['phase'] = 'move_interactions';
+        $form_state['kw_djambi']['interactions'] = $move_results;
       }
       else {
         $change_turn = TRUE;
@@ -805,9 +880,11 @@ function kw_djambi_game_form_submit($form, &$form_state) {
     $grid->changeTurn();
     _kw_djambi_save_game($grid);
   }
+  $form_state['kw_djambi']['change_turn'] = $change_turn;
 }
 
 function kw_djambi_game_form_cancel_selection_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
   if (isset($form_state['kw_djambi'])) {
     unset($form_state['kw_djambi']);
   }
@@ -817,6 +894,8 @@ function kw_djambi_game_form_cancel_selection_submit($form, &$form_state) {
  * Soumission du bouton d'annulation du dernier tour du jeu
  */
 function kw_djambi_game_form_cancel_last_turn_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  $form_state['kw_djambi']['change_turn'] = TRUE;
   $grid = $form['#grid'];
   $grid->cancelLastTurn();
   _kw_djambi_save_game($grid);
@@ -1234,4 +1313,108 @@ function _kw_djambi_stats_get_winners($grid, $price, $stats, $type = 'piece', $o
     }
   }
   return $winners_string_array;
+}
+
+function _kw_djambi_get_translatable_messages($message, $args = NULL) {
+  switch($message) {
+    case("throne access"):
+      $txt = t("!piece is now the great and beloved ruler of the djambi world.", $args);
+      break;
+    case("throne retreat"):
+      $txt = t("!piece's reign of despotism and terror is now over.", $args);
+      break;
+    case("throne evacuation"):
+      $txt= t("!piece body has been exhumed from his mausoleum.", $args);
+      break;
+    case("NEW_DJAMBI_GAME"):
+      $txt = t("New djambi chess game created.");
+      break;
+    case("SURROUNDED"):
+      $txt = t("<span class='faction !class'>!!faction</span>'s side is surrounded by dead pieces and cannot access to power anymore.", $args);
+      break;
+    case("END"):
+      $txt = t("End of the game !");
+      break;
+    case("DRAW"):
+      $txt = t("This is a draw.");
+      break;
+    case("THE_WINNER_IS"):
+      $txt = t("<span class='faction !class'>!!faction</span> wins !!!", $args);
+      break;
+    case("TURN_BEGIN"):
+      $txt = t("<span class='faction !class'>!!faction</span> turn begins.", $args);
+      break;
+    case("NEW_TURN"):
+      $txt = t("Turn !turn begins.", $args);
+      break;
+    case(KW_DJAMBI_MODE_SANDBOX):
+      $txt = t("Sandbox");
+      break;
+    case(KW_DJAMBI_STATUS_PENDING):
+      $txt = t("Game in progress...");
+      break;
+    case(KW_DJAMBI_MODE_HOTCHAIR):
+      $txt = t("Hotchair game");
+      break;
+    case(KW_DJAMBI_MODE_ROULETTE):
+      $txt = t("Open internet game");
+      break;
+    case(KW_DJAMBI_MODE_VIP):
+      $txt = t("Invitation internet game");
+      break;
+    case(KW_DJAMBI_STATUS_FINISHED):
+      $txt = t("Game over !");
+      break;
+    case("Sniper"):
+      $txt = t("Sniper");
+      break;
+    case("Leader"):
+      $txt = t("Leader");
+      break;
+    case("Necromobil"):
+      $txt = t("Necromobil");
+      break;
+    case("Diplomat"):
+      $txt = t("Diplomat");
+      break;
+    case("Reporter"):
+      $txt = t("Reporter");
+      break;
+    case("Leader"):
+      $txt = t("Leader");
+      break;
+    case("Militant #1"):
+      $txt = t("Militant #1");
+      break;
+    case("Militant #2"):
+      $txt = t("Militant #2");
+      break;
+    case("Militant #3"):
+      $txt = t("Militant #3");
+      break;
+    case("CHANGING_SIDE"):
+      $txt = t("The desperate remaining <span class='faction !old_class'>!!old_faction</span> side's partisans are now joining the <span class='faction !new_class'>!!new_faction</span> side !", $args);
+      break;
+    case("GAME_OVER"):
+      $txt = t("Game over for <span class='faction !class'>!!faction</span> side !", $args);
+      break;
+    case("Red"):
+      $txt = t("Red");
+      break;
+    case("Blue"):
+      $txt = t("Blue");
+      break;
+    case("Yellow"):
+      $txt = t("Yellow");
+      break;
+    case("Green"):
+      $txt = t("Green");
+      break;
+      /*case(""):
+       $txt = t("");
+      break;*/
+    default:
+      $txt = $message;
+  }
+  return $txt;
 }

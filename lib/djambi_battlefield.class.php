@@ -898,7 +898,4 @@ class DjambiBattlefield {
     );
   }
 
-  public function toHtml() {
-    return drupal_get_form("kw_djambi_game_form", $this);
-  }
 }

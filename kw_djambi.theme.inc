@@ -60,10 +60,8 @@ function theme_djambi_grid($variables) {
         isset($form_pieces["movable"]) && isset($cell["reachable"]) ? "reachable" : "unreachable");
     if ($has_destination_layer) {
       if (isset($form_pieces[$current_form_action]["cell-" . $key])) {
-        $row_inner_html .= "<div class='destination-layer'>"
-        . theme($form_pieces[$current_form_action]["cell-" . $key]["#type"], $form_pieces[$current_form_action]["cell-" . $key])
-        . "</div>";
-        unset($form["pieces"][$current_form_action]["cell-" . $key]);
+        $destination = drupal_render($form_pieces[$current_form_action]["cell-" . $key]);
+        $row_inner_html .= "<div class='destination-layer'>" . $destination . "</div>";
         $extra_classes[] = "selectable";
       }
       else {
@@ -80,7 +78,8 @@ function theme_djambi_grid($variables) {
       if (isset($form_pieces[$current_form_action]) && isset($form_pieces[$current_form_action]["#selected_piece_id"]) && $piece->getId() == $form_pieces[$current_form_action]["#selected_piece_id"]) {
         $extra_classes[] = "with-selected-piece";
       }
-      $row_inner_html .= "<div class='piece " . (!$piece->isAlive() ? "dead " : "alive ") . $piece->getType() . " " . $faction->getControl()->getClass()
+      $row_inner_html .= "<div class='piece " . (!$piece->isAlive() ? "dead " : "alive ")
+      . $piece->getType() . " " . $faction->getControl()->getClass()
       . (isset($form_pieces["movable"]) && $piece->isMovable() ? " movable" : " unmovable") . "' "
       . "title=\"" . ($piece->isAlive() ? (_kw_djambi_get_full_piece_name($piece) . ($piece->isMovable() ? " - "
           . t("this piece can be moved during this turn") : "")) : t("Here lies a dead piece")) . "\""
@@ -89,9 +88,7 @@ function theme_djambi_grid($variables) {
         $row_inner_html .= "<abbr title=\"" . t("Dead") . "\">†</abbr>";
       }
       elseif (!is_null($form_pieces) && isset($form_pieces["movable"]) && isset($form_pieces["movable"][$piece->getId()])) {
-        $row_inner_html .= theme($form_pieces["movable"][$piece->getId()]["#type"],
-            $form_pieces["movable"][$piece->getId()]);
-        unset($form["pieces"]["movable"][$piece->getId()]);
+        $row_inner_html .= drupal_render($form["pieces"]["movable"][$piece->getId()]);
       }
       else {
         $row_inner_html .= "<img src=\"/" . $piece->getImage() . "\" alt=\"\" />";
@@ -163,6 +160,7 @@ function theme_djambi_grid($variables) {
       ))
   );
   // Affichage
+  unset($form['pieces']);
   $html = drupal_render_children($form);
   return $html;
 }
