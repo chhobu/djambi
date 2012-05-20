@@ -106,72 +106,58 @@ class DjambiPiece {
   }
 
   public function buildAllowableMoves($allow_interactions = TRUE) {
-    $cells = $this->getFaction()->getBattlefield()->getCells();
-    $rows = $this->getFaction()->getBattlefield()->getRows();
-    $cols = $this->getFaction()->getBattlefield()->getCols();
     if (!$this->isAlive()) {
       return;
     }
-    $next_case = array();
-    $position = $this->getPosition();
-    $next_case[] = array("delta_x" => -1, "delta_y" => 1);
-    $next_case[] = array("delta_x" => -1, "delta_y" => 0);
-    $next_case[] = array("delta_x" => -1, "delta_y" => -1);
-    $next_case[] = array("delta_x" => 0, "delta_y" => 1);
-    $next_case[] = array("delta_x" => 0, "delta_y" => -1);
-    $next_case[] = array("delta_x" => 1, "delta_y" => 0);
-    $next_case[] = array("delta_x" => 1, "delta_y" => 1);
-    $next_case[] = array("delta_x" => 1, "delta_y" => -1);
-    foreach ($next_case as $key_case => $case) {
-      $next_case[$key_case]["x"] = $position["x"] + $case["delta_x"];
-      $next_case[$key_case]["y"] = $position["y"] + $case["delta_y"];
-      if ($next_case[$key_case]["x"] < 1 || $next_case[$key_case]["x"] > $cols ||
-        $next_case[$key_case]["y"] < 1 || $next_case[$key_case]["y"] > $rows) {
-        unset($next_case[$key_case]);
-        continue;
-      }
-      $cell = DjambiBattlefield::locateCell($next_case[$key_case]);
+    $cells = $this->getFaction()->getBattlefield()->getCells();
+    $rows = $this->getFaction()->getBattlefield()->getRows();
+    $cols = $this->getFaction()->getBattlefield()->getCols();
+    $directions = $this->getFaction()->getBattlefield()->getDirections();
+    $next_cases = $cells[DjambiBattlefield::locateCell($this->getPosition())]['neighbours'];
+    foreach ($next_cases as $direction => $cell) {
       $move_ok = $this->getFaction()->getBattlefield()->checkAvailableCell($this, $cell, $allow_interactions);
-      if (!$move_ok && isset($cells[$cell]["occupant"])) {
-        unset($next_case[$key_case]);
+      if (!$move_ok && isset($cells[$cell]['occupant'])) {
+        unset($next_cases[$direction]);
         continue;
       }
-      elseif (!isset($cells[$cell]["occupant"])) {
+      elseif (!isset($cells[$cell]['occupant'])) {
         $obstacle = FALSE;
+        $next_cell = $cell;
         for ($i = 2; $obstacle == FALSE; $i++) {
-          if ($this->getHability("limited_move") && $i > $this->getHability("limited_move")) {
+          if ($this->getHability('limited_move') && $i > $this->getHability('limited_move')) {
             $obstacle = TRUE;
           }
           else {
-            $next_next_case = array("x" => $position["x"] + $next_case[$key_case]["delta_x"] * $i,
-              "y" => $position["y"] + $next_case[$key_case]["delta_y"] * $i);
-            if ($next_next_case["x"] < 1 || $next_next_case["x"] > $cols ||
-              $next_next_case["y"] < 1 || $next_next_case["y"] > $rows) {
+            if (!isset($cells[$next_cell]['neighbours'][$direction])) {
               $obstacle = TRUE;
             }
             else {
-              $next_cell = DjambiBattlefield::locateCell($next_next_case);
+              $next_cell = $cells[$next_cell]['neighbours'][$direction];
               $test = $this->getFaction()->getBattlefield()->checkAvailableCell($this, $next_cell, $allow_interactions);
               if ($test) {
-                $next_case[] = $next_next_case;
+                if (!in_array($next_cell, $next_cases)) {
+                  $next_cases[$direction . $i] = $next_cell;
+                }
+                else {
+                  $obstacle = TRUE;
+                }
               }
-              if (isset($cells[$next_cell]["occupant"])) {
+              if (isset($cells[$next_cell]['occupant'])) {
                 $obstacle = TRUE;
               }
             }
           }
         }
-        if ($cells[$cell]["type"] == "throne" && !$this->getHability("access_throne")) {
-          unset($next_case[$key_case]);
+        if ($cells[$cell]['type'] == 'throne' && !$this->getHability('access_throne')) {
+          unset($next_cases[$direction]);
         }
       }
     }
-    if (count($next_case) > 0) {
+    if (count($next_cases) > 0) {
       $this->setMovable(TRUE);
-      $this->setAllowableMoves($next_case);
-      foreach ($next_case as $key => $case) {
-        $cell = DjambiBattlefield::locateCell($case);
-        $this->getFaction()->getBattlefield()->updateCell($cell, "reachable", TRUE);
+      $this->setAllowableMoves($next_cases);
+      foreach ($next_cases as $cell) {
+        $this->getFaction()->getBattlefield()->updateCell($cell, 'reachable', TRUE);
       }
     }
   }

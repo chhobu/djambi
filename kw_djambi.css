@@ -18,11 +18,7 @@ table.djambigrid {
   text-align: center;
   vertical-align: middle;}
 .djambigrid div.piece {
-  -moz-border-radius: 21px;
-  -webkit-border-radius: 21px;
   border-radius: 21px;
-  -moz-box-shadow: 2px 2px 2px #000;
-  -webkit-box-shadow: 2px 2px 2px #000;
   box-shadow: 2px 2px 2px #000;
   background-color: #CCC;
   font-weight: bold;
@@ -34,11 +30,10 @@ table.djambigrid {
   text-align: center;}
 .djambigrid div.piece input {
   border: 0px;
-  background: none;}
+  background: none;
+  position: relative;}
 span.faction {
   border: 1px solid #999;
-  -moz-border-radius: 5px;
-  -webkit-border-radius: 5px;
   border-radius: 5px;}
 .djambigrid div.piece.jaune, .faction.jaune {
   background-color: #fc0;
@@ -57,6 +52,8 @@ span.faction {
   color: #999;}
 .djambigrid td.reachable {
   background-color: #ddd;}
+.djambigrid .dragging td.reachable, .djambigrid .dragging td.with-movable-piece {
+  background-color: #eee;}
 .djambigrid td.with-movable-piece {
   background-color: #ccc;}
 .djambigrid td.unselectable {
@@ -65,14 +62,12 @@ span.faction {
   background-color: #ddd;}
 .djambigrid td.unselectable.with-selected-piece {
   background-color: #000;}
+.djambigrid .dragging td.reachable.selectable, .djambigrid .dragging td.reachable.selectable.with-piece .piece {
+  background: #ddd url(img/apply.png) no-repeat center center;}
 .djambigrid div.destination-layer {
   position: relative;
   z-index: 2;
-  -moz-border-radius: 21px;
-  -webkit-border-radius: 21px;
   border-radius: 21px;
-  -moz-box-shadow: 2px 2px 2px #999;
-  -webkit-box-shadow: 2px 2px 2px #999;
   box-shadow: 2px 2px 2px #999;
   background-color: rgba(255,255,255,0.5);
   height: 36px;
@@ -82,29 +77,16 @@ span.faction {
 .djambigrid td.with-piece div.destination-layer {
   margin-bottom: -42px;}
 .djambigrid td.throne {
-  background: #000 url(img/throne.png) no-repeat 0px 0px;}
+  background: #000 url(img/throne.png) no-repeat center center;}
 .djambigrid caption {
   text-align: left;
   margin-bottom: 0.5em;}
 .djambigrid caption .caption-line {
-  display: block;
-  border-bottom: 2px solid #999;
-  margin-top: 0.25em;}
-.djambigrid caption .caption-line > span {
-  margin-top: 0px;
-  display: inline-block;}
+  display: block;}
 .djambigrid caption .caption-label {
-  -moz-border-radius: 0.5em 0.5em 0 0;
-  -webkit-border-radius: 0.5em 0.5em 0 0;
-  border-radius: 0.5em 0.5em 0 0;
-  background-color: #EEE;
-  border: 2px solid #999;
-  border-bottom: 0px;
   font-size: 90%;
   font-weight: bold;
-  margin-right: 0.5em;
-  margin-top: 0.25em;
-  padding: 0 0.5em;}
+  margin-right: 0.5em;}
 .djambigrid caption .separateur {
   position:absolute;
   left:0px;
@@ -116,9 +98,11 @@ span.faction {
   padding: 0;
   margin: 0;}
 .faction {
-  background: url(img/leader16.png) no-repeat 2px 50%;
-  padding: 0 2px 0 20px;
+  background: url(img/leader16.png) no-repeat 4px 50%;
+  padding-left: 22px;
   white-space: nowrap;}
+span.faction {
+  padding-right: 0.25em;}
 span.piece {
   padding: 0 2px 0 20px;
   white-space: nowrap;}

@@ -56,7 +56,7 @@ function theme_djambi_grid($variables) {
   }
   foreach ($grid->getCells() as $key => $cell) {
     $row_inner_html = "";
-    $extra_classes = array($cell["type"], "x" . $cell["x"], "y" . $cell["y"],
+    $extra_classes = array($cell["type"],
         isset($form_pieces["movable"]) && isset($cell["reachable"]) ? "reachable" : "unreachable");
     if ($has_destination_layer) {
       if (isset($form_pieces[$current_form_action]["cell-" . $key])) {
@@ -74,6 +74,7 @@ function theme_djambi_grid($variables) {
       $extra_classes[] = "with-piece";
       if (isset($form_pieces["movable"]) && $piece->isMovable()) {
         $extra_classes[] = "with-movable-piece";
+        $moves = $piece->getAllowableMoves();
       }
       if (isset($form_pieces[$current_form_action]) && isset($form_pieces[$current_form_action]["#selected_piece_id"]) && $piece->getId() == $form_pieces[$current_form_action]["#selected_piece_id"]) {
         $extra_classes[] = "with-selected-piece";
@@ -81,6 +82,7 @@ function theme_djambi_grid($variables) {
       $row_inner_html .= "<div class='piece " . (!$piece->isAlive() ? "dead " : "alive ")
       . $piece->getType() . " " . $faction->getControl()->getClass()
       . (isset($form_pieces["movable"]) && $piece->isMovable() ? " movable" : " unmovable") . "' "
+      . (isset($form_pieces["movable"]) && $piece->isMovable() ? ' data-moves="' . implode(' ', $moves) . '"' : '')
       . "title=\"" . ($piece->isAlive() ? (_kw_djambi_get_full_piece_name($piece) . ($piece->isMovable() ? " - "
           . t("this piece can be moved during this turn") : "")) : t("Here lies a dead piece")) . "\""
           . ">";
@@ -100,11 +102,12 @@ function theme_djambi_grid($variables) {
       }
       $row_inner_html .= "</div>";
     }
-    $rows[$cell["y"]]["data"][$cell["x"]] = array(
-        "data" => $row_inner_html,
-        "title" => t("!xy case", array("!xy" => $key))
-        . ($current_form_action == "piece_selection" && isset($cell["reachable"]) ? " - " . t("a piece can move here...") : ""),
-        "class" => $extra_classes
+    $rows[$cell['y']]['data'][$cell['x']] = array(
+        'data' => $row_inner_html,
+        'title' => t('!xy case', array('!xy' => $key))
+        . ($current_form_action == 'piece_selection' && isset($cell['reachable']) ? ' - ' . t('a piece can move here...') : ''),
+        'class' => $extra_classes,
+        'data-coord' => $key
     );
   }
   // Création des légendes de la grille
@@ -127,16 +130,16 @@ function theme_djambi_grid($variables) {
         "<span class='faction " . $now_playing_faction->getClass() . "'>" . $now_playing_faction->getName("t") . "</span>"
     ));
     $caption_lines[t("Playing next")] = t("!color1 side, then !color2 side, then !color3 side", array(
-        "!color1" => "<span class='faction " . $playing_next_faction1->getClass() . "'>" . $playing_next_faction1->getName("t") . "</span>",
-        "!color2" => "<span class='faction " . $playing_next_faction2->getClass() . "'>" . $playing_next_faction2->getName("t") . "</span>",
-        "!color3" => "<span class='faction " . $playing_next_faction3->getClass() . "'>" . $playing_next_faction3->getName("t") . "</span>"
+        "!color1" => "<span class='faction " . $playing_next_faction1->getClass() . "'>" . $playing_next_faction1->getName() . "</span>",
+        "!color2" => "<span class='faction " . $playing_next_faction2->getClass() . "'>" . $playing_next_faction2->getName() . "</span>",
+        "!color3" => "<span class='faction " . $playing_next_faction3->getClass() . "'>" . $playing_next_faction3->getName() . "</span>"
     ));
     if (isset($form["textes"]["phase"])) {
       $caption_lines[t("Current phase")] = $form["textes"]["phase"]["#value"];
       unset($form["textes"]["phase"]);
     }
     else {
-      $caption_lines[t("Current phase")] = t("Waiting for an opponent move...");
+      $caption_lines[t("Current phase")] = t("Waiting for !side move...", array('!side' => $now_playing_faction->getName()));
     }
   }
   $c = 0;
