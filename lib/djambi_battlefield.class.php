@@ -1,29 +1,32 @@
 <?php
-define("KW_DJAMBI_MODE_SANDBOX", "bac-a-sable");
-define("KW_DJAMBI_MODE_HOTCHAIR", "hotchair");
-define("KW_DJAMBI_MODE_ROULETTE", "roulette");
-define("KW_DJAMBI_MODE_VIP", "vip");
-define("KW_DJAMBI_STATUS_PENDING", "pending");
-define("KW_DJAMBI_STATUS_FINISHED", "finished");
-define("KW_DJAMBI_USER_PLAYING", "playing");
-define("KW_DJAMBI_USER_WINNER", "winner");
-define("KW_DJAMBI_USER_LOSER", "loser");
-define("KW_DJAMBI_USER_DEFECT", "defect");
-define("KW_DJAMBI_USER_EMPTY_SLOT", "empty");
-define("KW_DJAMBI_USER_READY", "ready");
-define("KW_DJAMBI_USER_WAITING", "waiting");
+define('KW_DJAMBI_MODE_SANDBOX', 'bac-a-sable');
+
+define('KW_DJAMBI_STATUS_PENDING', 'pending');
+define('KW_DJAMBI_STATUS_FINISHED', 'finished');
+define('KW_DJAMBI_STATUS_DRAW_PROPOSAL', 'draw_proposal');
+
+define('KW_DJAMBI_USER_PLAYING', 'playing');
+define('KW_DJAMBI_USER_WINNER', 'winner');
+define('KW_DJAMBI_USER_LOSER', 'loser');
+define('KW_DJAMBI_USER_DEFECT', 'defect');
+define('KW_DJAMBI_USER_EMPTY_SLOT', 'empty');
+define('KW_DJAMBI_USER_READY', 'ready');
+define('KW_DJAMBI_USER_WAITING', 'waiting');
 
 class DjambiBattlefield {
   private $id, $rows, $cols, $cells, $factions, $directions,
-    $moves, $mode, $status, $turns, $play_order, $events;
+    $moves, $mode, $status, $turns, $play_order, $events, $options = array();
 
-  public function __construct($id, $data, DjambiPoliticalFaction $faction1 = NULL, DjambiPoliticalFaction $faction2 = NULL, DjambiPoliticalFaction $faction3 = NULL, DjambiPoliticalFaction $faction4 = NULL) {
+  public function __construct($id, $data, DjambiPoliticalFaction $faction1 = NULL,
+  DjambiPoliticalFaction $faction2 = NULL, DjambiPoliticalFaction $faction3 = NULL,
+  DjambiPoliticalFaction $faction4 = NULL) {
     $this->id = $id;
+    $this->setDefaultOptions();
     if (!is_null($data) && is_array($data)) {
       return $this->loadBattlefield($data);
     }
     elseif (!is_null($faction1) && !is_null($faction2) && !is_null($faction3) && !is_null($faction4)) {
-      return $this->buildNewBattlefieldWith4Factions($faction1, $faction2, $faction3, $faction4);
+      return $this->buildNewBattlefieldWith4Factions($faction1, $faction2, $faction3, $faction4, $data);
     }
     else {
       return FALSE;
@@ -40,9 +43,14 @@ class DjambiBattlefield {
     $this->points = isset($data['points']) ? $data['points'] : 0;
     $this->events = isset($data['events']) ? $data['events'] : array();
     $this->factions = array();
+    if (isset($data['options']) && is_array($data['options'])) {
+      foreach($data['options'] as $option => $value) {
+        $this->setOption($option, $value);
+      }
+    }
     $controls = array();
     foreach ($data['factions'] as $key => $faction_data) {
-      $faction = new DjambiPoliticalFaction($data['users'][$key], $key, $faction_data['name'], $faction_data['class'], $faction_data['start_order']);
+      $faction = new DjambiPoliticalFaction($data['users'][$key], $key, $faction_data);
       $positions = array();
       foreach ($data['positions'] as $cell => $piece_id) {
         $piece_data = explode('-', $piece_id, 2);
@@ -61,6 +69,11 @@ class DjambiBattlefield {
       $faction->setControl($this->getFactionById($key_control), FALSE);
     }
     return $this;
+  }
+
+  private function setDefaultOptions() {
+    $this->setOption('allowed_skipped_turns_per_user', -1);
+    $this->setOption('turns_before_draw_proposal', 10);
   }
 
   private function buildStdField($special_cells = array()) {
@@ -86,11 +99,18 @@ class DjambiBattlefield {
     return $cells;
   }
 
-  private function buildNewBattlefieldWith4Factions(DjambiPoliticalFaction $faction1, DjambiPoliticalFaction $faction2, DjambiPoliticalFaction $faction3, DjambiPoliticalFaction $faction4) {
+  private function buildNewBattlefieldWith4Factions(DjambiPoliticalFaction $faction1,
+  DjambiPoliticalFaction $faction2, DjambiPoliticalFaction $faction3,
+  DjambiPoliticalFaction $faction4, $options) {
     $this->rows = 9;
     $this->cols = 9;
     $this->moves = array();
     $this->events = array();
+    if (!empty($options) && is_array($options)) {
+      foreach($options as $option => $value) {
+        $this->setOption($option, $value);
+      }
+    }
     $this->factions = array(
       1 => $faction1,
       2 => $faction2,
@@ -341,6 +361,18 @@ class DjambiBattlefield {
     return $this->directions;
   }
 
+  public function getOption($option_key) {
+    if (isset($this->options[$option_key])) {
+      return $this->options[$option_key];
+    }
+    return NULL;
+  }
+
+  public function setOption($option_key, $value) {
+    $this->options[$option_key] = $value;
+    return $this;
+  }
+
   public function cancelLastTurn() {
     $current_turn_key = $this->getCurrentTurnId();
     unset($this->turns[$current_turn_key]);
@@ -394,6 +426,11 @@ class DjambiBattlefield {
     }
   }
 
+  public function endWithADraw() {
+    $this->logEvent("event", "DRAW");
+    $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
+  }
+
   public function changeTurn() {
     // Log de la fin du tour
     $last_turn_key = $this->getCurrentTurnId();
@@ -425,13 +462,7 @@ class DjambiBattlefield {
         if ($control_leader && !$control_necro) {
           $control_leader = $this->checkLeaderFreedom($leaders);
           if (!$control_leader) {
-            $this->logEvent(
-              "event",
-              "SURROUNDED",
-              array(
-                "!class" => $faction->getClass(),
-                "!!faction" => $faction->getName()
-              ));
+            $this->logEvent("event", "SURROUNDED", array('faction1' => $faction->getId()));
             foreach ($leaders as $leader) {
               $leader->setDead();
             }
@@ -452,8 +483,7 @@ class DjambiBattlefield {
       else {
         $winner_id = current($living_factions);
         $winner = $this->getFactionById($winner_id);
-        $this->logEvent('event', 'THE_WINNER_IS',
-          array('!id' => $winner->getId(), '!class' => $winner->getClass(), '!!faction' => $winner->getName()));
+        $this->logEvent('event', 'THE_WINNER_IS', array('faction1' => $faction->getId()));
       }
       $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
       return;
@@ -673,16 +703,10 @@ class DjambiBattlefield {
         "turn_scheme" => $current_order["turn_scheme"],
         "turn" => $current_phase
       );
-      $this->logEvent("notice", "TURN_BEGIN",
-        array(
-          "!class" => $selected_faction->getClass(),
-          "!!faction" => $selected_faction->getName()
-        ), NULL, NULL, $begin
-      );
+      $this->logEvent("notice", "TURN_BEGIN", array('faction1' => $selected_faction->getId()), $begin);
     }
     if ($new_phase) {
-      $this->logEvent("notice", "NEW_TURN",
-        array("!turn" => $current_phase), NULL, NULL, $begin);
+      $this->logEvent("notice", "NEW_TURN", array("!turn" => $current_phase), $begin);
     }
     return TRUE;
   }
@@ -834,24 +858,18 @@ class DjambiBattlefield {
     }
   }
 
-  public function logEvent($type, $event_txt, $event_args = NULL, DjambiPoliticalFaction $from = NULL, DjambiPoliticalFaction $to = NULL, $time = NULL) {
+  public function logEvent($type, $event_txt, $event_args = NULL, $time = NULL) {
     $event = array(
       "turn" => $this->getCurrentTurnId(),
       "time" => is_null($time) ? time() : $time,
-      "type" => $type,
+      "type" => $type, // event, info, notice
       "event" => $event_txt,
       "args" => $event_args
     );
-    if (!is_null($from)) {
-      $event["from"] = $from->getId();
-    }
-    if (!is_null($to)) {
-      $event["to"] = $to;
-    }
     $this->events[] = $event;
   }
 
-  private function getCurrentTurnId() {
+  public function getCurrentTurnId() {
     return empty($this->turns) ? 0 : max(array_keys($this->turns));
   }
 
@@ -921,7 +939,8 @@ class DjambiBattlefield {
       "points" => isset($this->points) ? $this->points : 0,
       "deads" => $deads,
       "special_cells" => $special_cells,
-      "events" => $this->events
+      "events" => $this->events,
+      "options" => $this->options
     );
   }
 

@@ -33,7 +33,7 @@ function kw_djambi_theme() {
  * @param String $mode
  */
 function kw_djambi_game_access($mode) {
-  return true;
+  return TRUE;
 }
 
 /**
@@ -106,7 +106,6 @@ function kw_djambi_new_game($mode) {
  */
 function kw_djambi_node_info() {
   // Création d'un nouveau type de contenu "partie de Djambi".
-  // Il s'agit d'un type de contenu basique, sans titre.
   return array(
     "kw_djambi" => array(
       "name" => t("Djambi game"),
@@ -123,6 +122,7 @@ function kw_djambi_node_info() {
 function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
   // Les nouvelles parties de Djambi sont créées dynamiquement, sans passer par le formulaire.
   // On redirige donc l'utilisateur vers la page ayant le chemin d'accès appelé "starting-block"
+  // FIXME Remplacer par interface de création de partie
   if (!$form["nid"]["#value"]) {
     drupal_goto("starting-block");
   }
@@ -179,9 +179,6 @@ function kw_djambi_node_view($node, $view_mode) {
   if ($node->type == "kw_djambi" && $view_mode =="full") {
     $node->content["grid"] = drupal_get_form("kw_djambi_game_form", $node);
   }
-  if ($node->type == 'kw_djambi' && $view_mode == 'teaser') {
-
-  }
 }
 
 /**
@@ -192,10 +189,14 @@ function kw_djambi_node_view($node, $view_mode) {
 function kw_djambi_build_battlefield($node, $players = 4) {
   if (!isset($node->nid)) {
     if ($players == 4) {
-      $faction2 = new DjambiPoliticalFaction($node->dj_users[3]["user"]->uid, "J", "Yellow", "jaune", 3);
-      $faction1 = new DjambiPoliticalFaction($node->dj_users[4]["user"]->uid, "V", "Green", "vert", 4);
-      $faction4 = new DjambiPoliticalFaction($node->dj_users[1]["user"]->uid, "R", "Red", "rouge", 1);
-      $faction3 = new DjambiPoliticalFaction($node->dj_users[2]["user"]->uid, "B", "Blue", "bleu", 2);
+      $faction2 = new DjambiPoliticalFaction($node->dj_users[3]["user"]->uid, "J",
+          array('name' => "Yellow", 'class' => "jaune", 'start_order' => 3));
+      $faction1 = new DjambiPoliticalFaction($node->dj_users[4]["user"]->uid, "V",
+          array('name' => "Green", 'class' =>  "vert", 'start_order' => 4));
+      $faction4 = new DjambiPoliticalFaction($node->dj_users[1]["user"]->uid, "R",
+          array('name' => "Red", 'class' =>  "rouge", 'start_order' => 1));
+      $faction3 = new DjambiPoliticalFaction($node->dj_users[2]["user"]->uid, "B",
+          array('name' => "Blue", 'class' => "bleu", 'start_order' => 2));
       $battlefield = new DjambiBattlefield(0, NULL, $faction1, $faction2, $faction3, $faction4);
       return $battlefield;
     }
@@ -244,6 +245,7 @@ function kw_djambi_preprocess_page(&$variables) {
  */
 function kw_djambi_game_form($form, &$form_state, $node) {
   global $user;
+  // Inclusion du Javascript et du CSS
   drupal_add_library('system', 'ui.core');
   drupal_add_library('system', 'ui.widget');
   drupal_add_library('system', 'ui.mouse');
@@ -251,7 +253,9 @@ function kw_djambi_game_form($form, &$form_state, $node) {
   drupal_add_library('system', 'ui.droppable');
   $form['#attached']['css'][] = drupal_get_path('module', 'kw_djambi').'/kw_djambi.css';
   $form['#attached']['js'][] = drupal_get_path('module', 'kw_djambi').'/js/kw_djambi.js';
+  // Délégation de l'affichage
   $form['#theme'] = array('djambi_grid');
+  // Chargement de la grille
   if (!empty($form_state['kw_djambi']['selected_piece']) && !$form_state['kw_djambi']['change_turn']) {
     $piece = $form_state['kw_djambi']['selected_piece'];
     $form['#grid'] = $piece->getFaction()->getBattlefield();
@@ -264,6 +268,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
       unset($form_state['kw_djambi']);
     }
   }
+  // Création de l'ossature du formulaire
   $form['#prefix'] = '<div id="GridDiv' . $grid->getId() . '">';
   $form['#suffix'] = '</div>';
   $form['grid'] = array(
@@ -289,10 +294,53 @@ function kw_djambi_game_form($form, &$form_state, $node) {
     'effect' => 'none',
     'method' => 'replace',
   );
+  // Ajout des interactions concernant le joueur actif
   $phase_text = NULL;
   $faction = $grid->getPlayingFaction();
-  if ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING && $faction->getControl()->getUid() == $user->uid) {
+  // Interface de réponse sur proposition de partie nulle
+  if ($grid->getStatus() == KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
+    $form['actions'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Actions'),
+        '#weight' => 1
+    );
+    $factions = $grid->getFactions();
+    foreach ($factions as $side) {
+      if ($side->getDrawStatus() == 1) {
+        $peacemonger = $side;
+        break;
+      }
+    }
+    if ($faction->getControl()->getUid() == $user->uid) {
+      $form['actions']['explain'] = array(
+        '#type' => 'markup',
+        '#value' => t("A peace proposal has been made by !faction side. What is your answer ?",
+            array('!faction' => $peacemonger->getName()))
+      );
+      $form['actions']['accept_peace'] = array(
+          '#type' => 'submit',
+          '#value' => t("OK, end this game with a draw and stay good friends."),
+          '#submit' => array('kw_djambi_game_form_accept_peace_submit'),
+          '#ajax' => $ajax_settings
+      );
+      $form['actions']['reject_peace'] = array(
+          '#type' => 'submit',
+          '#value' => t("No way, I am sure to win this game."),
+          '#submit' => array('kw_djambi_game_form_reject_peace_submit'),
+          '#ajax' => $ajax_settings
+      );
+    }
+    else {
+      $form['actions']['explain'] = array(
+          '#type' => 'markup',
+          '#value' => t("A peace proposal has been made by !faction side. Waiting for !current side answer...",
+              array('!faction' => $peacemonger->getName(), '!current' => $faction->getName()))
+      );
+    }
+  }
+  elseif ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING && $faction->getControl()->getUid() == $user->uid) {
     $actions = array();
+    // Annulation de sélection d'une pièce
     if (!empty($form_state["kw_djambi"]) && in_array($form_state["kw_djambi"]["phase"], array('move_interactions', 'piece_destination'))) {
       $actions['cancel_selection'] = array(
         '#type' => 'submit',
@@ -301,6 +349,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
         '#ajax' => $ajax_settings
       );
     }
+    // Annulation d'un mouvement
     elseif ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX && count($grid->getTurns()) > 1) {
       $actions['cancel_last_turn'] = array(
         '#type' => 'submit',
@@ -309,6 +358,37 @@ function kw_djambi_game_form($form, &$form_state, $node) {
         '#ajax' => $ajax_settings
       );
     }
+    // Passer son tour
+    $allowed_skip_turns = $grid->getOption('allowed_skipped_turns_per_user');
+    if ($allowed_skip_turns == -1 || $allowed_skip_turns > $faction->getSkippedTurns()) {
+      $actions['skip_turn'] = array(
+        '#type' => 'submit',
+        '#value' => $allowed_skip_turns == -1 ? t('Skip turn') : t('Skip turn (!nb of !max already skipped)', array(
+            '!nb' => $faction->getSkippedTurns(), '!max' => $allowed_skip_turns)),
+        '#submit' => array('kw_djambi_game_form_skip_turn_submit'),
+        '#ajax' => $ajax_settings
+      );
+    }
+    // Abandonner
+    $actions['withdrawal'] = array(
+        '#type' => 'submit',
+        '#value' => t('Withdraw'),
+        '#submit' => array('kw_djambi_game_form_withdraw_submit'),
+        '#ajax' => $ajax_settings,
+        '#attributes' => array('onclick' => "return confirm('" . addslashes(t("Do you really want to withdraw without glory from this game ?")) . "')")
+    );
+    // Proposer une nulle
+    $draw_proposal_delay = $grid->getOption('turns_before_draw_proposal');
+    $turns = $grid->getTurns();
+    if ($faction->getLastDrawProposal() + $draw_proposal_delay < $turns[$grid->getCurrentTurnId()]['turn']) {
+      $actions['draw_proposal'] = array(
+        '#type' => 'submit',
+        '#value' => t('Ask for a draw'),
+        '#submit' => array('kw_djambi_game_form_draw_proposal_submit'),
+        '#ajax' => $ajax_settings
+      );
+    }
+    // Regroupement des actions dans un fieldset
     if (!empty($actions)) {
       $form['actions'] = array(
         '#type' => 'fieldset',
@@ -319,6 +399,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
         $form['actions'][$key] = $value;
       }
     }
+    // Par défaut : phase de sélection des pièces
     if (!isset($form_state['kw_djambi'])) {
       $form_state['kw_djambi'] = array(
         'phase' => 'piece_selection'
@@ -483,6 +564,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
       }
     }
   }
+  // Affichage de la phase en cours de la partie
   if (!is_null($phase_text)) {
     $form["textes"]["phase"] = array(
       "#type" => "markup",
@@ -542,6 +624,9 @@ function kw_djambi_game_form($form, &$form_state, $node) {
   return $form;
 }
 
+/**
+ * Soumission de formulaire : chargement de logs supplémentaires
+ */
 function kw_djambi_load_more_logs($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
   if (!isset($form_state['kw_logs']) || $form_state['kw_logs']['end'] == -1) {
@@ -551,16 +636,25 @@ function kw_djambi_load_more_logs($form, &$form_state) {
   $form_state['kw_logs']['end'] += 20;
 }
 
+/**
+ * Soumission de formulaire : chargement de tous les logs
+ */
 function kw_djambi_load_all_logs($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
   $form_state['kw_logs']['begin'] = isset($form_state['kw_logs']['end']) ? $form_state['kw_logs']['end'] : 20;
   $form_state['kw_logs']['end'] = -1;
 }
 
+/**
+ * Fonction appelée après une requête Ajax : regénération du formulaire de jeu
+ */
 function kw_djambi_ajax_callback($form, $form_state) {
   return $form;
 }
 
+/**
+ * Fonction appelée après une requête Ajax : chargement des logs
+ */
 function kw_djambi_ajax_log_callback($form, $form_state) {
   return $form['log']['container'];
 }
@@ -905,6 +999,9 @@ function kw_djambi_game_form_submit($form, &$form_state) {
   $form_state['kw_djambi']['change_turn'] = $change_turn;
 }
 
+/**
+ * Soumission de formulaire : annulation de la sélection d'une pièce
+ */
 function kw_djambi_game_form_cancel_selection_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
   if (isset($form_state['kw_djambi'])) {
@@ -920,6 +1017,65 @@ function kw_djambi_game_form_cancel_last_turn_submit($form, &$form_state) {
   $form_state['kw_djambi']['change_turn'] = TRUE;
   $grid = $form['#grid'];
   $grid->cancelLastTurn();
+  _kw_djambi_save_game($grid);
+}
+
+/**
+ * Soumission du bouton "passer son tour"
+ */
+function kw_djambi_game_form_skip_turn_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  $grid = $form['#grid'];
+  $faction = $grid->getPlayingFaction();
+  $faction->skipTurn();
+  $grid = $faction->getBattlefield();
+  _kw_djambi_save_game($grid);
+}
+
+/**
+ * Soumission du bouton "Abandonner la partie"
+ */
+function kw_djambi_game_form_withdraw_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  $grid = $form['#grid'];
+  $faction = $grid->getPlayingFaction();
+  $faction->withdraw();
+  $grid = $faction->getBattlefield();
+  $grid->changeTurn();
+  _kw_djambi_save_game($grid);
+}
+
+/**
+ * Soumission du bouton "Proposer une partie nulle"
+ */
+function kw_djambi_game_form_draw_proposal_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  $grid = $form['#grid'];
+  $faction = $grid->getPlayingFaction();
+  $faction->callForADraw();
+  $grid = $faction->getBattlefield();
+  _kw_djambi_save_game($grid);
+}
+
+/**
+ * Soumission du bouton "Accepter une partie nulle"
+ */
+function kw_djambi_game_form_accept_peace_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  $grid = $form['#grid'];
+  $faction = $grid->getPlayingFaction();
+  $faction->acceptDraw();
+  $grid = $faction->getBattlefield();
+  _kw_djambi_save_game($grid);
+}
+
+/**
+ * Soumission du bouton "Refuser une partie nulle"
+ */
+function kw_djambi_game_form_reject_peace_submit($form, &$form_state) {
+  $grid = $form['#grid'];
+  $faction = $grid->getPlayingFaction();
+  $faction->rejectDraw();
   _kw_djambi_save_game($grid);
 }
 
@@ -976,7 +1132,7 @@ function _kw_djambi_build_log(DjambiBattlefield $grid) {
         $args[$key] = $arg;
       }
     }
-    $msg = _kw_djambi_get_translatable_messages($event["event"], $args);
+    $msg = _kw_djambi_get_translatable_messages($event["event"], $args, $grid);
     $log["time"][] = $event["time"];
     $log["msg"][] = "<div class='event ". $event["type"] . "'><span class=''>" . format_date($event["time"], "short") . " :</span> " . $msg . "</div>";
   }
@@ -1026,7 +1182,7 @@ function _kw_djambi_build_log(DjambiBattlefield $grid) {
     }
     if (!empty($move["special_event"])) {
       $msg2 = _kw_djambi_get_translatable_messages($move["special_event"],
-          array("!piece" => _kw_djambi_get_full_piece_name($piece)));
+          array("!piece" => _kw_djambi_get_full_piece_name($piece)), $grid);
       $log["time"][] = $move["time"];
       $log["msg"][] = "<div class='event'> " . $msg2 . "</div>";
     }
@@ -1035,6 +1191,11 @@ function _kw_djambi_build_log(DjambiBattlefield $grid) {
   return $log;
 }
 
+/**
+ * Génère les tableaux de statistiques
+ * @param DjambiBattlefield $grid
+ * @return multitype:Ambigous <An, string>
+ */
 function _kw_djambi_build_stats(DjambiBattlefield $grid) {
   $items = array();
   $factions = $grid->getFactions();
@@ -1048,7 +1209,7 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
     $j = 0;
     foreach ($grid->getEvents() as $event) {
       if ($event['event'] == 'GAME_OVER') {
-        $ranking[$event['args']['!id']] = $event['turn'];
+        $ranking[$event['args']['faction1']] = $event['turn'];
       }
     }
     asort($ranking);
@@ -1077,7 +1238,6 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
   foreach ($grid->getTurns() as $turn) {
     if (!empty($turn['end'])) {
       @$stats['playtime'][$turn['side']] += $turn['end'] - $turn['begin'];
-      @$stats['moves']['turns'][$turn['side']] ++;
     }
   }
   foreach ($grid->getMoves() as $key => $move) {
@@ -1087,6 +1247,7 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
           abs($cells[$move['from']]['x'] - $cells[$move['to']]['x']),
           abs($cells[$move['from']]['y'] - $cells[$move['to']]['y']));
       @$stats['mobility'][$move['target']] += $distance;
+      @$stats['moves']['turns'][$move['target_faction']]++;
       @$stats['moves']['distance'][$move['target_faction']] += $distance;
       if ($move['special_event'] == 'throne access') {
         $throne = $move['target_faction'];
@@ -1321,6 +1482,10 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
   return $items;
 }
 
+/**
+ * Fonction d'aide à la génération des statistiques
+ * Détermine le vainqueur d'un prix
+ */
 function _kw_djambi_stats_get_winners($grid, $price, $stats, $type = 'piece', $order = 'max') {
   $winners = array_keys($stats[$price], $order == 'min' ? min($stats[$price]) : max($stats[$price]));
   $winners_string_array = array();
@@ -1337,7 +1502,20 @@ function _kw_djambi_stats_get_winners($grid, $price, $stats, $type = 'piece', $o
   return $winners_string_array;
 }
 
-function _kw_djambi_get_translatable_messages($message, $args = NULL) {
+/**
+ * Traduction des chaînes de caractères présentes dans les classes du dossier lib
+ */
+function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBattlefield $grid = NULL) {
+  if (isset($args['faction1']) && !is_null($grid)) {
+    $faction1 = $grid->getFactionById($args['faction1']);
+    $args['!faction1'] = '<span class="faction ' . $faction1->getClass() . '">' . $faction1->getName() . '</span>';
+    unset($args['faction1']);
+  }
+  if (isset($args['faction2']) && !is_null($grid)) {
+    $faction2 = $grid->getFactionById($args['faction2']);
+    $args['!faction2'] = '<span class="faction ' . $faction2->getClass() . '">' . $faction2->getName() . '</span>';
+    unset($args['faction2']);
+  }
   switch($message) {
     case("throne access"):
       $txt = t("!piece is now the great and beloved ruler of the djambi world.", $args);
@@ -1352,7 +1530,7 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL) {
       $txt = t("New djambi chess game created.");
       break;
     case("SURROUNDED"):
-      $txt = t("<span class='faction !class'>!!faction</span>'s side is surrounded by dead pieces and cannot access to power anymore.", $args);
+      $txt = t("!faction1's side is surrounded by dead pieces and cannot access to power anymore.", $args);
       break;
     case("END"):
       $txt = t("End of the game !");
@@ -1361,13 +1539,16 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL) {
       $txt = t("This is a draw.");
       break;
     case("THE_WINNER_IS"):
-      $txt = t("<span class='faction !class'>!!faction</span> wins !!!", $args);
+      $txt = t("!faction1 wins !!!", $args);
       break;
     case("TURN_BEGIN"):
-      $txt = t("<span class='faction !class'>!!faction</span> turn begins.", $args);
+      $txt = t("!faction1 turn begins.", $args);
       break;
     case("NEW_TURN"):
       $txt = t("Turn !turn begins.", $args);
+      break;
+    case("SKIPPED_TURN"):
+      $txt = t("!faction1 skipps his turn.", $args);
       break;
     case(KW_DJAMBI_MODE_SANDBOX):
       $txt = t("Sandbox");
@@ -1375,17 +1556,11 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL) {
     case(KW_DJAMBI_STATUS_PENDING):
       $txt = t("Game in progress...");
       break;
-    case(KW_DJAMBI_MODE_HOTCHAIR):
-      $txt = t("Hotchair game");
-      break;
-    case(KW_DJAMBI_MODE_ROULETTE):
-      $txt = t("Open internet game");
-      break;
-    case(KW_DJAMBI_MODE_VIP):
-      $txt = t("Invitation internet game");
-      break;
     case(KW_DJAMBI_STATUS_FINISHED):
       $txt = t("Game over !");
+      break;
+    case(KW_DJAMBI_STATUS_DRAW_PROPOSAL):
+      $txt = t("Peace negociation...");
       break;
     case("Sniper"):
       $txt = t("Sniper");
@@ -1415,10 +1590,14 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL) {
       $txt = t("Militant #3");
       break;
     case("CHANGING_SIDE"):
-      $txt = t("The desperate remaining <span class='faction !old_class'>!!old_faction</span> side's partisans are now joining the <span class='faction !new_class'>!!new_faction</span> side !", $args);
+      $txt = t("The desperate remaining !faction1 side's partisans are now joining the !faction2 side !", $args);
       break;
     case("GAME_OVER"):
-      $txt = t("Game over for <span class='faction !class'>!!faction</span> side !", $args);
+      $txt = t("Game over for !faction1 side !", $args);
+      break;
+    case("WITHDRAWAL"):
+      $txt = t("The hopeless !faction1 leader decided to withdraw from the game. Shame on him.
+        His remaining pieces stay neutrally in the board, waiting for a better cause to support.", $args);
       break;
     case("Red"):
       $txt = t("Red");
@@ -1431,6 +1610,15 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL) {
       break;
     case("Green"):
       $txt = t("Green");
+      break;
+    case("DRAW_PROPOSAL"):
+      $txt = t("The !faction1 side has called for a draw.", $args);
+      break;
+    case("DRAW_ACCEPTED"):
+      $txt = t("The !faction1 side accepted the draw proposal.", $args);
+      break;
+    case("DRAW_REJECTED"):
+      $txt = t("The !faction1 side rejected the draw proposal.", $args);
       break;
       /*case(""):
        $txt = t("");

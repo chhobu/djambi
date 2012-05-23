@@ -1,17 +1,21 @@
 <?php
 class DjambiPoliticalFaction {
-  private $uid, $id, $name, $class, $control, $alive, $pieces, $battlefield = NULL, $start_order, $playing;
+  private $uid, $id, $name, $class, $control, $alive, $skipped_turns,
+    $pieces, $battlefield = NULL, $start_order, $playing, $last_draw_proposal, $draw_status;
 
-  public function __construct($uid, $id, $name, $class, $start_order) {
+  public function __construct($uid, $id, $data) {
     $this->uid = $uid;
     $this->id = $id;
-    $this->name = $name;
-    $this->class = $class;
+    $this->name = $data['name'];
+    $this->class = $data['class'];
     $this->control = $this;
     $this->alive = TRUE;
     $this->pieces = array();
-    $this->start_order = $start_order;
+    $this->start_order = $data['start_order'];
     $this->playing = FALSE;
+    $this->skipped_turns = isset($data['skipped_turns']) ? $data['skipped_turns'] : 0;
+    $this->last_draw_proposal = isset($data['last_draw_proposal']) ? $data['last_draw_proposal'] : 0;
+    $this->draw_status = isset($data['draw_status']) ? $data['draw_status'] : NULL;
   }
 
   public function getUid() {
@@ -42,6 +46,32 @@ class DjambiPoliticalFaction {
     return $this->control;
   }
 
+  public function getSkippedTurns() {
+    return $this->skipped_turns;
+  }
+
+  public function addSkippedTurn() {
+    $this->skipped_turns++;
+  }
+
+  public function getLastDrawProposal() {
+    return $this->last_draw_proposal;
+  }
+
+  public function setLastDrawProposal($turn) {
+    $this->last_draw_proposal = $turn;
+    return $this;
+  }
+
+  public function getDrawStatus() {
+    return $this->draw_status;
+  }
+
+  public function setDrawStatus($value) {
+    $this->draw_status = $value;
+    return $this;
+  }
+
   public function getControlledPieces() {
     $pieces = array();
     foreach ($this->battlefield->getFactions() as $faction) {
@@ -66,11 +96,7 @@ class DjambiPoliticalFaction {
     }
     if ($log) {
       $this->getBattlefield()->logEvent("event",
-        "CHANGING_SIDE",
-        array("!old_id" => $this->getId(), "!old_class" => $this->getClass(), "!!old_faction" => $this->getName(),
-            "!new_id" => $faction->getId(), "!new_class" => $faction->getClass(), "!!new_faction" => $faction->getName(),
-            "!controlled" => $controlled
-        )
+        "CHANGING_SIDE", array('faction1' => $this->getId(), 'faction2' => $faction->getId(), '!controlled' => $f->getId())
       );
     }
     return $this;
@@ -86,8 +112,7 @@ class DjambiPoliticalFaction {
   }
 
   public function setDead() {
-    $this->getBattlefield()->logEvent("event", "GAME_OVER",
-      array("!id" => $this->getId(), "!class" => $this->getClass(), "!!faction" => $this->getName()));
+    $this->getBattlefield()->logEvent("event", "GAME_OVER", array('faction1' => $this->getId()));
     return $this->setAlive(FALSE);
   }
 
@@ -100,6 +125,9 @@ class DjambiPoliticalFaction {
     return $this;
   }
 
+  /**
+   * @return DjambiBattlefield
+   */
   public function getBattlefield() {
     return $this->battlefield;
   }
@@ -127,13 +155,75 @@ class DjambiPoliticalFaction {
     }
   }
 
+  public function skipTurn() {
+    $this->addSkippedTurn();
+    $this->getBattlefield()->logEvent("event", "SKIPPED_TURN", array('faction1' => $this->getId(),
+        '!nb' => $this->getSkippedTurns()));
+    $this->getBattlefield()->changeTurn();
+  }
+
+  public function withdraw() {
+    $this->getBattlefield()->logEvent("event", "WITHDRAWAL", array('faction1' => $this->getId()));
+    $this->setDead();
+  }
+
+  public function callForADraw() {
+    $turns = $this->getBattlefield()->getTurns();
+    $this->setLastDrawProposal($turns[$this->getBattlefield()->getCurrentTurnId()]['turn']);
+    $this->getBattlefield()->logEvent('info', 'DRAW_PROPOSAL', array('faction1' => $this->getId()));
+    $this->getBattlefield()->setStatus(KW_DJAMBI_STATUS_DRAW_PROPOSAL);
+    $this->setDrawStatus(1);
+    $this->getBattlefield()->changeTurn();
+  }
+
+  public function acceptDraw() {
+    $this->getBattlefield()->logEvent('info', 'DRAW_ACCEPTED', array('faction1' => $this->getId()));
+    $this->setDrawStatus(2);
+    $factions = $this->getBattlefield()->getFactions();
+    $alive_factions = 0;
+    $accepted_draws = 0;
+    foreach ($factions as $faction) {
+      if ($faction->isAlive()) {
+        $alive_factions++;
+        if ($faction->getDrawStatus() > 0) {
+          $accepted_draws++;
+        }
+      }
+    }
+    if ($accepted_draws == $alive_factions) {
+      $this->getBattlefield()->endWithADraw();
+    }
+    else {
+      $this->getBattlefield()->changeTurn();
+    }
+  }
+
+  public function rejectDraw() {
+    $this->getBattlefield()->logEvent('info', 'DRAW_REJECTED', array('faction1' => $this->getId()));
+    $this->getBattlefield()->setStatus(KW_DJAMBI_STATUS_PENDING);
+    $factions = $this->getBattlefield()->getFactions();
+    foreach ($factions as $faction) {
+      $faction->setDrawStatus = NULL;
+    }
+  }
+
   public function toDatabase() {
-    return array(
-      "name" => $this->name,
-      "class" => $this->class,
-      "control" => $this->control->getId(),
-      "alive" => $this->alive,
-      "start_order" => $this->start_order
+    $data = array(
+      'name' => $this->name,
+      'class' => $this->class,
+      'control' => $this->control->getId(),
+      'alive' => $this->alive,
+      'start_order' => $this->start_order
     );
+    if ($this->skipped_turns > 0) {
+      $data['skipped_turns'] = $this->skipped_turns;
+    }
+    if ($this->last_draw_proposal > 0) {
+      $data['last_draw_proposal'] = $this->last_draw_proposal;
+    }
+    if (!is_null($this->draw_status)) {
+      $data['draw_status'] = $this->draw_status;
+    }
+    return $data;
   }
 }
