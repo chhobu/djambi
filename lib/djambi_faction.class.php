@@ -203,7 +203,7 @@ class DjambiPoliticalFaction {
     $this->getBattlefield()->setStatus(KW_DJAMBI_STATUS_PENDING);
     $factions = $this->getBattlefield()->getFactions();
     foreach ($factions as $faction) {
-      $faction->setDrawStatus = NULL;
+      $this->getBattlefield()->getFactionById($faction->getId())->setDrawStatus(NULL);
     }
   }
 

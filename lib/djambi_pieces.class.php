@@ -160,6 +160,7 @@ class DjambiPiece {
         $this->getFaction()->getBattlefield()->updateCell($cell, 'reachable', TRUE);
       }
     }
+    return count($this->allowable_moves);
   }
 
   private function checkNewPosition($destination) {

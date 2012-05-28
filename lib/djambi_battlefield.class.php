@@ -400,7 +400,7 @@ class DjambiBattlefield {
     foreach ($this->events as $key => $event) {
       if ($event['turn'] == $last_turn_key || $event['turn'] == $current_turn_key) {
         if ($event['event'] == 'GAME_OVER') {
-          $faction = $this->getFactionById($event['args']['!id']);
+          $faction = $this->getFactionById($event['args']['faction1']);
           $faction->setAlive(TRUE);
           $pieces = $faction->getPieces();
           foreach ($pieces as $key => $piece) {
@@ -410,7 +410,7 @@ class DjambiBattlefield {
           }
         }
         if ($event['event'] == 'CHANGING_SIDE') {
-          $faction = $this->getFactionById($event['args']['!old_id']);
+          $faction = $this->getFactionById($event['args']['faction1']);
           $faction->setControl($faction, FALSE);
           if (!empty($events['args']['!controlled'])) {
             foreach ($events['args']['!controlled'] as $controlled_faction) {
@@ -574,7 +574,7 @@ class DjambiBattlefield {
       }
     }
     $rulers = array();
-    if (!empty($thrones)) {
+    if (!empty($thrones) && $this->getStatus() == KW_DJAMBI_STATUS_PENDING) {
       foreach ($thrones as $throne) {
         if (isset($this->cells[$throne]) && !empty($this->cells[$throne]["occupant"])) {
           $piece = $this->cells[$throne]["occupant"];
@@ -608,6 +608,16 @@ class DjambiBattlefield {
       }
       if ($nb_factions > 2 && $turn_scheme[0]["side"] == $last_playable_prev_side) {
         $turn_scheme[$last_playable_turn_scheme]["playable"] = FALSE;
+      }
+    }
+    elseif ($this->getStatus() == KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
+      foreach ($turn_scheme as $key => $turn) {
+        if (!empty($turn['side']) && $turn['playable']) {
+          $side = $this->getFactionById($turn['side']);
+          if (!is_null($side->getDrawStatus())) {
+            $turn_scheme[$key]['playable'] = FALSE;
+          }
+        }
       }
     }
     $max_ts = max(array_keys($turn_scheme));
@@ -716,8 +726,16 @@ class DjambiBattlefield {
     $current_order = current($this->play_order);
     $active_faction = $this->getFactionById($current_order["side"]);
     /* @var $piece DjambiPiece */
+    $can_move = FALSE;
     foreach ($active_faction->getControlledPieces() as $key => $piece) {
-      $piece->buildAllowableMoves();
+      $moves = $piece->buildAllowableMoves();
+      if ($moves > 0) {
+        $can_move = TRUE;
+      }
+    }
+    if (!$can_move && $active_faction->getSkippedTurns() == $this->getOption('allowed_skipped_turns_per_user')) {
+      $active_faction->withdraw();
+      $this->changeTurn();
     }
   }
 

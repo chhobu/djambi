@@ -116,7 +116,7 @@ function theme_djambi_grid($variables) {
   $fieldset_title = _kw_djambi_get_translatable_messages($grid->getStatus());
   $turn = end($grid->getTurns());
   $fieldset_title .= ' - <span class="turn">' . t("Turn #%turn", array("%turn" => $turn["turn"])) . '</span>';
-  if ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING) {
+  if (in_array($grid->getStatus(), array(KW_DJAMBI_STATUS_PENDING, KW_DJAMBI_STATUS_DRAW_PROPOSAL))) {
     $play_order = $grid->getPlayOrder();
     $current_play_order = current($play_order);
     $now_playing_faction = $grid->getFactionById($current_play_order["side"]);
@@ -129,17 +129,45 @@ function theme_djambi_grid($variables) {
     $caption_lines[t("Now playing")] = t("!color side", array("!color" =>
         "<span class='faction " . $now_playing_faction->getClass() . "'>" . $now_playing_faction->getName("t") . "</span>"
     ));
-    $caption_lines[t("Playing next")] = t("!color1 side, then !color2 side, then !color3 side", array(
+    if ($grid->getStatus() != KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
+      $caption_lines[t("Playing next")] = t("!color1 side, then !color2 side, then !color3 side", array(
         "!color1" => "<span class='faction " . $playing_next_faction1->getClass() . "'>" . $playing_next_faction1->getName() . "</span>",
         "!color2" => "<span class='faction " . $playing_next_faction2->getClass() . "'>" . $playing_next_faction2->getName() . "</span>",
         "!color3" => "<span class='faction " . $playing_next_faction3->getClass() . "'>" . $playing_next_faction3->getName() . "</span>"
-    ));
-    if (isset($form["textes"]["phase"])) {
-      $caption_lines[t("Current phase")] = $form["textes"]["phase"]["#value"];
-      unset($form["textes"]["phase"]);
+      ));
+      if (isset($form["textes"]["phase"])) {
+        $caption_lines[t("Current phase")] = $form["textes"]["phase"]["#markup"];
+        unset($form["textes"]["phase"]);
+      }
+      else {
+        $caption_lines[t("Current phase")] = t("Waiting for !side move...", array('!side' => $now_playing_faction->getName()));
+      }
     }
     else {
-      $caption_lines[t("Current phase")] = t("Waiting for !side move...", array('!side' => $now_playing_faction->getName()));
+      $accepted = array();
+      $waiting = array();
+      foreach($grid->getFactions() as $playing_faction) {
+        if (!$playing_faction->isAlive()) {
+          continue;
+        }
+        $faction_name = '<span class="faction ' . $playing_faction->getClass() . '">' . $playing_faction->getName() . '</span>';
+        if ($playing_faction->getDrawStatus() == 1) {
+          $peacemonger = $faction_name;
+        }
+        elseif ($playing_faction->getDrawStatus() == 2) {
+          $accepted[] = $faction_name;
+        }
+        elseif (is_null($playing_faction->getDrawStatus())) {
+          $waiting[] = $faction_name;
+        }
+      }
+      $caption_lines[t("Current phase")] = t("Draw asked by !faction side.", array('!faction' => $peacemonger));
+      if (!empty($accepted)) {
+        $caption_lines[t("Sides having accepted the draw")] = implode(', ', $accepted);
+      }
+      if (!empty($waiting)) {
+        $caption_lines[t("Undecided sides")] = implode(', ', $waiting);
+      }
     }
   }
   $c = 0;

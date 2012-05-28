@@ -312,10 +312,21 @@ function kw_djambi_game_form($form, &$form_state, $node) {
       }
     }
     if ($faction->getControl()->getUid() == $user->uid) {
+      $form['actions']['descriptions'] = array(
+          '#type' => 'item',
+          '#title' => t('Now playing') . ' : ',
+          '#prefix' => '<div class="container-inline">',
+          '#suffix' => '</div>',
+          '#markup' => t('!faction side', array('!faction' =>
+              "<span class='faction " . $faction->getClass() . "'>"
+              . $faction->getName("t") . "</span>")),
+          '#weight' => -10,
+      );
       $form['actions']['explain'] = array(
         '#type' => 'markup',
-        '#value' => t("A peace proposal has been made by !faction side. What is your answer ?",
-            array('!faction' => $peacemonger->getName()))
+        '#markup' => t("A peace proposal has been made by !faction side. What is your answer ?",
+            array('!faction' => "<span class='faction " . $peacemonger->getClass() . "'>"
+                . $peacemonger->getName("t") . "</span>"))
       );
       $form['actions']['accept_peace'] = array(
           '#type' => 'submit',
@@ -333,13 +344,14 @@ function kw_djambi_game_form($form, &$form_state, $node) {
     else {
       $form['actions']['explain'] = array(
           '#type' => 'markup',
-          '#value' => t("A peace proposal has been made by !faction side. Waiting for !current side answer...",
+          '#markup' => t("A peace proposal has been made by !faction side. Waiting for !current side answer...",
               array('!faction' => $peacemonger->getName(), '!current' => $faction->getName()))
       );
     }
   }
   elseif ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING && $faction->getControl()->getUid() == $user->uid) {
     $actions = array();
+    $descriptions = array();
     // Annulation de sélection d'une pièce
     if (!empty($form_state["kw_djambi"]) && in_array($form_state["kw_djambi"]["phase"], array('move_interactions', 'piece_destination'))) {
       $actions['cancel_selection'] = array(
@@ -368,28 +380,42 @@ function kw_djambi_game_form($form, &$form_state, $node) {
         '#submit' => array('kw_djambi_game_form_skip_turn_submit'),
         '#ajax' => $ajax_settings
       );
+      if ($allowed_skip_turns) {
+        $descriptions[] = t('There is no limitation concerning turn skippings.');
+      }
+      else {
+        $descriptions[] = format_plural($allowed_skip_turns, t('You can only skip your turn 1 time.'),
+          'You can skip your turn only !nb times', array('!nb' => $allowed_skip_turns));
+      }
     }
-    // Abandonner
-    $actions['withdrawal'] = array(
-        '#type' => 'submit',
-        '#value' => t('Withdraw'),
-        '#submit' => array('kw_djambi_game_form_withdraw_submit'),
-        '#ajax' => $ajax_settings,
-        '#attributes' => array('onclick' => "return confirm('" . addslashes(t("Do you really want to withdraw without glory from this game ?")) . "')")
-    );
     // Proposer une nulle
     $draw_proposal_delay = $grid->getOption('turns_before_draw_proposal');
     $turns = $grid->getTurns();
-    if ($faction->getLastDrawProposal() + $draw_proposal_delay < $turns[$grid->getCurrentTurnId()]['turn']) {
+    if ($faction->getLastDrawProposal() + $draw_proposal_delay <= $turns[$grid->getCurrentTurnId()]['turn']) {
       $actions['draw_proposal'] = array(
         '#type' => 'submit',
         '#value' => t('Ask for a draw'),
         '#submit' => array('kw_djambi_game_form_draw_proposal_submit'),
         '#ajax' => $ajax_settings
       );
+      if ($draw_proposal_delay > 1) {
+        $descriptions[] = t('You can ask for a draw every !nb turns', array('!nb' => $draw_proposal_delay));
+      }
+      $descriptions[] = t('Asking for a draw will end your turn without making a piece move.');
     }
+    else {
+      $descriptions[] = t('You cannot ask for a draw before turn !turn.',
+          array('!turn' => ($faction->getLastDrawProposal() + $draw_proposal_delay)));
+    }
+    // Abandonner
+    $actions['withdrawal'] = array(
+        '#type' => 'submit',
+        '#value' => t('Withdraw'),
+        '#submit' => array('kw_djambi_game_form_withdraw_submit'),
+        '#ajax' => $ajax_settings
+    );
     // Regroupement des actions dans un fieldset
-    if (!empty($actions)) {
+    if (!empty($actions) || !empty($descriptions)) {
       $form['actions'] = array(
         '#type' => 'fieldset',
         '#title' => t('Actions'),
@@ -397,6 +423,19 @@ function kw_djambi_game_form($form, &$form_state, $node) {
       );
       foreach ($actions as $key => $value) {
         $form['actions'][$key] = $value;
+      }
+      if (!empty($descriptions)) {
+        $form['actions']['descriptions'] = array(
+            '#type' => 'item',
+            '#title' => t('Now playing') . ' : ',
+            '#prefix' => '<div class="container-inline">',
+            '#suffix' => '</div>',
+            '#markup' => t('!faction side', array('!faction' =>
+                "<span class='faction " . $faction->getClass() . "'>"
+                . $faction->getName("t") . "</span>")),
+            '#weight' => -10,
+            '#description' => theme('item_list', array('items' => $descriptions))
+        );
       }
     }
     // Par défaut : phase de sélection des pièces
@@ -568,7 +607,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
   if (!is_null($phase_text)) {
     $form["textes"]["phase"] = array(
       "#type" => "markup",
-      "#value" => $phase_text
+      "#markup" => $phase_text
     );
   }
   // Log des événements
@@ -1073,6 +1112,7 @@ function kw_djambi_game_form_accept_peace_submit($form, &$form_state) {
  * Soumission du bouton "Refuser une partie nulle"
  */
 function kw_djambi_game_form_reject_peace_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
   $grid = $form['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->rejectDraw();
@@ -1298,7 +1338,8 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
     }
     $rows[] = array(
       'data' => array(
-          array('data' => t('Great Beloved Ruler of Djambi'), 'header' => TRUE),
+          array('data' => count($winners) == 1 ? t('Great Beloved Ruler of Djambi') : t("No winner in this game... Last standing teams :"),
+              'header' => TRUE),
           array('data' => t('!pieces', array(
               '!pieces' => implode(', ', $winners)))
           )
