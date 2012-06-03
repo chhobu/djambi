@@ -3,109 +3,114 @@
  * Implements hook_schema().
  */
 function kw_djambi_schema() {
-  $schema["djambi_node"] = array(
-    "description" => t("Extra data used by djambi nodes"),
-    "fields" => array(
-      "nid" => array(
-        "type" => "int",
-        "not null" => TRUE,
-        "unsigned" => TRUE,
-        "default" => "0"
+  $schema['djambi_node'] = array(
+    'description' => t('Extra data used by djambi nodes'),
+    'fields' => array(
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => '0'
       ),
-      "mode" => array(
-        "type" => "varchar",
-        "length" => 20
+      'mode' => array(
+        'type' => 'varchar',
+        'length' => 20
       ),
-      "points" => array(
-        "type" => "int",
-        "not null" => TRUE,
-        "unsigned" => TRUE,
-        "default" => 0
+      'points' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => 0
       ),
-      "status" => array(
-        "type" => "varchar",
-        "length" => 20
+      'status' => array(
+        'type' => 'varchar',
+        'length' => 20
       ),
-      "nb_moves" => array(
-        "type" => "int",
-        "not null" => TRUE,
-        "unsigned" => TRUE,
-        "default" => "0"
+      'nb_moves' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => '0'
       ),
-      "data" => array(
-        "type" => "blob",
-        "not null" => TRUE,
-        "size" => "big",
-        "serialize" => TRUE
+      'data' => array(
+        'type' => 'blob',
+        'not null' => TRUE,
+        'size' => 'big',
+        'serialize' => TRUE
       ),
-      "begin" => array(
-        "type" => "int",
-        "unsigned" => TRUE
+      'begin' => array(
+        'type' => 'int',
+        'unsigned' => TRUE
       ),
-      "changed" => array(
-        "type" => "int",
-        "unsigned" => TRUE
+      'changed' => array(
+        'type' => 'int',
+        'unsigned' => TRUE
       ),
-      "autodelete" => array(
-        "type" => "int",
-        "unsigned" => TRUE
+      'autodelete' => array(
+        'type' => 'int',
+        'unsigned' => TRUE
+      ),
+      'compressed' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'default' => 0,
       )
     ),
-    "primary key" => array("nid"),
-    "foreign keys" => array(
-      "node" => array(
-        "table" => "node",
-        "columns" => array("nid" => "nid"),
+    'primary key' => array('nid'),
+    'foreign keys' => array(
+      'node' => array(
+        'table' => 'node',
+        'columns' => array('nid' => 'nid'),
       ),
     )
   );
-  $schema["djambi_users"] = array(
-    "description" => t("Users involved in a djambi game."),
-    "fields" => array(
-      "djuid" => array(
-        "type" => "serial",
-        "not null" => TRUE,
-        "unsigned" => TRUE
+  $schema['djambi_users'] = array(
+    'description' => t('Users involved in a djambi game.'),
+    'fields' => array(
+      'djuid' => array(
+        'type' => 'serial',
+        'not null' => TRUE,
+        'unsigned' => TRUE
       ),
-      "nid" => array(
-        "type" => "int",
-        "not null" => TRUE,
-        "unsigned" => TRUE,
-        "default" => "0"
+      'nid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => '0'
       ),
-      "uid" => array(
-        "type" => "int",
-        "not null" => TRUE,
-        "unsigned" => TRUE,
-        "default" => "0"
+      'uid' => array(
+        'type' => 'int',
+        'not null' => TRUE,
+        'unsigned' => TRUE,
+        'default' => '0'
       ),
-      "status" => array(
-        "type" => "varchar",
-        "length" => 20
+      'status' => array(
+        'type' => 'varchar',
+        'length' => 20
       ),
-      "faction" => array(
-        "type" => "varchar",
-        "length" => 20
+      'faction' => array(
+        'type' => 'varchar',
+        'length' => 20
       ),
-      "ranking" => array(
-        "type" => "int",
-        "unsigned" => TRUE,
-        "size" => "tiny"
+      'ranking' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+        'size' => 'tiny'
       ),
-      "data" => array(
-        "type" => "blob",
-        "not null" => TRUE,
-        "serialize" => TRUE
+      'data' => array(
+        'type' => 'blob',
+        'not null' => TRUE,
+        'serialize' => TRUE
       )
     ),
-    "primary key" => array("djuid"),
-    "indexes" => array(
-      "link_to_node" => array('nid'),
+    'primary key' => array('djuid'),
+    'indexes' => array(
+      'link_to_node' => array('nid'),
     ),
-    "foreign keys" => array(
-      "node" => array(
-        "table" => "node",
-        "columns" => array("nid" => "nid"),
+    'foreign keys' => array(
+      'node' => array(
+        'table' => 'node',
+        'columns' => array('nid' => 'nid'),
       ),
     )
   );
@@ -114,4 +119,12 @@ function kw_djambi_schema() {
 
 function kw_djambi_uninstall() {
   variable_del('kw_djambi_game_sequence');
+}
+
+function kw_djambi_update_7100() {
+  db_add_field('djambi_node', 'compressed', array(
+    'type' => 'int',
+    'not null' => TRUE,
+    'default' => 0,
+  ));
 }

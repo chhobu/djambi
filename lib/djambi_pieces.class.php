@@ -3,7 +3,7 @@ class DjambiPiece {
   private $faction, $alive, $shortname, $longname, $type, $habilities, $position, $image, $movable,
     $allowable_moves;
 
-  public function __construct(DjambiPoliticalFaction $faction, $shortname, $longname, $type, $x, $y, $alive) {
+  public function __construct(DjambiPoliticalFaction $faction, $piece_scheme_id, $shortname, $longname, $type, $x, $y, $alive) {
     $this->faction = $faction;
     $this->alive = $alive;
     $this->shortname = $shortname;
@@ -11,20 +11,20 @@ class DjambiPiece {
     $this->type = $type;
     $this->image = drupal_get_path("module", "kw_djambi"). "/img/" . $type . ".png";
     $this->habilities = array(
-      "limited_move"       => FALSE,
-      "access_throne"      => FALSE,
-      "kill_throne_leader" => FALSE,
-      "move_dead_pieces"   => FALSE,
-      "move_living_pieces" => FALSE,
-      "kill_by_proximity"  => FALSE,
-      "kill_by_attack"     => FALSE,
-      "kill_signature"     => FALSE,
-      "must_live"          => FALSE
+      'limited_move'       => FALSE,
+      'access_throne'      => FALSE,
+      'kill_throne_leader' => FALSE,
+      'move_dead_pieces'   => FALSE,
+      'move_living_pieces' => FALSE,
+      'kill_by_proximity'  => FALSE,
+      'kill_by_attack'     => FALSE,
+      'kill_signature'     => FALSE,
+      'must_live'          => FALSE
     );
     $this->setPosition($x, $y);
     $this->movable = FALSE;
     $this->allowable_moves = array();
-    $this->id = $faction->getId()."-".$this->shortname;
+    $this->id = $faction->getId() . '-' . $piece_scheme_id;
     return $this;
   }
 
@@ -269,16 +269,6 @@ class DjambiPiece {
     $destination = $this->checkNewPosition($destination);
     $this->faction->getBattlefield()->logMove($victim, $destination, "necromobility", $this);
     $victim->setPosition($destination["x"], $destination["y"]);
-  }
-
-  public function toDatabase() {
-    return array(
-      "habilities" => $this->habilities,
-      "shortname" => $this->getShortname(),
-      "longname" => $this->getLongname(),
-      "image" => $this->getImage(),
-      "type" => $this->getType()
-    );
   }
 
 }

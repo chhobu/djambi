@@ -13,7 +13,7 @@ Drupal.behaviors.Djambi = {attach: function(context) {(function ($) {
     }
   );
   var $pieces = $(".piece.movable");
-  if ($("table.djambigrid td.with-selected-piece").length == 0) {
+  if ($pieces.length > 0 && $("table.djambigrid td.with-selected-piece").length == 0) {
     $pieces.draggable({
       cursor: "move",
       containment: $("table.djambigrid tbody"),

@@ -7,3 +7,4 @@ package = Kweb Djambi
 files[] = lib/djambi_battlefield.class.php
 files[] = lib/djambi_faction.class.php
 files[] = lib/djambi_pieces.class.php
+files[] = lib/djambi_piece_scheme.class.php

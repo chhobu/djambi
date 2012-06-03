@@ -1,7 +1,8 @@
 <?php
 class DjambiPoliticalFaction {
-  private $uid, $id, $name, $class, $control, $alive, $skipped_turns,
-    $pieces, $battlefield = NULL, $start_order, $playing, $last_draw_proposal, $draw_status;
+  private $uid, $id, $name, $class, $control, $alive,
+    $pieces, $battlefield = NULL, $start_order, $playing,
+    $skipped_turns, $last_draw_proposal, $draw_status;
 
   public function __construct($uid, $id, $data) {
     $this->uid = $uid;
@@ -16,6 +17,15 @@ class DjambiPoliticalFaction {
     $this->skipped_turns = isset($data['skipped_turns']) ? $data['skipped_turns'] : 0;
     $this->last_draw_proposal = isset($data['last_draw_proposal']) ? $data['last_draw_proposal'] : 0;
     $this->draw_status = isset($data['draw_status']) ? $data['draw_status'] : NULL;
+  }
+
+  public static function buildFactionsInfos() {
+    $factions = array();
+    $factions['R'] = array('name' => 'Red', 'class' =>  'rouge', 'start_order' => 1);
+    $factions['B'] = array('name' => 'Blue', 'class' => 'bleu', 'start_order' => 2);
+    $factions['J'] = array('name' => 'Yellow', 'class' => 'jaune', 'start_order' => 3);
+    $factions['V'] = array('name' => 'Green', 'class' =>  'vert', 'start_order' => 4);
+    return $factions;
   }
 
   public function getUid() {
@@ -140,14 +150,14 @@ class DjambiPoliticalFaction {
     foreach($pieces_scheme as $key => $scheme) {
       $alive = TRUE;
       if (!is_null($deads) && is_array($deads)) {
-        if (array_search($this->getId(). "-" . $key, $deads) !== FALSE) {
+        if (array_search($this->getId(). '-' . $key, $deads) !== FALSE) {
           $alive = FALSE;
         }
       }
-      $piece = new DjambiPiece($this, $scheme["shortname"], $scheme["longname"],
-        $scheme["type"], $start_scheme[$key]["x"], $start_scheme[$key]["y"], $alive);
-      if (isset($scheme["habilities"]) && is_array($scheme["habilities"])) {
-        foreach($scheme["habilities"] as $hability => $value) {
+      $piece = new DjambiPiece($this, $key, $scheme['shortname'], $scheme['longname'],
+        $scheme['type'], $start_scheme[$key]['x'], $start_scheme[$key]['y'], $alive);
+      if (isset($scheme['habilities']) && is_array($scheme['habilities'])) {
+        foreach($scheme['habilities'] as $hability => $value) {
           $piece->setHability($hability, $value);
         }
       }
@@ -157,13 +167,13 @@ class DjambiPoliticalFaction {
 
   public function skipTurn() {
     $this->addSkippedTurn();
-    $this->getBattlefield()->logEvent("event", "SKIPPED_TURN", array('faction1' => $this->getId(),
+    $this->getBattlefield()->logEvent('event', 'SKIPPED_TURN', array('faction1' => $this->getId(),
         '!nb' => $this->getSkippedTurns()));
     $this->getBattlefield()->changeTurn();
   }
 
   public function withdraw() {
-    $this->getBattlefield()->logEvent("event", "WITHDRAWAL", array('faction1' => $this->getId()));
+    $this->getBattlefield()->logEvent('event', 'WITHDRAWAL', array('faction1' => $this->getId()));
     $this->setDead();
   }
 
