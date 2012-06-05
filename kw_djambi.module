@@ -53,24 +53,37 @@ function kw_djambi_new_game($mode) {
     return drupal_not_found();
   }
   if ($mode == KW_DJAMBI_MODE_SANDBOX) {
-    if($user->uid > 0) { // TODO : si joueur non identifié, création d'un cookie
-      $q = db_select("djambi_users", "u");
-      $q->join("djambi_node", "n", "n.nid = u.nid");
-      $q->join("node", "n2", "n.nid = n2.nid");
-      $q->fields("n", array("nid"));
-      $q->fields("n2", array("created"));
-      $q->condition("n.status", KW_DJAMBI_STATUS_PENDING);
-      $q->condition("n.mode", KW_DJAMBI_MODE_SANDBOX);
-      $q->condition("u.uid", $user->uid);
-      $results = $q->execute()->fetchAll();
-      if ($results) {
-        $result = current($results);
-        drupal_set_message(t("You already have begun a sandbox game on !date. "
-        . "This game does not seem to be finished : "
-        . " switching back to the last played move of the game.",
-          array("!date" => format_date($result->created))));
-        drupal_goto("node/" . $result->nid);
+    if($user->uid == 0) {
+      if (empty($_COOKIE['Drupal_visitor_djambi_cookie_id'])) {
+        $cookie = uniqid();
+        user_cookie_save(array('djambi_cookie_id' => $cookie));
       }
+      else {
+        $cookie = $_COOKIE['Drupal_visitor_djambi_cookie_id'];
+      }
+    }
+    else {
+      $cookie = NULL;
+    }
+    $q = db_select("djambi_users", "u");
+    $q->join("djambi_node", "n", "n.nid = u.nid");
+    $q->join("node", "n2", "n.nid = n2.nid");
+    $q->fields("n", array("nid"));
+    $q->fields("n2", array("created"));
+    $q->condition("n.status", KW_DJAMBI_STATUS_PENDING);
+    $q->condition("n.mode", KW_DJAMBI_MODE_SANDBOX);
+    $q->condition("u.uid", $user->uid);
+    if ($user->uid == 0 && !is_null($cookie)) {
+      $q->condition('u.cookie', $cookie);
+    }
+    $results = $q->execute()->fetchAll();
+    if ($results) {
+      $result = current($results);
+      drupal_set_message(t("You already have begun a sandbox game on !date. "
+      . "This game does not seem to be finished : "
+      . " switching back to the last played move of the game.",
+        array("!date" => format_date($result->created))));
+      drupal_goto("node/" . $result->nid);
     }
     $node->dj_players = 4;
     $node->dj_mode = $mode;
@@ -78,9 +91,10 @@ function kw_djambi_new_game($mode) {
     $node->dj_begin = time();
     $node->dj_delete = _kw_djambi_autodelete_time($mode);
     $node->dj_users = array_fill(1, $node->dj_players, array(
-      "user" => $user,
-      "data" => array("ip" => $_SERVER["REMOTE_ADDR"]),
-      "status" => KW_DJAMBI_USER_READY
+      'uid' => $user->uid,
+      'data' => array('ip' => $_SERVER['REMOTE_ADDR']),
+      'status' => KW_DJAMBI_USER_READY,
+      'cookie' => $cookie
     ));
   }
   $battlefield = _kw_djambi_build_battlefield($node, $node->dj_players);
@@ -145,10 +159,11 @@ function kw_djambi_node_insert($node) {
       $user = current($node->dj_users);
       db_insert('djambi_users')->fields(array(
         'nid' => $node->nid,
-        'uid' => $user['user']->uid,
+        'uid' => $user['uid'],
         'status' => $user['status'],
         'faction' => $faction->getId(),
-        'data' => $user['data']
+        'data' => $user['data'],
+        'cookie' => $user['cookie']
       ))->execute();
       if (next($node->dj_users) === FALSE) {
         break;
@@ -189,7 +204,7 @@ function _kw_djambi_build_battlefield($node, $players = 4) {
       if ($i > $players) {
         break;
       }
-      $factions[] = new DjambiPoliticalFaction($node->dj_users[$i]["user"]->uid, $key,
+      $factions[] = new DjambiPoliticalFaction($node->dj_users[$i], $key,
           $faction_data);
     }
     $battlefield = new DjambiBattlefield(0, TRUE, array('factions' => $factions));
@@ -204,12 +219,12 @@ function _kw_djambi_build_battlefield($node, $players = 4) {
       drupal_set_message(t("Sorry, we were unabled to load the selected game."), "error");
     }
     $query = db_select("djambi_users", "dju")
-      ->fields("dju", array("uid", "faction"))
+      ->fields("dju", array("djuid", "uid", "faction", "cookie"))
       ->condition("dju.nid", $node->nid);
     $users_result = $query->execute()->fetchAll();
     $users = array();
     foreach($users_result as $key => $user) {
-      $users[$user->faction] = $user->uid;
+      $users[$user->faction] = array('djuid' => $user->djuid, 'uid' => $user->uid, 'cookie' => $user->cookie);
     }
     $data = $result['data'];
 
@@ -309,7 +324,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
         break;
       }
     }
-    if ($faction->getControl()->getUid() == $user->uid) {
+    if (_kw_djambi_check_current_user($faction->getControl()->getUserData())) {
       $form['actions']['descriptions'] = array(
           '#type' => 'item',
           '#title' => t('Now playing') . ' : ',
@@ -347,7 +362,8 @@ function kw_djambi_game_form($form, &$form_state, $node) {
       );
     }
   }
-  elseif ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING && $faction->getControl()->getUid() == $user->uid) {
+  elseif ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING &&
+      _kw_djambi_check_current_user($faction->getControl()->getUserData())) {
     $actions = array();
     $descriptions = array();
     // Annulation de sélection d'une pièce
@@ -443,9 +459,10 @@ function kw_djambi_game_form($form, &$form_state, $node) {
       );
     }
     // Sélection des pièces
-    if ($faction->getControl()->getUid() == $user->uid) {
+    $is_current_user = _kw_djambi_check_current_user($faction->getControl()->getUserData());
+    if ($is_current_user) {
       $piece_selection_phases = array('piece_selection', 'piece_destination');
-      if ($faction->getUid() == $user->uid && in_array($form_state['kw_djambi']['phase'], $piece_selection_phases)) {
+      if ($is_current_user && in_array($form_state['kw_djambi']['phase'], $piece_selection_phases)) {
         /* @var $piece DjambiPiece */
         foreach($faction->getControlledPieces() as $key => $piece) {
           if ($piece->isMovable()) {
@@ -793,7 +810,8 @@ function kw_djambi_piece_selection_validate(&$errors, $piece_id, DjambiBattlefie
   $errors = array();
   $piece_form_locator = "pieces[movable][" . $piece_id;
   $faction = $grid->getPlayingFaction();
-  if ($faction->getUid() != $user->uid) {
+  $is_current_user = _kw_djambi_check_current_user($faction->getControl()->getUserData());
+  if (!$is_current_user) {
     $errors[] = array(
       "location" => $piece_form_locator,
       "msg" => t("You do not own the !faction pieces.", array("!faction", $faction->getName("t")))
@@ -1547,6 +1565,27 @@ function _kw_djambi_stats_get_winners($grid, $price, $stats, $type = 'piece', $o
     }
   }
   return $winners_string_array;
+}
+
+function _kw_djambi_check_current_user($user_data) {
+  global $user;
+  if ($user->uid > 0) {
+    if ($user_data['uid'] == $user->uid) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+  else {
+    if (!empty($_COOKIE['Drupal_visitor_djambi_cookie_id'])
+        && $user_data['cookie'] == $_COOKIE['Drupal_visitor_djambi_cookie_id']) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
 }
 
 /**

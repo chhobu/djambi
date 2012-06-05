@@ -1,11 +1,11 @@
 <?php
 class DjambiPoliticalFaction {
-  private $uid, $id, $name, $class, $control, $alive,
+  private $user_data, $id, $name, $class, $control, $alive,
     $pieces, $battlefield = NULL, $start_order, $playing,
     $skipped_turns, $last_draw_proposal, $draw_status;
 
-  public function __construct($uid, $id, $data) {
-    $this->uid = $uid;
+  public function __construct($user_data, $id, $data) {
+    $this->user_data = $user_data;
     $this->id = $id;
     $this->name = $data['name'];
     $this->class = $data['class'];
@@ -28,8 +28,12 @@ class DjambiPoliticalFaction {
     return $factions;
   }
 
-  public function getUid() {
-    return $this->uid;
+  public function getUserData() {
+    return $this->user_data;
+  }
+
+  public function getUserDataItem($item) {
+    return $this->user_data[$item];
   }
 
   public function getId() {

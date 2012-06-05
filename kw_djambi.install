@@ -101,11 +101,17 @@ function kw_djambi_schema() {
         'type' => 'blob',
         'not null' => TRUE,
         'serialize' => TRUE
+      ),
+      'cookie' => array(
+        'type' => 'varchar',
+        'length' => 23
       )
     ),
     'primary key' => array('djuid'),
     'indexes' => array(
       'link_to_node' => array('nid'),
+      'link_to_user' => array('uid'),
+      'link_to_cookie' => array('cookie')
     ),
     'foreign keys' => array(
       'node' => array(
@@ -127,4 +133,13 @@ function kw_djambi_update_7100() {
     'not null' => TRUE,
     'default' => 0,
   ));
+}
+
+function kw_djambi_update_7101() {
+  db_add_field('djambi_users', 'cookie', array(
+    'type' => 'varchar',
+    'length' => 23
+  ));
+  db_add_index('djambi_users', 'link_to_user', array('uid'));
+  db_add_index('djambi_users', 'link_to_cookie', array('cookie'));
 }

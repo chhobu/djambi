@@ -2,7 +2,7 @@
 name = Djambi
 description = "Machiavelli chess online !"
 core = 7.x
-version = 7.x-0.1-dev
+version = 7.x-1.0-dev
 package = Kweb Djambi
 files[] = lib/djambi_battlefield.class.php
 files[] = lib/djambi_faction.class.php
