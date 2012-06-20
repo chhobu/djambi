@@ -5,17 +5,19 @@ define('KW_DJAMBI_STATUS_PENDING', 'pending');
 define('KW_DJAMBI_STATUS_FINISHED', 'finished');
 define('KW_DJAMBI_STATUS_DRAW_PROPOSAL', 'draw_proposal');
 
-define('KW_DJAMBI_USER_PLAYING', 'playing');
-define('KW_DJAMBI_USER_WINNER', 'winner');
-define('KW_DJAMBI_USER_LOSER', 'loser');
-define('KW_DJAMBI_USER_DEFECT', 'defect');
-define('KW_DJAMBI_USER_EMPTY_SLOT', 'empty');
-define('KW_DJAMBI_USER_READY', 'ready');
-define('KW_DJAMBI_USER_WAITING', 'waiting');
+define('KW_DJAMBI_USER_PLAYING', 'playing'); // Partie en cours
+define('KW_DJAMBI_USER_WINNER', 'winner'); // Fin du jeu, vainqueur
+define('KW_DJAMBI_USER_DRAW', 'draw'); // Fin du jeu, nul
+define('KW_DJAMBI_USER_LOSER', 'loser'); // Fin du jeu, perdant
+define('KW_DJAMBI_USER_DEFECT', 'defect'); // Fin du jeu, disqualification
+define('KW_DJAMBI_USER_EMPTY_SLOT', 'empty'); // Création de partie, place libre
+define('KW_DJAMBI_USER_READY', 'ready'); // Création de partie, prêt à jouer
+
 
 class DjambiBattlefield {
   private $id, $rows, $cols, $cells, $factions, $directions,
-    $moves, $mode, $status, $turns, $play_order, $events, $options;
+    $moves, $mode, $status, $turns, $play_order, $events, $options,
+    $living_factions_at_turn_begin;
 
   public function __construct($id, $new_game, $data) {
     $this->id = $id;
@@ -348,8 +350,10 @@ class DjambiBattlefield {
         if ($event['event'] == 'GAME_OVER') {
           $faction = $this->getFactionById($event['args']['faction1']);
           $faction->setAlive(TRUE);
+          $faction->setStatus(KW_DJAMBI_USER_PLAYING);
+          $faction->setRanking(NULL);
           $pieces = $faction->getPieces();
-          foreach ($pieces as $key => $piece) {
+          foreach ($pieces as $piece) {
             if ($piece->getHability('must_live')) {
               $piece->setDead(TRUE);
             }
@@ -375,6 +379,17 @@ class DjambiBattlefield {
   public function endWithADraw() {
     $this->logEvent("event", "DRAW");
     $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
+    foreach ($this->factions as $faction) {
+      if ($faction->isAlive()) {
+        $living_factions[] = $faction;
+
+      }
+    }
+    $ranking = count($living_factions);
+    foreach ($living_factions as $faction) {
+      $faction->setStatus(KW_DJAMBI_USER_DRAW);
+      $faction->setRanking($ranking);
+    }
   }
 
   public function changeTurn() {
@@ -424,17 +439,19 @@ class DjambiBattlefield {
     if ($total < 2) {
       $this->logEvent("event", "END");
       if ($total == 0) {
-        $this->logEvent("event", "DRAW");
+        $this->endWithADraw();
       }
       else {
         $winner_id = current($living_factions);
         $winner = $this->getFactionById($winner_id);
-        $this->logEvent('event', 'THE_WINNER_IS', array('faction1' => $faction->getId()));
+        $winner->setStatus(KW_DJAMBI_USER_WINNER);
+        $winner->setRanking(1);
+        $this->logEvent('event', 'THE_WINNER_IS', array('faction1' => $winner->getId()));
       }
       $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
       return;
     }
-    // Attribution des pièces mortes à l'occupant du trône
+    // Attribution des pièces vivantes à l'occupant du trône
     foreach ($this->getFactions() as $faction) {
       if (!$faction->getControl()->isAlive()) {
         $kings = array();
@@ -451,6 +468,14 @@ class DjambiBattlefield {
         if (!empty($kings)) {
           $kings = array_unique($kings);
           if (count($kings) == 1) {
+            // Cas d'un abandon : lors de la prise de pouvoir, retrait de l'ancien chef
+            $pieces = $faction->getPieces();
+            foreach ($pieces as $key => $piece) {
+              if ($piece->isAlive() && $piece->getHability('must_live')) {
+                $piece->setDead();
+              }
+            }
+            // Prise de contrôle
             $faction->setControl($this->getFactionById(current($kings)));
           }
         }
@@ -468,6 +493,11 @@ class DjambiBattlefield {
 
   public function setStatus($status) {
     $this->status = $status;
+    return $this;
+  }
+
+  public function getLivingFactionsAtTurnBegin() {
+    return $this->living_factions_at_turn_begin;
   }
 
   private function definePlayOrder() {
@@ -483,6 +513,7 @@ class DjambiBattlefield {
         $nb_factions++;
       }
     }
+    $this->living_factions_at_turn_begin = $nb_factions;
     $total_factions = count($orders["factions"]);
     $thrones = $this->getSpecialCells("throne");
     $nb_thrones = count($thrones);
@@ -649,7 +680,7 @@ class DjambiBattlefield {
     }
     $current_order = current($this->play_order);
     $selected_faction = $this->getFactionById($current_order["side"]);
-    $selected_faction->isPlaying(TRUE);
+    $selected_faction->setPlaying(TRUE);
     $begin = !empty($last_turn) ? $last_turn['end'] + 1 : time();
     if ($new_turn) {
       $this->turns[] = array(

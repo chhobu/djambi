@@ -53,6 +53,7 @@ function kw_djambi_new_game($mode) {
     return drupal_not_found();
   }
   if ($mode == KW_DJAMBI_MODE_SANDBOX) {
+    // Création d'un cookie si l'utilisateur est anonyme
     if($user->uid == 0) {
       if (empty($_COOKIE['Drupal_visitor_djambi_cookie_id'])) {
         $cookie = uniqid();
@@ -65,6 +66,7 @@ function kw_djambi_new_game($mode) {
     else {
       $cookie = NULL;
     }
+    // Recherche d'une partie en cours pour l'utilisateur courant
     $q = db_select("djambi_users", "u");
     $q->join("djambi_node", "n", "n.nid = u.nid");
     $q->join("node", "n2", "n.nid = n2.nid");
@@ -77,6 +79,7 @@ function kw_djambi_new_game($mode) {
       $q->condition('u.cookie', $cookie);
     }
     $results = $q->execute()->fetchAll();
+    // Si partie en cours : redirection
     if ($results) {
       $result = current($results);
       drupal_set_message(t("You already have begun a sandbox game on !date. "
@@ -219,15 +222,20 @@ function _kw_djambi_build_battlefield($node, $players = 4) {
       drupal_set_message(t("Sorry, we were unabled to load the selected game."), "error");
     }
     $query = db_select("djambi_users", "dju")
-      ->fields("dju", array("djuid", "uid", "faction", "cookie"))
+      ->fields("dju", array("djuid", "uid", "faction", "cookie", "status", "ranking"))
       ->condition("dju.nid", $node->nid);
     $users_result = $query->execute()->fetchAll();
     $users = array();
     foreach($users_result as $key => $user) {
-      $users[$user->faction] = array('djuid' => $user->djuid, 'uid' => $user->uid, 'cookie' => $user->cookie);
+      $users[$user->faction] = array(
+          'djuid' => $user->djuid,
+          'uid' => $user->uid,
+          'cookie' => $user->cookie,
+          'status' => $user->status,
+          'ranking' => $user->ranking
+      );
     }
     $data = $result['data'];
-
     if ($result['compressed']) {
       $data = gzuncompress($data);
     }
@@ -311,7 +319,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
   $phase_text = NULL;
   $faction = $grid->getPlayingFaction();
   // Interface de réponse sur proposition de partie nulle
-  if ($grid->getStatus() == KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
+  if ($faction && $grid->getStatus() == KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
     $form['actions'] = array(
         '#type' => 'fieldset',
         '#title' => t('Actions'),
@@ -362,7 +370,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
       );
     }
   }
-  elseif ($grid->getStatus() == KW_DJAMBI_STATUS_PENDING &&
+  elseif ($faction && $grid->getStatus() == KW_DJAMBI_STATUS_PENDING &&
       _kw_djambi_check_current_user($faction->getControl()->getUserData())) {
     $actions = array();
     $descriptions = array();
@@ -387,14 +395,16 @@ function kw_djambi_game_form($form, &$form_state, $node) {
     // Passer son tour
     $allowed_skip_turns = $grid->getOption('allowed_skipped_turns_per_user');
     if ($allowed_skip_turns == -1 || $allowed_skip_turns > $faction->getSkippedTurns()) {
-      $actions['skip_turn'] = array(
-        '#type' => 'submit',
-        '#value' => $allowed_skip_turns == -1 ? t('Skip turn') : t('Skip turn (!nb of !max already skipped)', array(
+      if (empty($form_state['kw_djambi']['selected_piece'])) {
+        $actions['skip_turn'] = array(
+          '#type' => 'submit',
+          '#value' => $allowed_skip_turns == -1 ? t('Skip turn') : t('Skip turn (!nb of !max already skipped)', array(
             '!nb' => $faction->getSkippedTurns(), '!max' => $allowed_skip_turns)),
-        '#submit' => array('kw_djambi_game_form_skip_turn_submit'),
-        '#ajax' => $ajax_settings
-      );
-      if ($allowed_skip_turns) {
+          '#submit' => array('kw_djambi_game_form_skip_turn_submit'),
+          '#ajax' => $ajax_settings
+        );
+      }
+      if ($allowed_skip_turns == -1) {
         $descriptions[] = t('There is no limitation concerning turn skippings.');
       }
       else {
@@ -1148,17 +1158,33 @@ function _kw_djambi_save_game(DjambiBattlefield $grid) {
   if ($compress) {
     $data = gzcompress($data);
   }
-  $query = db_update('djambi_node');
-  $query->fields(array(
-      'nb_moves' => count($grid->getTurns()),
+  $query1 = db_update('djambi_node');
+  $moves = 0;
+  foreach ($grid->getMoves() as $move) {
+    if ($move['type'] == 'move') {
+      $moves++;
+    }
+  }
+  $query1->fields(array(
+      'nb_moves' => $moves,
       'data' => $data,
       'changed' => time(),
       'status' => $grid->getStatus(),
       'autodelete' => _kw_djambi_autodelete_time($grid->getMode()),
       'compressed' => $compress ? 1 : 0
   ));
-  $query->condition('nid', $grid->getId());
-  $query->execute();
+  $query1->condition('nid', $grid->getId());
+  $query1->execute();
+  foreach ($grid->getFactions() as $key => $faction) {
+    $query2 = db_update('djambi_users');
+    $query2->fields(array(
+        'status' => $faction->getStatus(), // FIXME : marche pas !!!!
+        'ranking' => $faction->getRanking()
+    ));
+    $query2->condition('nid', $grid->getId());
+    $query2->condition('faction', $faction->getId());
+    $query2->execute();
+  }
 }
 
 /**
@@ -1379,12 +1405,14 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
             '!side' => '<span class="faction ' . $faction->getClass() . '">' . $faction->getName() . '</span>'
           ));
     }
-    $rows[] = array(
-      'data' => array(
+    if (!empty($ranking_array)) {
+      $rows[] = array(
+        'data' => array(
           array('data' => t('Ashamed loser opponents'), 'header' => TRUE),
           array('data' => theme('item_list', array('items' => $ranking_array)))
-      )
-    );
+        )
+      );
+    }
     if (!empty($stats['mobility']) && max($stats['mobility']) > 1) {
       $move =
       $rows[] = array(
