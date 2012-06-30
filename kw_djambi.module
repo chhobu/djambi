@@ -37,6 +37,20 @@ function kw_djambi_game_access($mode) {
 }
 
 /**
+ * Implements hook_cron().
+ */
+function kw_djambi_cron() {
+  $q = db_select('djambi_node', 'dj');
+  $q->fields('dj', array('nid'));
+  $q->condition('dj.autodelete', time(), '<');
+  $q->condition('dj.autodelete', 0, '!=');
+  $nids = $q->execute()->fetchCol('nid');
+  if (!empty($nids)) {
+    node_delete_multiple($nids);
+  }
+}
+
+/**
  * Création d'une nouvelle partie
  * @param String $mode
  */
@@ -135,6 +149,33 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
   if (!$form["nid"]["#value"]) {
     drupal_goto("starting-block");
   }
+  $node = $form["#node"];
+  $grid = _kw_djambi_build_battlefield($node);
+  if ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+    $form['djambi_mode'] = array(
+        '#type' => 'value',
+        '#value' => $grid->getMode()
+    );
+    $form['no_autodelete'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Do not autodelete this game'),
+      '#description' => t('Finished or inactive games are automatically removed after an amount of time.'
+         .' Check this box to keep this game alive.'),
+      '#default_value' => $grid->getInfo('autodelete') == 0 ? 1 : 0,
+      '#return_value' => 1
+    );
+    $form['#submit'][] = 'kw_djambi_node_form_extra_submit';
+  }
+}
+
+function kw_djambi_node_form_extra_submit($form, &$form_state) {
+  if (isset($form_state['values']['no_autodelete'])) {
+    $q = db_update('djambi_node')
+    -> fields(array('autodelete' => $form_state['values']['no_autodelete'] == 1 ? 0 :
+        _kw_djambi_autodelete_time($form['djambi_mode']['#value'])))
+    -> condition('nid', $form['#node']->nid)
+    -> execute();
+  }
 }
 
 /**
@@ -215,7 +256,7 @@ function _kw_djambi_build_battlefield($node, $players = 4) {
   }
   else {
     $query = db_select("djambi_node", "dj")
-      ->fields("dj", array("nid", "data", "status", "mode", "compressed"))
+      ->fields("dj", array("nid", "data", "status", "mode", "compressed", "autodelete"))
       ->condition("dj.nid", $node->nid);
     $result = $query->execute()->fetchAssoc();
     if (!$result) {
@@ -244,6 +285,7 @@ function _kw_djambi_build_battlefield($node, $players = 4) {
     $battlefield = new DjambiBattlefield($result["nid"], FALSE, $data);
     $battlefield->setMode($result["mode"]);
     $battlefield->setStatus($result["status"]);
+    $battlefield->setInfo('autodelete', $result['autodelete']);
     $battlefield->play();
     return $battlefield;
   }
@@ -1170,7 +1212,7 @@ function _kw_djambi_save_game(DjambiBattlefield $grid) {
       'data' => $data,
       'changed' => time(),
       'status' => $grid->getStatus(),
-      'autodelete' => _kw_djambi_autodelete_time($grid->getMode()),
+      'autodelete' => $grid->getInfo('autodelete') == 0 ? 0 : _kw_djambi_autodelete_time($grid->getMode()),
       'compressed' => $compress ? 1 : 0
   ));
   $query1->condition('nid', $grid->getId());

@@ -17,7 +17,7 @@ define('KW_DJAMBI_USER_READY', 'ready'); // Création de partie, prêt à jouer
 class DjambiBattlefield {
   private $id, $rows, $cols, $cells, $factions, $directions,
     $moves, $mode, $status, $turns, $play_order, $events, $options,
-    $living_factions_at_turn_begin;
+    $infos, $living_factions_at_turn_begin;
 
   public function __construct($id, $new_game, $data) {
     $this->id = $id;
@@ -39,6 +39,18 @@ class DjambiBattlefield {
 
   public static function getModes() {
     return array(KW_DJAMBI_MODE_SANDBOX);
+  }
+
+  public function getInfo($info) {
+    if (!isset($this->infos[$info])) {
+      return FALSE;
+    }
+    return $this->infos[$info];
+  }
+
+  public function setInfo($info, $value) {
+    $this->infos[$info] = $value;
+    return $this;
   }
 
   private function loadBattlefield($data) {
