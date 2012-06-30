@@ -17,7 +17,7 @@ define('KW_DJAMBI_USER_READY', 'ready'); // Création de partie, prêt à jouer
 class DjambiBattlefield {
   private $id, $rows, $cols, $cells, $factions, $directions,
     $moves, $mode, $status, $turns, $play_order, $events, $options,
-    $infos, $living_factions_at_turn_begin;
+    $infos, $rules, $living_factions_at_turn_begin;
 
   public function __construct($id, $new_game, $data) {
     $this->id = $id;
@@ -37,8 +37,23 @@ class DjambiBattlefield {
     return FALSE;
   }
 
-  public static function getModes() {
-    return array(KW_DJAMBI_MODE_SANDBOX);
+  public static function getModes($with_description = FALSE) {
+    $modes = array(
+        KW_DJAMBI_MODE_SANDBOX => 'MODE_SANDBOX_DESCRIPTION'
+    );
+    if ($with_description) {
+      return $modes;
+    }
+    else {
+      return array_keys($modes);
+    }
+  }
+
+  public static function getAvailbaleNumberPlayers() {
+    return array(
+        //'3std' => '3STD_DESCRIPTION',
+        '4std' => '4STD_DESCRIPTION'
+    );
   }
 
   public function getInfo($info) {
@@ -91,11 +106,21 @@ class DjambiBattlefield {
     return $this;
   }
 
+  public static function retrieveDefaultOptions() {
+    return array(
+      'allowed_skipped_turns_per_user' => -1,
+      'turns_before_draw_proposal' => 10,
+      'piece_scheme' => 'standard',
+      'directions' => 'cardinal',
+      'rule_surrounding' => 'necrodependance'
+    );
+  }
+
   private function setDefaultOptions() {
-    $this->setOption('allowed_skipped_turns_per_user', -1);
-    $this->setOption('turns_before_draw_proposal', 10);
-    $this->setOption('piece_scheme', 'standard');
-    $this->setOption('directions', 'cardinal');
+    $defaults = self::retrieveDefaultOptions();
+    foreach ($defaults as $key => $value) {
+      $this->setOption($key, $value);
+    }
   }
 
   private function buildStdField($special_cells = array()) {
