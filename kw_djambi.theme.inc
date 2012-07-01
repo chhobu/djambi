@@ -79,8 +79,9 @@ function theme_djambi_grid($variables) {
       if (isset($form_pieces[$current_form_action]) && isset($form_pieces[$current_form_action]["#selected_piece_id"]) && $piece->getId() == $form_pieces[$current_form_action]["#selected_piece_id"]) {
         $extra_classes[] = "with-selected-piece";
       }
-      $row_inner_html .= "<div class='piece " . (!$piece->isAlive() ? "dead " : "alive ")
-      . $piece->getType() . " " . $faction->getControl()->getClass()
+      $row_inner_html .= "<div class='piece " . (!$piece->isAlive() ? "dead "
+      : "alive " . $piece->getType() . " " . ($faction->getControl()->isAlive() ? $faction->getControl()->getClass() . '-control ' : '')
+          . $faction->getClass() . '-origin')
       . (isset($form_pieces["movable"]) && $piece->isMovable() ? " movable" : " unmovable") . "' "
       . (isset($form_pieces["movable"]) && $piece->isMovable() ? ' data-moves="' . implode(' ', $moves) . '"' : '')
       . "title=\"" . ($piece->isAlive() ? (_kw_djambi_get_full_piece_name($piece) . ($piece->isMovable() ? " - "

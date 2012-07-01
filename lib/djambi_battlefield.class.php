@@ -8,7 +8,9 @@ define('KW_DJAMBI_STATUS_DRAW_PROPOSAL', 'draw_proposal');
 define('KW_DJAMBI_USER_PLAYING', 'playing'); // Partie en cours
 define('KW_DJAMBI_USER_WINNER', 'winner'); // Fin du jeu, vainqueur
 define('KW_DJAMBI_USER_DRAW', 'draw'); // Fin du jeu, nul
-define('KW_DJAMBI_USER_LOSER', 'loser'); // Fin du jeu, perdant
+define('KW_DJAMBI_USER_KILLED', 'killed'); // Fin du jeu, perdant
+define('KW_DJAMBI_USER_WITHDRAW', 'withdraw'); // Fin du jeu, abandon
+define('KW_DJAMBI_USER_SURROUNDED', 'surrounded'); // Fin du jeu, encerclement
 define('KW_DJAMBI_USER_DEFECT', 'defect'); // Fin du jeu, disqualification
 define('KW_DJAMBI_USER_EMPTY_SLOT', 'empty'); // Création de partie, place libre
 define('KW_DJAMBI_USER_READY', 'ready'); // Création de partie, prêt à jouer
@@ -17,13 +19,14 @@ define('KW_DJAMBI_USER_READY', 'ready'); // Création de partie, prêt à jouer
 class DjambiBattlefield {
   private $id, $rows, $cols, $cells, $factions, $directions,
     $moves, $mode, $status, $turns, $play_order, $events, $options,
-    $infos, $rules, $living_factions_at_turn_begin;
+    $infos, $rules, $living_factions_at_turn_begin, $summary;
 
   public function __construct($id, $new_game, $data) {
     $this->id = $id;
     $this->setDefaultOptions();
     $this->moves = array();
     $this->events = array();
+    $this->summary = array();
     if (!$new_game) {
       return $this->loadBattlefield($data);
     }
@@ -75,6 +78,7 @@ class DjambiBattlefield {
     $this->turns = isset($data['turns']) ? $data['turns'] : array();
     $this->points = isset($data['points']) ? $data['points'] : 0;
     $this->events = isset($data['events']) ? $data['events'] : array();
+    $this->summary = isset($data['summary']) ? $data['summary'] : array();
     $this->factions = array();
     if (isset($data['options']) && is_array($data['options'])) {
       foreach($data['options'] as $option => $value) {
@@ -106,18 +110,20 @@ class DjambiBattlefield {
     return $this;
   }
 
-  public static function retrieveDefaultOptions() {
+  public static function getDefaultOptions() {
     return array(
       'allowed_skipped_turns_per_user' => -1,
       'turns_before_draw_proposal' => 10,
       'piece_scheme' => 'standard',
       'directions' => 'cardinal',
-      'rule_surrounding' => 'throne_access'
+      'rule_surrounding' => 'loose', // throne_access, strict, loose
+      'rule_comeback' => 'never', // never, surrounding, always
+      'rule_vassalization' => 'temporary' // temporary, full_control
     );
   }
 
   private function setDefaultOptions() {
-    $defaults = self::retrieveDefaultOptions();
+    $defaults = self::getDefaultOptions();
     foreach ($defaults as $key => $value) {
       $this->setOption($key, $value);
     }
@@ -372,7 +378,7 @@ class DjambiBattlefield {
         $position = $cells[$move['from']];
         $piece->setPosition($position['x'], $position['y']);
         if ($move['type'] == 'murder') {
-          $piece->setDead(TRUE);
+          $piece->setAlive(TRUE);
         }
         if ($move['turn'] == $current_turn_key && $move['type'] == 'move' && !empty($move['acting'])) {
           $piece2 = $this->getPieceById($move['acting']);
@@ -384,52 +390,42 @@ class DjambiBattlefield {
     }
     foreach ($this->events as $key => $event) {
       if ($event['turn'] == $last_turn_key || $event['turn'] == $current_turn_key) {
-        if ($event['event'] == 'GAME_OVER') {
-          $faction = $this->getFactionById($event['args']['faction1']);
-          $faction->setAlive(TRUE);
-          $faction->setStatus(KW_DJAMBI_USER_PLAYING);
-          $faction->setRanking(NULL);
-          $pieces = $faction->getPieces();
-          foreach ($pieces as $piece) {
-            if ($piece->getHability('must_live')) {
-              $piece->setDead(TRUE);
-            }
-          }
-        }
-        if ($event['event'] == 'CHANGING_SIDE') {
-          $faction = $this->getFactionById($event['args']['faction1']);
-          $faction->setControl($faction, FALSE);
-          if (!empty($events['args']['!controlled'])) {
-            foreach ($events['args']['!controlled'] as $controlled_faction) {
-              $controlled_faction->setControl($faction, FALSE);
-            }
-          }
-        }
         if ($event['turn'] == $last_turn_key && in_array($event['event'], array('NEW_DJAMBI_GAME', 'NEW_TURN', 'TURN_BEGIN'))) {
           continue;
         }
         unset($this->events[$key]);
       }
     }
+    ksort($this->summary);
+    foreach ($this->summary as $turn => $data) {
+      if ($turn >= $last_turn_key) {
+        unset($this->summary[$turn]);
+      }
+      else {
+        $summary = $data;
+      }
+    }
+    foreach ($summary as $faction_key => $data) {
+      $faction = $this->getFactionById($faction_key);
+      $faction->setStatus($data['status']);
+      $faction->setControl($this->getFactionById($data['control']), FALSE);
+      $faction->setMaster(isset($data['master']) ? $data['master'] : NULL);
+    }
   }
 
   public function endWithADraw() {
     $this->logEvent("event", "DRAW");
     $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
-    foreach ($this->factions as $faction) {
-      if ($faction->isAlive()) {
-        $living_factions[] = $faction;
-
-      }
-    }
-    $ranking = count($living_factions);
+    $ranking = $this->countLivingFactions();
     foreach ($living_factions as $faction) {
       $faction->setStatus(KW_DJAMBI_USER_DRAW);
       $faction->setRanking($ranking);
     }
+    $this->updateSummary();
   }
 
   public function changeTurn() {
+    $changes = FALSE;
     // Log de la fin du tour
     $last_turn_key = $this->getCurrentTurnId();
     $this->turns[$last_turn_key]["end"] = time();
@@ -461,10 +457,13 @@ class DjambiBattlefield {
           $control_leader = $this->checkLeaderFreedom($leaders, $control_necro);
           if (!$control_leader) {
             $this->logEvent("event", "SURROUNDED", array('faction1' => $faction->getId()));
-            foreach ($leaders as $leader) {
-              $leader->setDead();
+            if ($this->getOption('rule_comeback') == 'never' && $this->getOption('rule_vassalization') == 'full_control') {
+              foreach ($leaders as $leader) {
+                $leader->setAlive(FALSE);
+              }
             }
-            $faction->setDead();
+            $faction->dieDieDie(KW_DJAMBI_USER_SURROUNDED);
+            $changes = TRUE;
           }
         }
         if ($control_leader) {
@@ -489,34 +488,46 @@ class DjambiBattlefield {
       return;
     }
     // Attribution des pièces vivantes à l'occupant du trône
+    $kings = array();
+    $thrones = $this->getSpecialCells("throne");
+    foreach ($thrones as $throne) {
+      if (!empty($this->cells[$throne]["occupant"])) {
+        $occupant = $this->cells[$throne]["occupant"];
+        if ($occupant->isAlive()) {
+          $kings[] = $occupant->getFaction()->getControl()->getId();
+          break;
+        }
+      }
+    }
+    $kings = array_unique($kings);
     foreach ($this->getFactions() as $faction) {
-      if (!$faction->getControl()->isAlive()) {
-        $kings = array();
-        $thrones = $this->getSpecialCells("throne");
-        foreach ($thrones as $throne) {
-          if (!empty($this->cells[$throne]["occupant"])) {
-            $occupant = $this->cells[$throne]["occupant"];
-            if ($occupant->isAlive()) {
-              $kings[] = $occupant->getFaction()->getControl()->getId();
-              break;
+      if (!$faction->getControl()->isAlive() && !empty($kings)) {
+        if (count($kings) == 1) {
+          // Cas d'un abandon : lors de la prise de pouvoir, retrait de l'ancien chef
+          $pieces = $faction->getPieces();
+          foreach ($pieces as $key => $piece) {
+            if ($this->getOption('rule_vassalization') == 'full_control'
+                && $piece->isAlive() && $piece->getHability('must_live')) {
+              $piece->setAlive(FALSE);
             }
           }
+          // Prise de contrôle
+          $faction->setControl($this->getFactionById(current($kings)));
+          $changes = TRUE;
         }
-        if (!empty($kings)) {
-          $kings = array_unique($kings);
-          if (count($kings) == 1) {
-            // Cas d'un abandon : lors de la prise de pouvoir, retrait de l'ancien chef
-            $pieces = $faction->getPieces();
-            foreach ($pieces as $key => $piece) {
-              if ($piece->isAlive() && $piece->getHability('must_live')) {
-                $piece->setDead();
-              }
-            }
-            // Prise de contrôle
-            $faction->setControl($this->getFactionById(current($kings)));
+      }
+      elseif (empty($kings)) {
+        if ($this->getOption('rule_vassalization') != 'full_control' && !$faction->isAlive()) {
+          if (in_array($faction->getStatus(), array(KW_DJAMBI_USER_DEFECT, KW_DJAMBI_USER_WITHDRAW, KW_DJAMBI_USER_SURROUNDED))
+             && $faction->getControl()->getId() != $faction->getId()) {
+             $faction->setControl($faction);
+             $changes = TRUE;
           }
         }
       }
+    }
+    if ($changes) {
+      $this->updateSummary();
     }
   }
 
@@ -936,7 +947,35 @@ class DjambiBattlefield {
     if ($this->status == KW_DJAMBI_STATUS_PENDING) {
       $this->getPlayOrder(TRUE);
       $this->defineMovablePieces();
+      if (empty($this->summary)) {
+        $this->updateSummary();
+      }
     }
+  }
+
+  public function getSummary() {
+    return $this->summary;
+  }
+
+  public function updateSummary() {
+    $infos = array();
+    if (empty($this->summary)) {
+      $key = -1;
+    }
+    else {
+      $key = $this->getCurrentTurnId();
+    }
+    foreach ($this->factions as $faction) {
+      $faction_info = array(
+        'control' => $faction->getControl()->getId(),
+        'status' => $faction->getStatus()
+      );
+      if (!is_null($faction->getMaster())) {
+        $faction_info['master'] = $faction->getMaster();
+      }
+      $infos[$faction->getId()] = $faction_info;
+    }
+    $this->summary[$key] = $infos;
   }
 
   public function logEvent($type, $event_txt, $event_args = NULL, $time = NULL) {
@@ -1020,7 +1059,8 @@ class DjambiBattlefield {
       'deads' => $deads,
       'special_cells' => $special_cells,
       'events' => $this->events,
-      'options' => $this->options
+      'options' => $this->options,
+      'summary' => $this->summary
     );
   }
 

@@ -1,6 +1,6 @@
 <?php
 class DjambiPoliticalFaction {
-  private $status, $ranking,
+  private $status, $ranking, $elimination_turn,
     $user_data, $id, $name, $class, $control, $alive,
     $pieces, $battlefield = NULL, $start_order, $playing,
     $skipped_turns, $last_draw_proposal, $draw_status;
@@ -20,6 +20,8 @@ class DjambiPoliticalFaction {
     $this->draw_status = isset($data['draw_status']) ? $data['draw_status'] : NULL;
     $this->status = $this->getUserDataItem('status');
     $this->ranking = isset($data['ranking']) ? $data['ranking'] : NULL;
+    $this->master = isset($data['master']) ? $data['master'] : NULL;
+    $this->elimination_turn = isset($data['elimination_turn']) ? $data['elimination_turn'] : NULL;
   }
 
   public static function buildFactionsInfos() {
@@ -75,6 +77,10 @@ class DjambiPoliticalFaction {
     return $this->skipped_turns;
   }
 
+  public function getMaster() {
+    return $this->master;
+  }
+
   public function addSkippedTurn() {
     $this->skipped_turns++;
   }
@@ -99,12 +105,31 @@ class DjambiPoliticalFaction {
 
   public function setStatus($status) {
     $this->status = $status;
+    if (in_array($status, array(KW_DJAMBI_USER_PLAYING, KW_DJAMBI_USER_READY))) {
+      $this->setAlive(TRUE);
+      $this->elimination_turn = NULL;
+      $this->ranking = NULL;
+    }
     return $this;
   }
 
   public function setRanking($ranking) {
     $this->ranking = $ranking;
     return $this;
+  }
+
+  public function setMaster($master) {
+    $this->master = $master;
+    return $this;
+  }
+
+  public function setEliminationTurn($turn) {
+    $this->elimination_turn = $turn;
+    return $this;
+  }
+
+  public function getEliminationTurn() {
+    return $this->elimination_turn;
   }
 
   public function getControlledPieces() {
@@ -122,17 +147,31 @@ class DjambiPoliticalFaction {
   public function setControl(DjambiPoliticalFaction $faction, $log = TRUE) {
     $old_control = $this->control;
     $this->control = $faction;
-    foreach ($this->getBattlefield()->getFactions() as $key => $f) {
-      $controlled = array();
+    $grid = $this->getBattlefield();
+    foreach ($grid->getFactions() as $key => $f) {
       if ($f->getId() != $this->getId() && $f->getControl()->getId() == $this->getId()) {
-        $f->setControl($faction, FALSE);
-        $controlled[] = $f->getId();
+        if ($grid->getOption('rule_vassalization') == 'full_control' || $f->getStatus() == KW_DJAMBI_USER_KILLED) {
+          $f->setControl($faction, FALSE);
+        }
+        elseif ($faction->getId() != $this->id) {
+          $f->setControl($f, FALSE);
+        }
+      }
+      if ($faction->getId() == $this->id && !$f->isAlive() && $f->getMaster() == $this->id
+          && $f->getControl()->getId() != $this->id) {
+        $f->setControl($this, FALSE);
       }
     }
     if ($log) {
-      $this->getBattlefield()->logEvent("event",
-        "CHANGING_SIDE", array('faction1' => $this->getId(), 'faction2' => $faction->getId(), '!controlled' => $f->getId())
-      );
+      if ($faction->getId() != $this->getId()) {
+        $this->getBattlefield()->logEvent("event", "CHANGING_SIDE",
+            array('faction1' => $this->getId(), 'faction2' => $faction->getId(), '!controlled' => $f->getId())
+        );
+      }
+      else {
+        $this->getBattlefield()->logEvent("event", "INDEPENDANT_SIDE",
+            array('faction1' => $this->getId(), 'faction2' => $old_control->getId()));
+      }
     }
     return $this;
   }
@@ -149,11 +188,15 @@ class DjambiPoliticalFaction {
     return $this;
   }
 
-  public function setDead() {
-    $this->getBattlefield()->logEvent("event", "GAME_OVER", array('faction1' => $this->getId()));
-    $this->setStatus(KW_DJAMBI_USER_LOSER);
+  public function dieDieDie($user_status) {
+    if ($this->isAlive()) {
+      $this->getBattlefield()->logEvent("event", "GAME_OVER", array('faction1' => $this->getId()));
+      $this->setEliminationTurn($this->getBattlefield()->getCurrentTurnId());
+    }
+    $this->setStatus($user_status);
     $this->setRanking($this->getBattlefield()->getLivingFactionsAtTurnBegin());
-    return $this->setAlive(FALSE);
+    $this->setAlive(FALSE);
+    return $this;
   }
 
   public function isAlive() {
@@ -204,7 +247,8 @@ class DjambiPoliticalFaction {
 
   public function withdraw() {
     $this->getBattlefield()->logEvent('event', 'WITHDRAWAL', array('faction1' => $this->getId()));
-    $this->setDead();
+    $this->dieDieDie(KW_DJAMBI_USER_WITHDRAW);
+    $this->getBattlefield()->updateSummary();
   }
 
   public function callForADraw() {
@@ -255,8 +299,12 @@ class DjambiPoliticalFaction {
       'alive' => $this->alive,
       'start_order' => $this->start_order,
       'ranking' => $this->ranking,
-      'status' => $this->status
+      'status' => $this->status,
+      'master' => $this->master,
     );
+    if (!is_null($this->elimination_turn)) {
+      $data['elimination_turn'] = $this->elimination_turn;
+    }
     if ($this->skipped_turns > 0) {
       $data['skipped_turns'] = $this->skipped_turns;
     }

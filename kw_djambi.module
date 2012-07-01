@@ -58,6 +58,7 @@ function kw_djambi_node_info() {
  */
 function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
   if (!$form["nid"]["#value"]) {
+    $form['actions']['submit']['#value'] = t('Begin game');
     $form['basics'] = array(
         '#type' => 'fieldset',
         '#title' => t('Game presets')
@@ -89,7 +90,7 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         '#collapsible' => TRUE,
         '#collapsed' => TRUE
     );
-    $defaults = DjambiBattlefield::retrieveDefaultOptions();
+    $defaults = DjambiBattlefield::getDefaultOptions();
     $form['advanced']['rule_surrounding'] = array(
         '#type' => 'radios',
         '#title' => t('Leader surrounding rule'),
@@ -104,6 +105,26 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
             'throne_access' => t('A leader is eliminated if the way to throne case is locked by dead pieces (even if he can still move)'
                 . ' and if he has no living necromobile among his controlled pieces.')
         )
+    );
+    $form['advanced']['rule_vassalization'] = array(
+        '#type' => 'radios',
+        '#title' => t('Team vassalization rule'),
+        '#default_value' => $defaults['rule_vassalization'],
+        '#options' => array(
+            'full_control' => t('A player who acceeds to power gains full control of the withdrawn or surrounded leaders sides until the end of the game,'
+                .' even if he leaves the throne case.'),
+            'temporary' => t('A player who acceeds to power gains control of the withdrawn or surrounded leaders sides just during the time of his reign.')
+        )
+    );
+    $form['advanced']['rule_comeback'] = array(
+        '#type' => 'radios',
+        '#title' => t('Come-back possibilities rule'),
+        '#default_value' => $defaults['rule_comeback'],
+        '#options' => array(
+            'never' => t('No come-back.'),
+            'surrounding' => t('A player who had a surrounded leader can play again if his leader is not surrounded anymore, even if he is controlled by another team.'),
+            'allowed' => t('A player who had withdrawn or had a surrounded leader can play again if his leader is still alive, not surrounded and not controlled by an another team.')
+         )
     );
     $form['advanced']['turns_before_draw_proposal'] = array(
         '#type' => 'select',
@@ -1805,6 +1826,9 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBatt
       break;
     case("CHANGING_SIDE"):
       $txt = t("The desperate remaining !faction1 side's partisans are now joining the !faction2 side !", $args);
+      break;
+    case("INDEPENDANT_SIDE"):
+      $txt = t("The desperate remaining !faction1 side's partisans are no longing supporting the !faction2 side.", $args);
       break;
     case("GAME_OVER"):
       $txt = t("Game over for !faction1 side !", $args);

@@ -19,15 +19,18 @@ table.djambigrid {
   vertical-align: middle;}
 .djambigrid div.piece {
   border-radius: 21px;
+  border: 2px solid #ccc;
   box-shadow: 2px 2px 2px #000;
   background-color: #CCC;
   font-weight: bold;
-  height: 36px;
+  height: 32px;
   margin: 0 auto;
   overflow: hidden;
   padding: 3px 3px;
-  width: 36px;
+  width: 32px;
   text-align: center;}
+.djambigrid div.piece input, .djambigrid div.piece img {
+  margin: -2px;}
 .djambigrid div.piece input {
   border: 0px;
   background: none;
@@ -35,19 +38,28 @@ table.djambigrid {
 span.faction {
   border: 1px solid #999;
   border-radius: 5px;}
-.djambigrid div.piece.jaune, .faction.jaune {
+.djambigrid div.piece.jaune-origin {
+  border-color: #fc0;}
+.djambigrid div.piece.jaune-control, .faction.jaune {
   background-color: #fc0;
   color: #000;}
-.djambigrid div.piece.rouge, .faction.rouge {
+.djambigrid div.piece.rouge-origin {
+  border-color: #f33;}
+.djambigrid div.piece.rouge-control, .faction.rouge {
   background-color: #f33;
   color: #000;}
-.djambigrid div.piece.bleu, .faction.bleu {
+.djambigrid div.piece.bleu-origin {
+  border-color: #9cf;}
+.djambigrid div.piece.bleu-control, .faction.bleu {
   background-color: #9cf;
   color: #000;}
-.djambigrid div.piece.vert, .faction.vert {
+.djambigrid div.piece.vert-origin {
+  border-color: #9d0;}
+.djambigrid div.piece.vert-control, .faction.vert {
   background-color: #9d0;
   color: #000;}
 .djambigrid div.piece.dead {
+  border-color: #333;
   background-color: #333;
   color: #999;}
 .djambigrid td.reachable {

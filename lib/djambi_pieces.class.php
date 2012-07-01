@@ -82,8 +82,8 @@ class DjambiPiece {
     return $this->alive;
   }
 
-  public function setDead($ressucite = FALSE) {
-    $this->alive = $ressucite;
+  public function setAlive($value) {
+    $this->alive = $value;
     return $this;
   }
 
@@ -249,12 +249,14 @@ class DjambiPiece {
 
   public function kill(DjambiPiece $victim, $destination) {
     $destination = $this->checkNewPosition($destination);
-    $victim->setDead();
+    $victim->setAlive(FALSE);
     $this->faction->getBattlefield()->logMove($victim, $destination, "murder", $this);
     $victim->setPosition($destination["x"], $destination["y"]);
     if ($victim->getHability("must_live")) {
-      $victim->getFaction()->setDead();
+      $victim->getFaction()->dieDieDie(KW_DJAMBI_USER_KILLED);
       $victim->getFaction()->setControl($this->faction->getControl());
+      $victim->getFaction()->setMaster($this->faction->getControl()->getId());
+      $this->faction->getBattlefield()->updateSummary();
       $this->faction->getBattlefield()->getPlayOrder(TRUE);
     }
   }
