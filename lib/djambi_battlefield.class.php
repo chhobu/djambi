@@ -112,7 +112,7 @@ class DjambiBattlefield {
       'turns_before_draw_proposal' => 10,
       'piece_scheme' => 'standard',
       'directions' => 'cardinal',
-      'rule_surrounding' => 'necrodependance'
+      'rule_surrounding' => 'throne_access'
     );
   }
 
@@ -457,8 +457,8 @@ class DjambiBattlefield {
           }
         }
         // Contrôle 3 : case pouvoir atteignable par le chef ?
-        if ($control_leader && !$control_necro) {
-          $control_leader = $this->checkLeaderFreedom($leaders);
+        if ($control_leader) {
+          $control_leader = $this->checkLeaderFreedom($leaders, $control_necro);
           if (!$control_leader) {
             $this->logEvent("event", "SURROUNDED", array('faction1' => $faction->getId()));
             foreach ($leaders as $leader) {
@@ -789,8 +789,19 @@ class DjambiBattlefield {
     return $move_ok;
   }
 
-  private function checkLeaderFreedom($leaders) {
+  private function countLivingFactions() {
+    $nb_alive = 0;
+    foreach ($this->getFactions() as $faction) {
+      if ($faction->isAlive()) {
+        $nb_alive++;
+      }
+    }
+    return $nb_alive;
+  }
+
+  private function checkLeaderFreedom($leaders, $has_necromobile) {
     $thrones = $this->getSpecialCells("throne");
+    $nb_factions = $this->countLivingFactions();
     $checked = array();
     /* @var $leader DjambiPiece */
     foreach ($leaders as $leader) {
@@ -799,34 +810,72 @@ class DjambiBattlefield {
       if (in_array($alternate_position, $thrones)) {
         return TRUE;
       }
-      $checked[$alternate_position] = $position;
-      $check_further[$alternate_position] = $position;
-      while (!empty($check_further)) {
-        $position = current($check_further);
-        $next_positions = $this->findNeighbourCells($position);
-        foreach ($next_positions as $key => $coord) {
-          $blocked = FALSE;
-          $alternate_position = self::locateCell($coord);
-          if (!isset($checked[$alternate_position])) {
-            if (!empty($this->cells[$alternate_position]["occupant"])) {
-              $occupant = $this->cells[$alternate_position]["occupant"];
-              if (!$occupant->isAlive() && $this->cells[$alternate_position]["type"] != "throne") {
-                $blocked = TRUE;
+      // Règle d'encerclement strict
+      $strict_rule = in_array($this->getOption('rule_surrounding'), array('strict', 'loose'));
+      if ($strict_rule && $nb_factions > 2) {
+        if ($has_necromobile && $this->getOption('rule_surrounding') == 'loose') {
+          return TRUE;
+        }
+        $escorte[$alternate_position] = $leader->getId();
+        $checked = array();
+        while (!empty($escorte)) {
+          foreach ($escorte as $escorte_position => $piece_id) {
+            $current_cell = $this->cells[$escorte_position];
+            foreach($current_cell['neighbours'] as $neighbour) {
+              if (in_array($neighbour, $checked)) {
+                continue;
               }
-              elseif(in_array($alternate_position, $thrones)) {
+              $cell = $this->cells[$neighbour];
+              if (empty($cell['occupant'])) {
                 return TRUE;
               }
+              else {
+                $piece = $cell['occupant'];
+                if ($piece->isAlive()) {
+                  $escorte[$neighbour] = $piece->getId();
+                }
+              }
+              $checked[] = $neighbour;
             }
-            elseif (in_array($alternate_position, $thrones)) {
-              return TRUE;
-            }
-            if (!$blocked) {
-              $check_further[$alternate_position] = $coord;
-            }
-            $checked[$alternate_position] = $coord;
+            unset($escorte[$escorte_position]);
           }
         }
-        unset($check_further[key($check_further)]);
+        return FALSE;
+      }
+      // Règle d'encerclement par accès au pouvoir
+      else {
+        if ($has_necromobile) {
+          return TRUE;
+        }
+        $checked[$alternate_position] = $position;
+        $check_further[$alternate_position] = $position;
+        while (!empty($check_further)) {
+          $position = current($check_further);
+          $next_positions = $this->findNeighbourCells($position);
+          foreach ($next_positions as $key => $coord) {
+            $blocked = FALSE;
+            $alternate_position = self::locateCell($coord);
+            if (!isset($checked[$alternate_position])) {
+              if (!empty($this->cells[$alternate_position]["occupant"])) {
+                $occupant = $this->cells[$alternate_position]["occupant"];
+                if (!$occupant->isAlive() && $this->cells[$alternate_position]["type"] != "throne") {
+                  $blocked = TRUE;
+                }
+                elseif(in_array($alternate_position, $thrones)) {
+                  return TRUE;
+                }
+              }
+              elseif (in_array($alternate_position, $thrones)) {
+                return TRUE;
+              }
+              if (!$blocked) {
+                $check_further[$alternate_position] = $coord;
+              }
+              $checked[$alternate_position] = $coord;
+            }
+          }
+          unset($check_further[key($check_further)]);
+        }
       }
     }
     return FALSE;

@@ -85,7 +85,9 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
     $form['advanced'] = array(
         '#type' => 'fieldset',
         '#title' => t('Advanced options'),
-        '#tree' => TRUE
+        '#tree' => TRUE,
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE
     );
     $defaults = DjambiBattlefield::retrieveDefaultOptions();
     $form['advanced']['rule_surrounding'] = array(
@@ -93,9 +95,13 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         '#title' => t('Leader surrounding rule'),
         '#default_value' => $defaults['rule_surrounding'],
         '#options' => array(
-            'strict' => t('A leader is eliminated if he cannot move, is not occupying the throne case, is completely surrounded by dead pieces '
-                . '(eventually among some pieces of his side) and cannot be saved by a controlled necromobile during the very next turn.'),
-            'necrodependance' => t('A leader is eliminated if any way to the throne case is completely blocked by dead pieces '
+            'strict' => t('A leader is eliminated if he is not occupying the throne case, '
+                . 'if he or his controlled adjacent pieces are surrounded by dead peaces (without empty cells) '
+                . 'even if he is still controlling a living necromobile.'),
+            'loose' => t('A leader is eliminated if he is not occupying the throne case, '
+                . 'if he or his controlled adjacent pieces cannot move due to dead pieces barricade '
+                . 'and if he is not controlling a living necromobile.'),
+            'throne_access' => t('A leader is eliminated if the way to throne case is locked by dead pieces (even if he can still move)'
                 . ' and if he has no living necromobile among his controlled pieces.')
         )
     );
