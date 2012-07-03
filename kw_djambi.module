@@ -559,6 +559,26 @@ function kw_djambi_game_form($form, &$form_state, $node) {
         '#submit' => array('kw_djambi_game_form_withdraw_submit'),
         '#ajax' => $ajax_settings
     );
+    // Retour après abandon
+    if ($grid->getOption('rule_comeback') == 'allowed' && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+      foreach ($grid->getFactions() as $playing_faction) {
+        if ($playing_faction->canComeBackAfterWithdraw()) {
+          $actions['comeback']['comeback_' . $playing_faction->getId()] = array(
+              '#type' => 'submit',
+              '#value' => t('Allow !faction side to come back in the game', array(
+                  '!faction' => $playing_faction->getName())),
+              '#submit' => array('kw_djambi_game_form_comeback_submit'),
+              '#ajax' => $ajax_settings,
+              '#weight' => 10
+             );
+        }
+      }
+      if (isset($actions['comeback'])) {
+        $actions['comeback']['separator'] = array(
+            '#markup' => '<hr />'
+            );
+      }
+    }
     // Regroupement des actions dans un fieldset
     if (!empty($actions) || !empty($descriptions)) {
       $form['actions'] = array(
@@ -1232,6 +1252,20 @@ function kw_djambi_game_form_withdraw_submit($form, &$form_state) {
 }
 
 /**
+ * Soumission du bouton "Revenir dans la partie"
+ */
+function kw_djambi_game_form_comeback_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  $grid = $form['#grid'];
+  $clicked_button = $form_state['clicked_button']['#parents'][0];
+  $id = substr($clicked_button, strpos($clicked_button, '_') + 1);
+  $faction = $grid->getFactionById($id);
+  $faction->comeBackAfterWithdraw();
+  $grid = $faction->getBattlefield();
+  kw_djambi_save_game($grid);
+}
+
+/**
  * Soumission du bouton "Proposer une partie nulle"
  */
 function kw_djambi_game_form_draw_proposal_submit($form, &$form_state) {
@@ -1387,6 +1421,13 @@ function _kw_djambi_build_log(DjambiBattlefield $grid) {
           "!destination" => $move["to"]
       ));
     }
+    elseif ($move['type'] == 'elimination') {
+      $victim = $piece;
+      $msg = t("!victim has been eliminated from the game. The action took place in !origin.", array(
+          "!victim" => "<span class='piece " . $victim->getType() . "'>" . _kw_djambi_get_full_piece_name($victim) . "</span>",
+          "!origin" => $move["from"],
+      ));
+    }
     if (!empty($msg)) {
       $log["time"][] = $move["time"];
       $log["msg"][] = "<div class='" . $move["type"] . "'><span class=''>" . format_date($move["time"], "short") . " :</span>  " . $msg . "</div>";
@@ -1412,38 +1453,13 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
   $factions = $grid->getFactions();
   $throne = NULL;
   $ranking = array();
-  foreach ($grid->getFactions() as $faction) {
-    $ranking[$faction->getId()] = -1;
+  foreach ($factions as $faction) {
+    //if (!is_null($faction->getRanking())) {
+      $ranking[$faction->getId()] = $faction->getRanking();
+    //}
     $stats['peace'][$faction->getId()] = 0;
   }
-  if ($grid->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
-    $j = 0;
-    foreach ($grid->getEvents() as $event) {
-      if ($event['event'] == 'GAME_OVER') {
-        $ranking[$event['args']['faction1']] = $event['turn'];
-      }
-    }
-    asort($ranking);
-    $i = 0;
-    $last_turn = NULL;
-    foreach ($ranking as $faction_id => $turn) {
-      if ($turn == -1) {
-        $ranking[$faction_id] = 1;
-      }
-      else {
-        $ranking[$faction_id] = count($ranking) - $i++;
-        if ($turn == $last_turn) {
-          foreach ($last_faction as $eq_faction_id) {
-            $ranking[$eq_faction_id] = $ranking[$eq_faction_id] -= 1;
-          }
-          $last_faction[] = $faction_id;
-        }
-        else {
-          $last_turn = $turn;
-          $last_faction = array($faction_id);
-        }
-      }
-    }
+  if (!empty($ranking)) {
     asort($ranking);
   }
   foreach ($grid->getTurns() as $turn) {
@@ -1765,7 +1781,7 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBatt
       $txt = t("New djambi chess game created.");
       break;
     case("SURROUNDED"):
-      $txt = t("!faction1's side is surrounded by dead pieces and cannot access to power anymore.", $args);
+      $txt = t("!faction1 leader is surrounded by dead pieces and cannot access to power anymore.", $args);
       break;
     case("END"):
       $txt = t("End of the game !");
@@ -1868,6 +1884,12 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBatt
       break;
     case("3STD_DESCRIPTION"):
       $txt = t("3 players, standard square grid, 1 unused team");
+      break;
+    case("COMEBACK_AFTER_SURROUND"):
+      $txt = t("The !faction1 leader is not surrounded anymore by dead pieces. It's a come back for !faction1 side !", $args);
+      break;
+    case("COMEBACK_AFTER_WITHDRAW"):
+      $txt = t("The !faction1 side got some new hope and is back in the game.", $args);
       break;
       /*case(""):
        $txt = t("");

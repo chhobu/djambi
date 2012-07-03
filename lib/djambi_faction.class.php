@@ -1,6 +1,6 @@
 <?php
 class DjambiPoliticalFaction {
-  private $status, $ranking, $elimination_turn,
+  private $status, $ranking,
     $user_data, $id, $name, $class, $control, $alive,
     $pieces, $battlefield = NULL, $start_order, $playing,
     $skipped_turns, $last_draw_proposal, $draw_status;
@@ -21,7 +21,6 @@ class DjambiPoliticalFaction {
     $this->status = $this->getUserDataItem('status');
     $this->ranking = isset($data['ranking']) ? $data['ranking'] : NULL;
     $this->master = isset($data['master']) ? $data['master'] : NULL;
-    $this->elimination_turn = isset($data['elimination_turn']) ? $data['elimination_turn'] : NULL;
   }
 
   public static function buildFactionsInfos() {
@@ -107,8 +106,10 @@ class DjambiPoliticalFaction {
     $this->status = $status;
     if (in_array($status, array(KW_DJAMBI_USER_PLAYING, KW_DJAMBI_USER_READY))) {
       $this->setAlive(TRUE);
-      $this->elimination_turn = NULL;
-      $this->ranking = NULL;
+    }
+    elseif (in_array($status, array(KW_DJAMBI_USER_DEFECT, KW_DJAMBI_USER_SURROUNDED,
+        KW_DJAMBI_USER_WITHDRAW, KW_DJAMBI_USER_KILLED))) {
+      $this->setAlive(FALSE);
     }
     return $this;
   }
@@ -121,15 +122,6 @@ class DjambiPoliticalFaction {
   public function setMaster($master) {
     $this->master = $master;
     return $this;
-  }
-
-  public function setEliminationTurn($turn) {
-    $this->elimination_turn = $turn;
-    return $this;
-  }
-
-  public function getEliminationTurn() {
-    return $this->elimination_turn;
   }
 
   public function getControlledPieces() {
@@ -191,10 +183,8 @@ class DjambiPoliticalFaction {
   public function dieDieDie($user_status) {
     if ($this->isAlive()) {
       $this->getBattlefield()->logEvent("event", "GAME_OVER", array('faction1' => $this->getId()));
-      $this->setEliminationTurn($this->getBattlefield()->getCurrentTurnId());
     }
     $this->setStatus($user_status);
-    $this->setRanking($this->getBattlefield()->getLivingFactionsAtTurnBegin());
     $this->setAlive(FALSE);
     return $this;
   }
@@ -251,6 +241,26 @@ class DjambiPoliticalFaction {
     $this->getBattlefield()->updateSummary();
   }
 
+  public function canComeBackAfterWithdraw() {
+    if ($this->getStatus() == KW_DJAMBI_USER_WITHDRAW
+        && $this->getBattlefield()->getOption('rule_comeback') == 'allowed'
+        && $this->getControl()->getId() == $this->getId()
+        && $this->checkLeaderFreedom()) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  public function comeBackAfterWithdraw() {
+    if ($this->canComeBackAfterWithdraw()) {
+      $this->setStatus(KW_DJAMBI_USER_READY);
+      $this->getBattlefield()->logEvent('event', 'COMEBACK_AFTER_WITHDRAW', array('faction1' => $this->getId()));
+      $this->getBattlefield()->updateSummary();
+    }
+  }
+
   public function callForADraw() {
     $turns = $this->getBattlefield()->getTurns();
     $this->setLastDrawProposal($turns[$this->getBattlefield()->getCurrentTurnId()]['turn']);
@@ -275,7 +285,7 @@ class DjambiPoliticalFaction {
       }
     }
     if ($accepted_draws == $alive_factions) {
-      $this->getBattlefield()->endWithADraw();
+      $this->getBattlefield()->endGame($alive_factions);
     }
     else {
       $this->getBattlefield()->changeTurn();
@@ -291,6 +301,111 @@ class DjambiPoliticalFaction {
     }
   }
 
+  public function checkLeaderFreedom() {
+    $control_leader = FALSE;
+    $control_necro = FALSE;
+    $leaders = array();
+    $pieces = $this->getControlledPieces();
+    $cells = $this->getBattlefield()->getCells();
+    /* @var $piece DjambiPiece */
+    foreach ($pieces as $key => $piece) {
+      if ($piece->isAlive()) {
+        // Contrôle 1 : chef vivant ?
+        if ($piece->getHability("must_live")) {
+          $control_leader = TRUE;
+          $leaders[] = $piece;
+        }
+        // Contrôle 2 : nécromobile vivant ?
+        if ($piece->getHability("move_dead_pieces")) {
+          $has_necromobile = TRUE;
+        }
+      }
+    }
+    if (!$control_leader) {
+      return FALSE;
+    }
+    // Contrôle 3 : case pouvoir atteignable par le chef ?
+    $thrones = $this->getBattlefield()->getSpecialCells("throne");
+    $nb_factions = $this->getBattlefield()->countLivingFactions();
+    $checked = array();
+    /* @var $leader DjambiPiece */
+    foreach ($leaders as $leader) {
+      $position = $leader->getPosition();
+      $alternate_position = DjambiBattlefield::locateCell($position);
+      if (in_array($alternate_position, $thrones)) {
+        return TRUE;
+      }
+      // Règle d'encerclement strict
+      $strict_rule = in_array($this->getBattlefield()->getOption('rule_surrounding'), array('strict', 'loose'));
+      if ($strict_rule && $nb_factions > 2) {
+        if ($has_necromobile && $this->getBattlefield()->getOption('rule_surrounding') == 'loose') {
+          return TRUE;
+        }
+        $escorte[$alternate_position] = $leader->getId();
+        $checked = array();
+        while (!empty($escorte)) {
+          foreach ($escorte as $escorte_position => $piece_id) {
+            $current_cell = $cells[$escorte_position];
+            foreach($current_cell['neighbours'] as $neighbour) {
+              if (in_array($neighbour, $checked)) {
+                continue;
+              }
+              $cell = $cells[$neighbour];
+              if (empty($cell['occupant'])) {
+                return TRUE;
+              }
+              else {
+                $piece = $cell['occupant'];
+                if ($piece->isAlive()) {
+                  $escorte[$neighbour] = $piece->getId();
+                }
+              }
+              $checked[] = $neighbour;
+            }
+            unset($escorte[$escorte_position]);
+          }
+        }
+        return FALSE;
+      }
+      // Règle d'encerclement par accès au pouvoir
+      else {
+        if ($has_necromobile) {
+          return TRUE;
+        }
+        $checked[$alternate_position] = $position;
+        $check_further[$alternate_position] = $position;
+        while (!empty($check_further)) {
+          $position = current($check_further);
+          $next_positions = $this->getBattlefield()->findNeighbourCells($position);
+          foreach ($next_positions as $key => $coord) {
+            $blocked = FALSE;
+            $alternate_position = DjambiBattlefield::locateCell($coord);
+            if (!isset($checked[$alternate_position])) {
+              if (!empty($cells[$alternate_position]["occupant"])) {
+                $occupant = $cells[$alternate_position]["occupant"];
+                if (!$occupant->isAlive() && $this->cells[$alternate_position]["type"] != "throne") {
+                  $blocked = TRUE;
+                }
+                elseif(in_array($alternate_position, $thrones)) {
+                  return TRUE;
+                }
+              }
+              elseif (in_array($alternate_position, $thrones)) {
+                return TRUE;
+              }
+              if (!$blocked) {
+                $check_further[$alternate_position] = $coord;
+              }
+              $checked[$alternate_position] = $coord;
+            }
+          }
+          unset($check_further[key($check_further)]);
+        }
+      }
+    }
+    return FALSE;
+  }
+
   public function toDatabase() {
     $data = array(
       'name' => $this->name,
@@ -302,9 +417,6 @@ class DjambiPoliticalFaction {
       'status' => $this->status,
       'master' => $this->master,
     );
-    if (!is_null($this->elimination_turn)) {
-      $data['elimination_turn'] = $this->elimination_turn;
-    }
     if ($this->skipped_turns > 0) {
       $data['skipped_turns'] = $this->skipped_turns;
     }

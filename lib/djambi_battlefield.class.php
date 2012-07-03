@@ -54,7 +54,6 @@ class DjambiBattlefield {
 
   public static function getAvailbaleNumberPlayers() {
     return array(
-        //'3std' => '3STD_DESCRIPTION',
         '4std' => '4STD_DESCRIPTION'
     );
   }
@@ -117,7 +116,7 @@ class DjambiBattlefield {
       'piece_scheme' => 'standard',
       'directions' => 'cardinal',
       'rule_surrounding' => 'loose', // throne_access, strict, loose
-      'rule_comeback' => 'never', // never, surrounding, always
+      'rule_comeback' => 'allowed', // never, surrounding, allowed
       'rule_vassalization' => 'temporary' // temporary, full_control
     );
   }
@@ -377,7 +376,7 @@ class DjambiBattlefield {
         $piece = $this->getPieceById($move['target']);
         $position = $cells[$move['from']];
         $piece->setPosition($position['x'], $position['y']);
-        if ($move['type'] == 'murder') {
+        if ($move['type'] == 'murder' || $move['type'] == 'elimination') {
           $piece->setAlive(TRUE);
         }
         if ($move['turn'] == $current_turn_key && $move['type'] == 'move' && !empty($move['acting'])) {
@@ -405,7 +404,7 @@ class DjambiBattlefield {
         $summary = $data;
       }
     }
-    foreach ($summary as $faction_key => $data) {
+    foreach ($summary['faction'] as $faction_key => $data) {
       $faction = $this->getFactionById($faction_key);
       $faction->setStatus($data['status']);
       $faction->setControl($this->getFactionById($data['control']), FALSE);
@@ -413,15 +412,26 @@ class DjambiBattlefield {
     }
   }
 
-  public function endWithADraw() {
-    $this->logEvent("event", "DRAW");
-    $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
-    $ranking = $this->countLivingFactions();
-    foreach ($living_factions as $faction) {
-      $faction->setStatus(KW_DJAMBI_USER_DRAW);
-      $faction->setRanking($ranking);
+  public function endGame($living_factions) {
+    $nb_living_factions = count($living_factions);
+    if ($nb_living_factions == 1) {
+      $winner_id = current($living_factions);
+      $winner = $this->getFactionById($winner_id);
+      $winner->setStatus(KW_DJAMBI_USER_WINNER);
+      $winner->setRanking(1);
+      $this->logEvent('event', 'THE_WINNER_IS', array('faction1' => $winner->getId()));
     }
+    else {
+      $this->logEvent("event", "DRAW");
+      foreach ($living_factions as $faction) {
+        $faction->setStatus(KW_DJAMBI_USER_DRAW);
+        $faction->setRanking($nb_living_factions);
+      }
+    }
+    $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
     $this->updateSummary();
+    $this->buildFinalRanking($nb_living_factions);
+    $this->logEvent("event", "END");
   }
 
   public function changeTurn() {
@@ -429,65 +439,82 @@ class DjambiBattlefield {
     // Log de la fin du tour
     $last_turn_key = $this->getCurrentTurnId();
     $this->turns[$last_turn_key]["end"] = time();
+    $kings = $this->findKings();
+    // Attribution des pièces vivantes à l'occupant du trône
+    if (!empty($kings)) {
+      foreach ($this->getFactions() as $faction) {
+        if (!$faction->getControl()->isAlive()) {
+          if (count($kings) == 1) {
+            // Cas d'un abandon : lors de la prise de pouvoir, retrait de l'ancien chef
+            $pieces = $faction->getPieces();
+            foreach ($pieces as $key => $piece) {
+              if ($this->getOption('rule_vassalization') == 'full_control'
+                  && $piece->isAlive() && $piece->getHability('must_live')) {
+                $piece->setAlive(FALSE);
+                $this->logMove($piece, $piece->getPosition(), 'elimination');
+              }
+            }
+            // Prise de contrôle
+            $faction->setControl($this->getFactionById(current($kings)));
+            $changes = TRUE;
+          }
+        }
+      }
+    }
+    elseif ($this->getOption('rule_vassalization') != 'full_control') {
+      foreach ($this->getFactions() as $faction) {
+        if (!$faction->isAlive()) {
+          if (in_array($faction->getStatus(), array(KW_DJAMBI_USER_DEFECT, KW_DJAMBI_USER_WITHDRAW, KW_DJAMBI_USER_SURROUNDED))
+             && $faction->getControl()->getId() != $faction->getId()) {
+             $faction->setControl($faction);
+             $changes = TRUE;
+          }
+        }
+      }
+    }
     // Vérification des conditions de victoire
     $living_factions = array();
     /* @var $faction DjambiPoliticalFaction */
     foreach ($this->getFactions() as $key => $faction) {
       if ($faction->isAlive()) {
-        $control_leader = FALSE;
-        $control_necro = FALSE;
-        $leaders = array();
-        $pieces = $faction->getControlledPieces();
-        /* @var $piece DjambiPiece */
-        foreach ($pieces as $key => $piece) {
-          if ($piece->isAlive()) {
-            // Contrôle 1 : chef vivant ?
-            if ($piece->getHability("must_live")) {
-              $control_leader = TRUE;
-              $leaders[] = $piece;
-            }
-            // Contrôle 2 : nécromobile vivant ?
-            if ($piece->getHability("move_dead_pieces")) {
-              $control_necro = TRUE;
+        $control_leader = $faction->checkLeaderFreedom();
+        if (!$control_leader) {
+          $this->logEvent("event", "SURROUNDED", array('faction1' => $faction->getId()));
+          if ($this->getOption('rule_comeback') == 'never' && $this->getOption('rule_vassalization') == 'full_control') {
+            foreach ($leaders as $leader) {
+              $this->logMove($leader, $leader->getPosition(), 'elimination');
+              $leader->setAlive(FALSE);
             }
           }
+          $faction->dieDieDie(KW_DJAMBI_USER_SURROUNDED);
+          $changes = TRUE;
         }
-        // Contrôle 3 : case pouvoir atteignable par le chef ?
-        if ($control_leader) {
-          $control_leader = $this->checkLeaderFreedom($leaders, $control_necro);
-          if (!$control_leader) {
-            $this->logEvent("event", "SURROUNDED", array('faction1' => $faction->getId()));
-            if ($this->getOption('rule_comeback') == 'never' && $this->getOption('rule_vassalization') == 'full_control') {
-              foreach ($leaders as $leader) {
-                $leader->setAlive(FALSE);
-              }
-            }
-            $faction->dieDieDie(KW_DJAMBI_USER_SURROUNDED);
+        else {
+          $living_factions[] = $faction->getId();
+        }
+      }
+      elseif ($this->getOption('rule_comeback') == 'surrounded' ||
+          ($this->getOption('rule_comeback') == 'allowed' && empty($kings))) {
+        if ($faction->getStatus() == KW_DJAMBI_USER_SURROUNDED) {
+          $control_leader = $faction->checkLeaderFreedom();
+          if ($control_leader) {
+            $faction->setStatus(KW_DJAMBI_USER_READY);
+            $this->logEvent("event", "COMEBACK_AFTER_SURROUND", array('faction1' => $faction->getId()));
             $changes = TRUE;
           }
-        }
-        if ($control_leader) {
-          $living_factions[] = $faction->getId();
         }
       }
     }
     $total = count($living_factions);
     if ($total < 2) {
-      $this->logEvent("event", "END");
-      if ($total == 0) {
-        $this->endWithADraw();
-      }
-      else {
-        $winner_id = current($living_factions);
-        $winner = $this->getFactionById($winner_id);
-        $winner->setStatus(KW_DJAMBI_USER_WINNER);
-        $winner->setRanking(1);
-        $this->logEvent('event', 'THE_WINNER_IS', array('faction1' => $winner->getId()));
-      }
-      $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
-      return;
+      $this->endGame($living_factions);
     }
-    // Attribution des pièces vivantes à l'occupant du trône
+    elseif ($changes) {
+      $this->updateSummary();
+    }
+  }
+
+  private function findKings() {
     $kings = array();
     $thrones = $this->getSpecialCells("throne");
     foreach ($thrones as $throne) {
@@ -499,36 +526,7 @@ class DjambiBattlefield {
         }
       }
     }
-    $kings = array_unique($kings);
-    foreach ($this->getFactions() as $faction) {
-      if (!$faction->getControl()->isAlive() && !empty($kings)) {
-        if (count($kings) == 1) {
-          // Cas d'un abandon : lors de la prise de pouvoir, retrait de l'ancien chef
-          $pieces = $faction->getPieces();
-          foreach ($pieces as $key => $piece) {
-            if ($this->getOption('rule_vassalization') == 'full_control'
-                && $piece->isAlive() && $piece->getHability('must_live')) {
-              $piece->setAlive(FALSE);
-            }
-          }
-          // Prise de contrôle
-          $faction->setControl($this->getFactionById(current($kings)));
-          $changes = TRUE;
-        }
-      }
-      elseif (empty($kings)) {
-        if ($this->getOption('rule_vassalization') != 'full_control' && !$faction->isAlive()) {
-          if (in_array($faction->getStatus(), array(KW_DJAMBI_USER_DEFECT, KW_DJAMBI_USER_WITHDRAW, KW_DJAMBI_USER_SURROUNDED))
-             && $faction->getControl()->getId() != $faction->getId()) {
-             $faction->setControl($faction);
-             $changes = TRUE;
-          }
-        }
-      }
-    }
-    if ($changes) {
-      $this->updateSummary();
-    }
+    return array_unique($kings);
   }
 
   public function getPlayOrder($reset = FALSE) {
@@ -800,7 +798,7 @@ class DjambiBattlefield {
     return $move_ok;
   }
 
-  private function countLivingFactions() {
+  public function countLivingFactions() {
     $nb_alive = 0;
     foreach ($this->getFactions() as $faction) {
       if ($faction->isAlive()) {
@@ -810,88 +808,7 @@ class DjambiBattlefield {
     return $nb_alive;
   }
 
-  private function checkLeaderFreedom($leaders, $has_necromobile) {
-    $thrones = $this->getSpecialCells("throne");
-    $nb_factions = $this->countLivingFactions();
-    $checked = array();
-    /* @var $leader DjambiPiece */
-    foreach ($leaders as $leader) {
-      $position = $leader->getPosition();
-      $alternate_position = self::locateCell($position);
-      if (in_array($alternate_position, $thrones)) {
-        return TRUE;
-      }
-      // Règle d'encerclement strict
-      $strict_rule = in_array($this->getOption('rule_surrounding'), array('strict', 'loose'));
-      if ($strict_rule && $nb_factions > 2) {
-        if ($has_necromobile && $this->getOption('rule_surrounding') == 'loose') {
-          return TRUE;
-        }
-        $escorte[$alternate_position] = $leader->getId();
-        $checked = array();
-        while (!empty($escorte)) {
-          foreach ($escorte as $escorte_position => $piece_id) {
-            $current_cell = $this->cells[$escorte_position];
-            foreach($current_cell['neighbours'] as $neighbour) {
-              if (in_array($neighbour, $checked)) {
-                continue;
-              }
-              $cell = $this->cells[$neighbour];
-              if (empty($cell['occupant'])) {
-                return TRUE;
-              }
-              else {
-                $piece = $cell['occupant'];
-                if ($piece->isAlive()) {
-                  $escorte[$neighbour] = $piece->getId();
-                }
-              }
-              $checked[] = $neighbour;
-            }
-            unset($escorte[$escorte_position]);
-          }
-        }
-        return FALSE;
-      }
-      // Règle d'encerclement par accès au pouvoir
-      else {
-        if ($has_necromobile) {
-          return TRUE;
-        }
-        $checked[$alternate_position] = $position;
-        $check_further[$alternate_position] = $position;
-        while (!empty($check_further)) {
-          $position = current($check_further);
-          $next_positions = $this->findNeighbourCells($position);
-          foreach ($next_positions as $key => $coord) {
-            $blocked = FALSE;
-            $alternate_position = self::locateCell($coord);
-            if (!isset($checked[$alternate_position])) {
-              if (!empty($this->cells[$alternate_position]["occupant"])) {
-                $occupant = $this->cells[$alternate_position]["occupant"];
-                if (!$occupant->isAlive() && $this->cells[$alternate_position]["type"] != "throne") {
-                  $blocked = TRUE;
-                }
-                elseif(in_array($alternate_position, $thrones)) {
-                  return TRUE;
-                }
-              }
-              elseif (in_array($alternate_position, $thrones)) {
-                return TRUE;
-              }
-              if (!$blocked) {
-                $check_further[$alternate_position] = $coord;
-              }
-              $checked[$alternate_position] = $coord;
-            }
-          }
-          unset($check_further[key($check_further)]);
-        }
-      }
-    }
-    return FALSE;
-  }
-
+  // FIXME adapter cette fonction à l'utilisation de directions
   public function findNeighbourCells($position, $use_diagonals = TRUE) {
     $next_positions = array();
     if ($position["x"] + 1 <= $this->cols) {
@@ -973,9 +890,32 @@ class DjambiBattlefield {
       if (!is_null($faction->getMaster())) {
         $faction_info['master'] = $faction->getMaster();
       }
-      $infos[$faction->getId()] = $faction_info;
+      $infos['factions'][$faction->getId()] = $faction_info;
+    }
+    foreach ($this->events as $key => $event) {
+      if ($event['event'] == 'GAME_OVER') {
+        $faction = $this->getFactionById($event['args']['faction1']);
+        if (!$faction->isAlive()) {
+          $infos['eliminations'][$faction->getId()] = $event['turn'];
+        }
+      }
     }
     $this->summary[$key] = $infos;
+  }
+
+  private function buildFinalRanking($begin) {
+    $last_summary = $this->summary[max(array_keys($this->summary))];
+    arsort($last_summary['eliminations']);
+    $last_turn = NULL;
+    $i = 0;
+    foreach ($last_summary['eliminations'] as $faction_key => $turn) {
+      $i++;
+      if ($last_turn != $turn) {
+        $rank = $begin + $i;
+      }
+      $this->getFactionById($faction_key)->setRanking($rank);
+      $last_turn = $turn;
+    }
   }
 
   public function logEvent($type, $event_txt, $event_args = NULL, $time = NULL) {
