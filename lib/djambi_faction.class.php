@@ -303,7 +303,7 @@ class DjambiPoliticalFaction {
 
   public function checkLeaderFreedom() {
     $control_leader = FALSE;
-    $control_necro = FALSE;
+    $has_necromobile = FALSE;
     $leaders = array();
     $pieces = $this->getControlledPieces();
     $cells = $this->getBattlefield()->getCells();

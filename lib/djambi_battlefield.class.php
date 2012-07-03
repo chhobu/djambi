@@ -100,11 +100,9 @@ class DjambiBattlefield {
       $faction->setAlive($faction_data['alive']);
       $faction->createPieces($pieces_scheme->getPieceScheme(), $positions, $data['deads']);
       $this->factions[] = $faction;
-      $controls[$key] = $faction_data['control'];
     }
-    foreach ($controls as $key_faction => $key_control) {
-      $faction = $this->getFactionById($key_faction);
-      $faction->setControl($this->getFactionById($key_control), FALSE);
+    if (!empty($this->summary)) {
+      $this->rebuildFactionsControls($this->summary[max(array_keys($this->summary))]);
     }
     return $this;
   }
@@ -157,14 +155,15 @@ class DjambiBattlefield {
       case('cardinal'):
       default :
         $this->directions = array(
-            'N' => array('y' => 0, 'x' => -1),
-            'NE' => array('y' => 1, 'x' => -1),
-            'E' => array('y' => 1, 'x' => 0),
-            'SE' => array('y' => 1, 'x' => 1),
-            'S' => array('y' => 0, 'x' => 1),
-            'SW' => array('y' => -1, 'x' => 1),
-            'W' => array('y' => -1, 'x' => 0),
-            'NW' => array('y' => -1, 'x' => -1));
+            'N' => array('y' => 0, 'x' => -1, 'diagonal' => FALSE),
+            'NE' => array('y' => 1, 'x' => -1, 'diagonal' => TRUE),
+            'E' => array('y' => 1, 'x' => 0, 'diagonal' => FALSE),
+            'SE' => array('y' => 1, 'x' => 1, 'diagonal' => TRUE),
+            'S' => array('y' => 0, 'x' => 1, 'diagonal' => FALSE),
+            'SW' => array('y' => -1, 'x' => 1, 'diagonal' => TRUE),
+            'W' => array('y' => -1, 'x' => 0, 'diagonal' => FALSE),
+            'NW' => array('y' => -1, 'x' => -1, 'diagonal' => TRUE)
+        );
     }
   }
 
@@ -371,7 +370,9 @@ class DjambiBattlefield {
     $last_turn['end'] = NULL;
     $this->turns[$last_turn_key] = $last_turn;
     $cells = $this->getCells();
-    foreach ($this->moves as $key => $move) {
+    $inverted_moves = $this->moves;
+    krsort($inverted_moves);
+    foreach ($inverted_moves as $key => $move) {
       if ($move['turn'] == $last_turn_key || $move['turn'] == $current_turn_key) {
         $piece = $this->getPieceById($move['target']);
         $position = $cells[$move['from']];
@@ -379,7 +380,7 @@ class DjambiBattlefield {
         if ($move['type'] == 'murder' || $move['type'] == 'elimination') {
           $piece->setAlive(TRUE);
         }
-        if ($move['turn'] == $current_turn_key && $move['type'] == 'move' && !empty($move['acting'])) {
+        if ($move['turn'] == $current_turn_key && $move['type'] == 'type' && !empty($move['acting'])) {
           $piece2 = $this->getPieceById($move['acting']);
           $position = self::locateCell($move['to']);
           $piece2->setPosition($position['x'], $position['y']);
@@ -398,13 +399,20 @@ class DjambiBattlefield {
     ksort($this->summary);
     foreach ($this->summary as $turn => $data) {
       if ($turn >= $last_turn_key) {
+        drupal_set_message('Suppression du summary ' . $turn . '( > '.$current_turn_key.')');
         unset($this->summary[$turn]);
       }
       else {
         $summary = $data;
       }
     }
-    foreach ($summary['faction'] as $faction_key => $data) {
+    if (!empty($summary)) {
+      $this->rebuildFactionsControls($summary);
+    }
+  }
+
+  private function rebuildFactionsControls($summary) {
+    foreach ($summary['factions'] as $faction_key => $data) {
       $faction = $this->getFactionById($faction_key);
       $faction->setStatus($data['status']);
       $faction->setControl($this->getFactionById($data['control']), FALSE);
@@ -808,32 +816,15 @@ class DjambiBattlefield {
     return $nb_alive;
   }
 
-  // FIXME adapter cette fonction à l'utilisation de directions
   public function findNeighbourCells($position, $use_diagonals = TRUE) {
+    $cell = $this->cells[self::locateCell($position)];
     $next_positions = array();
-    if ($position["x"] + 1 <= $this->cols) {
-      $next_positions[] = array("x" => $position["x"] + 1, "y" => $position["y"]);
-      if ($position["y"] + 1 <= $this->rows && $use_diagonals) {
-        $next_positions[] = array("x" => $position["x"] + 1, "y" => $position["y"] + 1);
+    foreach ($cell['neighbours'] as $direction_key => $neighbour) {
+      $direction = $this->directions[$direction_key];
+      if ($use_diagonals || !$direction['diagonal']) {
+        $next_positions[] = array('x' => $this->cells[$neighbour]['x'],
+          'y' => $this->cells[$neighbour]['y']);
       }
-      if ($position["y"] - 1 > 0 && $use_diagonals) {
-        $next_positions[] = array("x" => $position["x"] + 1, "y" => $position["y"] - 1);
-      }
-    }
-    if ($position["x"] - 1 > 0) {
-      $next_positions[] = array("x" => $position["x"] - 1, "y" => $position["y"]);
-      if ($position["y"] + 1 <= $this->rows && $use_diagonals) {
-        $next_positions[] = array("x" => $position["x"] - 1, "y" => $position["y"] + 1);
-      }
-      if ($position["y"] - 1 > 0 && $use_diagonals) {
-        $next_positions[] = array("x" => $position["x"] - 1, "y" => $position["y"] - 1);
-      }
-    }
-    if ($position["y"] + 1 <= $this->rows) {
-      $next_positions[] = array("x" => $position["x"], "y" => $position["y"] + 1);
-    }
-    if ($position["y"] - 1 > 0) {
-      $next_positions[] = array("x" => $position["x"], "y" => $position["y"] - 1);
     }
     return $next_positions;
   }
@@ -900,7 +891,7 @@ class DjambiBattlefield {
         }
       }
     }
-    $this->summary[$key] = $infos;
+    $this->summary[$event['turn']] = $infos;
   }
 
   private function buildFinalRanking($begin) {
