@@ -115,7 +115,9 @@ class DjambiBattlefield {
       'directions' => 'cardinal',
       'rule_surrounding' => 'loose', // throne_access, strict, loose
       'rule_comeback' => 'allowed', // never, surrounding, allowed
-      'rule_vassalization' => 'temporary' // temporary, full_control
+      'rule_vassalization' => 'temporary', // temporary, full_control,
+      'rule_canibalism' => 'no', // yes, no
+      'rule_self_diplomacy' => 'never' // never, vassal
     );
   }
 
@@ -778,8 +780,20 @@ class DjambiBattlefield {
       }
       else {
         $occupant = $this->cells[$cell]["occupant"];
-        if ($occupant->isAlive() && $occupant->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId()) {
-          if ($piece->getHability("kill_by_attack")) {
+        if ($this->getOption('rule_canibalism') == 'yes') {
+          $can_attack = TRUE;
+          }
+        else {
+          $can_attack = ($occupant->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId()) ? TRUE : FALSE;
+        }
+        if ($this->getOption('rule_self_diplomacy') == 'vassal') {
+          $can_manipulate = ($occupant->getFaction()->getId() != $piece->getFaction()->getId()) ? TRUE : FALSE;
+        }
+        else {
+          $can_manipulate = ($occupant->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId()) ? TRUE : FALSE;
+        }
+        if ($occupant->isAlive() && ($can_attack || $can_manipulate)) {
+          if ($piece->getHability("kill_by_attack") && $can_attack) {
             if ($this->cells[$cell]["type"] == "throne") {
               if ($piece->getHability("kill_throne_leader")) {
                 $move_ok = TRUE;
@@ -789,7 +803,7 @@ class DjambiBattlefield {
               $move_ok = TRUE;
             }
           }
-          elseif ($piece->getHability("move_living_pieces")) {
+          elseif ($piece->getHability("move_living_pieces") && $can_manipulate) {
             $move_ok = TRUE;
           }
         }

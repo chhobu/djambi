@@ -147,3 +147,16 @@ ul.stats > li {
 ul.stats caption {
   font-size: 150%;
   border-bottom: 2px solid #000;}
+.rule-variant {
+  background-color: #000;
+  color: #fff;}
+.game-option {
+  background-color: #900;
+  color: #fc0;}
+.rule-variant, .game-option {
+  float: left;
+  font-size: 90%;
+  font-variant: small-caps;
+  font-weight: bold;
+  margin: 0 0.5em 0 0;
+  padding: 0 0.5em;} 

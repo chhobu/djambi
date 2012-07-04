@@ -183,8 +183,14 @@ class DjambiPiece {
       if (isset($destination["occupant"])) {
         /* @var $target DjambiPiece */
         $target = $destination["occupant"];
+        if ($this->getFaction()->getBattlefield()->getOption('rule_self_diplomacy') == 'vassal') {
+          $can_manipulate = $target->getFaction()->getId() != $this->getFaction()->getId();
+        }
+        else {
+          $can_manipulate = $target->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId();
+        }
         if ($target->isAlive() && $this->getHability("move_living_pieces") && $allow_interactions
-          && $target->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) {
+          && $can_manipulate) {
           $interactions[] = array("type" => "manipulation", "target" => $target);
           $move_ok = TRUE;
         }

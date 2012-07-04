@@ -90,8 +90,10 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         '#collapsible' => TRUE,
         '#collapsed' => TRUE
     );
+    $form['#attached']['css'][] = drupal_get_path('module', 'kw_djambi').'/kw_djambi.css';
     $defaults = DjambiBattlefield::getDefaultOptions();
     $form['advanced']['rule_surrounding'] = array(
+        '#prefix' => '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => '01')) . '</span>',
         '#type' => 'radios',
         '#title' => t('Leader surrounding rule'),
         '#default_value' => $defaults['rule_surrounding'],
@@ -107,6 +109,7 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         )
     );
     $form['advanced']['rule_vassalization'] = array(
+        '#prefix' => '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => '02')) . '</span>',
         '#type' => 'radios',
         '#title' => t('Team vassalization rule'),
         '#default_value' => $defaults['rule_vassalization'],
@@ -117,6 +120,7 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         )
     );
     $form['advanced']['rule_comeback'] = array(
+        '#prefix' => '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => '03')) . '</span>',
         '#type' => 'radios',
         '#title' => t('Come-back possibilities rule'),
         '#default_value' => $defaults['rule_comeback'],
@@ -126,7 +130,28 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
             'allowed' => t('A player who had withdrawn or had a surrounded leader can play again if his leader is still alive, not surrounded and not controlled by an another team.')
          )
     );
+    $form['advanced']['rule_canibalism'] = array(
+        '#prefix' => '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => '04')) . '</span>',
+        '#type' => 'radios',
+        '#title' => t('Canibalism rule'),
+        '#default_value' => $defaults['rule_canibalism'],
+        '#options' => array(
+            'no' => t('No way, killing your own pieces is forbidden.'),
+            'yes' => t('The end justifies the means. If needed, there will be sacrifices. They will remain in our memories.'),
+        )
+    );
+    $form['advanced']['rule_self_diplomacy'] = array(
+        '#prefix' => '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => '05')) . '</span>',
+        '#type' => 'radios',
+        '#title' => t('Self manipulation rule'),
+        '#default_value' => $defaults['rule_self_diplomacy'],
+        '#options' => array(
+            'never' => t('Your diplomats are never allowed to manipulate pieces that you are controlling.'),
+            'vassal' => t('Your diplomat can manipulate vassalized pieces.'),
+        )
+    );
     $form['advanced']['turns_before_draw_proposal'] = array(
+        '#prefix' => '<span class="game-option">' . t('Game option #!number', array('!number' => '01')) . '</span>',
         '#type' => 'select',
         '#title' => t('Turns before each draw proposal avalaibility'),
         '#default_value' => $defaults['turns_before_draw_proposal'],
@@ -140,6 +165,7 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
          ),
     );
     $form['advanced']['allowed_skipped_turns_per_user'] = array(
+        '#prefix' => '<span class="game-option">' . t('Game option #!number', array('!number' => '02')) . '</span>',
         '#type' => 'select',
         '#title' => t('Allowed skipped turns per user before elimination'),
         '#default_value' => $defaults['allowed_skipped_turns_per_user'],
@@ -1022,7 +1048,8 @@ function kw_djambi_piece_murder_validate(&$errors, DjambiBattlefield $grid, Djam
     );
     return FALSE;
   }
-  if ($piece->getFaction()->getControl() == $grid->getPlayingFaction()) {
+  if ($grid->getOption('rule_canibalism') == 'no' &&
+      $piece->getFaction()->getControl()->getId() == $grid->getPlayingFaction()->getId()) {
     $errors[] = array(
       "location" => "pieces[destination][" . $button_name,
       "msg" => t("You are not allowed to kill one of your pieces, you crazy bastard !")
@@ -1088,7 +1115,13 @@ function kw_djambi_piece_manipulation_validate(&$errors, DjambiBattlefield $grid
     );
     return FALSE;
   }
-  if($piece->getFaction()->getControl() == $grid->getPlayingFaction()) {
+  if ($grid->getOption('rule_self_diplomacy') == 'vassal') {
+    $can_manipulate = TRUE;
+  }
+  else {
+    $can_manipulate = ($piece->getFaction()->getControl()->getId() == $grid->getPlayingFaction()->getId() ? FALSE : TRUE);
+  }
+  if(!$can_manipulate) {
     $errors[] = array(
       "location" => "pieces[destination][ " . $button_name,
       "msg" => t("You cannot manipulate your pieces.")
@@ -1454,9 +1487,7 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
   $throne = NULL;
   $ranking = array();
   foreach ($factions as $faction) {
-    //if (!is_null($faction->getRanking())) {
-      $ranking[$faction->getId()] = $faction->getRanking();
-    //}
+    $ranking[$faction->getId()] = $faction->getRanking();
     $stats['peace'][$faction->getId()] = 0;
   }
   if (!empty($ranking)) {
@@ -1632,8 +1663,14 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
       $murders = isset($stats['murders'][$faction->getId()][$subfaction->getId()]) ?
         $stats['murders'][$faction->getId()][$subfaction->getId()] : 0;
       $total += $murders;
-      $row[$subfaction->getId()] = ($faction->getId() != $subfaction->getId()) ? array('data' => $murders, 'class' => array('number'))
-        : array('data' => '-', 'class' => array('locked'));
+      $std_row = array('data' => $murders, 'class' => array('number'));
+      if ($grid->getOption('rule_canibalism') == 'no') {
+        $row[$subfaction->getId()] = ($faction->getId() != $subfaction->getId()) ? $std_row
+          : array('data' => '-', 'class' => array('locked'));
+      }
+      else {
+        $row[$subfaction->getId()] = $std_row;
+      }
       if (!isset($global_total[$subfaction->getId()])) {
         $global_total[$subfaction->getId()] = array(
             'data' => 0,
