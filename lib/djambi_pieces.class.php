@@ -222,17 +222,21 @@ class DjambiPiece {
             $key = DjambiBattlefield::locateCell($cell);
             if (!empty($cells[$key]["occupant"])) {
               $occupant = $cells[$key]["occupant"];
-              if ($occupant->isAlive() && $occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) {
-                $victims[$key] = $occupant;
+              if ($occupant->isAlive()) {
+                if ($grid->getOption('rule_press_liberty') == 'foxnews' ||
+                    $occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) {
+                  $victims[$key] = $occupant;
+                }
               }
             }
           }
-          if (count($victims) > 1) {
+          if ($grid->getOption('rule_press_liberty') == 'pravda' && count($victims) > 1) {
             $interactions[] = array("type" => "reportage", "reporter" => $this, "victims" => $victims);
           }
-          elseif (count($victims) == 1) {
-            $victim = current($victims);
-            $this->kill($victim, $victim->getPosition());
+          elseif (count($victims) > 0) {
+            foreach ($victims as $victim) {
+              $this->kill($victim, $victim->getPosition());
+            }
           }
         }
         $move_ok = TRUE;

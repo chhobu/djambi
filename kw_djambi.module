@@ -91,95 +91,35 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         '#collapsed' => TRUE
     );
     $form['#attached']['css'][] = drupal_get_path('module', 'kw_djambi').'/kw_djambi.css';
-    $defaults = DjambiBattlefield::getDefaultOptions();
-    $form['advanced']['rule_surrounding'] = array(
-        '#prefix' => '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => '01')) . '</span>',
-        '#type' => 'radios',
-        '#title' => t('Leader surrounding rule'),
-        '#default_value' => $defaults['rule_surrounding'],
-        '#options' => array(
-            'strict' => t('A leader is eliminated if he is not occupying the throne case, '
-                . 'if he or his controlled adjacent pieces are surrounded by dead peaces (without empty cells) '
-                . 'even if he is still controlling a living necromobile.'),
-            'loose' => t('A leader is eliminated if he is not occupying the throne case, '
-                . 'if he or his controlled adjacent pieces cannot move due to dead pieces barricade '
-                . 'and if he is not controlling a living necromobile.'),
-            'throne_access' => t('A leader is eliminated if the way to throne case is locked by dead pieces (even if he can still move)'
-                . ' and if he has no living necromobile among his controlled pieces.')
-        )
-    );
-    $form['advanced']['rule_vassalization'] = array(
-        '#prefix' => '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => '02')) . '</span>',
-        '#type' => 'radios',
-        '#title' => t('Team vassalization rule'),
-        '#default_value' => $defaults['rule_vassalization'],
-        '#options' => array(
-            'full_control' => t('A player who acceeds to power gains full control of the withdrawn or surrounded leaders sides until the end of the game,'
-                .' even if he leaves the throne case.'),
-            'temporary' => t('A player who acceeds to power gains control of the withdrawn or surrounded leaders sides just during the time of his reign.')
-        )
-    );
-    $form['advanced']['rule_comeback'] = array(
-        '#prefix' => '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => '03')) . '</span>',
-        '#type' => 'radios',
-        '#title' => t('Come-back possibilities rule'),
-        '#default_value' => $defaults['rule_comeback'],
-        '#options' => array(
-            'never' => t('No come-back.'),
-            'surrounding' => t('A player who had a surrounded leader can play again if his leader is not surrounded anymore, even if he is controlled by another team.'),
-            'allowed' => t('A player who had withdrawn or had a surrounded leader can play again if his leader is still alive, not surrounded and not controlled by an another team.')
-         )
-    );
-    $form['advanced']['rule_canibalism'] = array(
-        '#prefix' => '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => '04')) . '</span>',
-        '#type' => 'radios',
-        '#title' => t('Canibalism rule'),
-        '#default_value' => $defaults['rule_canibalism'],
-        '#options' => array(
-            'no' => t('No way, killing your own pieces is forbidden.'),
-            'yes' => t('The end justifies the means. If needed, there will be sacrifices. They will remain in our memories.'),
-        )
-    );
-    $form['advanced']['rule_self_diplomacy'] = array(
-        '#prefix' => '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => '05')) . '</span>',
-        '#type' => 'radios',
-        '#title' => t('Self manipulation rule'),
-        '#default_value' => $defaults['rule_self_diplomacy'],
-        '#options' => array(
-            'never' => t('Your diplomats are never allowed to manipulate pieces that you are controlling.'),
-            'vassal' => t('Your diplomat can manipulate vassalized pieces.'),
-        )
-    );
-    $form['advanced']['turns_before_draw_proposal'] = array(
-        '#prefix' => '<span class="game-option">' . t('Game option #!number', array('!number' => '01')) . '</span>',
-        '#type' => 'select',
-        '#title' => t('Turns before each draw proposal avalaibility'),
-        '#default_value' => $defaults['turns_before_draw_proposal'],
-        '#options' => array(
-            -1 => t('No draw !'),
-            0 => t('Unlimited draw proposal'),
-            2 => t('2 turns'),
-            5 => t('5 turns'),
-            10 => t('10 turns'),
-            20 => t('20 turns')
-         ),
-    );
-    $form['advanced']['allowed_skipped_turns_per_user'] = array(
-        '#prefix' => '<span class="game-option">' . t('Game option #!number', array('!number' => '02')) . '</span>',
-        '#type' => 'select',
-        '#title' => t('Allowed skipped turns per user before elimination'),
-        '#default_value' => $defaults['allowed_skipped_turns_per_user'],
-        '#options' => array(
-            0 => t('Skipping turns is forbidden !'),
-            1 => t('1 time'),
-            2 => t('2 times'),
-            3 => t('3 times'),
-            4 => t('4 times'),
-            5 => t('5 times'),
-            10 => t('10 times'),
-            -1 => t('No limits, you can always skip your turn.'),
-        ),
-    );
+    $defaults = DjambiBattlefield::getOptionsInfo();
+    $nb_rule = 0;
+    $nb_option = 0;
+    foreach($defaults as $option => $data) {
+      if ($data['configurable']) {
+        $form['advanced'][$option] = array(
+            '#type' => $data['widget'],
+            '#default_value' => $data['default']
+        );
+        if (!empty($data['title'])) {
+          $form['advanced'][$option]['#title'] = _kw_djambi_get_translatable_messages($data['title']);
+        }
+        if ($data['type'] == 'rule_variant') {
+          $nb_rule++;
+          $form['advanced'][$option]['#prefix'] = '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => str_pad($nb_rule, 2, '0', STR_PAD_LEFT))) . '</span>';
+        }
+        elseif ($data['type'] == 'game_option') {
+          $nb_option++;
+          $form['advanced'][$option]['#prefix'] = '<span class="game-option">' . t('Game option #!number', array('!number' => str_pad($nb_option, 2, '0', STR_PAD_LEFT))) . '</span>';
+        }
+        if (in_array($data['widget'], array('radios', 'select'))) {
+          $choices = array();
+          foreach ($data['choices'] as $choice_key => $description) {
+            $choices[$choice_key] = _kw_djambi_get_translatable_messages($description, array('!value' => $choice_key));
+          }
+          $form['advanced'][$option]['#options'] = $choices;
+        }
+      }
+    }
     $form['#submit'] = array('kw_djambi_new_game_submit');
   }
   else {
@@ -441,6 +381,13 @@ function kw_djambi_game_form($form, &$form_state, $node) {
     '#title' => t('Djambi grid'),
     '#weight' => 0
   );
+  $form['options'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Game configuration'),
+    '#weight' => 4,
+    '#collapsible' => TRUE,
+    '#collapsed' => TRUE
+  );
   $form['stats'] = array(
     '#type' => 'fieldset',
     '#title' => $grid->getStatus() == KW_DJAMBI_STATUS_FINISHED ? t('Stats and awards') : t('Stats'),
@@ -459,6 +406,20 @@ function kw_djambi_game_form($form, &$form_state, $node) {
     'effect' => 'none',
     'method' => 'replace',
   );
+  // Affichage du récapitulatif des règles
+  $options = DjambiBattlefield::getOptionsInfo();
+  foreach ($options as $key => $option) {
+    if ($option['type'] == 'rule_variant') {
+      $value = $grid->getOption($key);
+      if (!empty($option['choices'][$value])) {
+        $form['options'][$key] = array(
+            '#type' => 'item',
+            '#title' => !empty($option['title']) ? _kw_djambi_get_translatable_messages($option['title']) : NULL,
+            '#markup' => _kw_djambi_get_translatable_messages($option['choices'][$value], array('!value' => $value))
+        );
+      }
+    }
+  }
   // Ajout des interactions concernant le joueur actif
   $phase_text = NULL;
   $faction = $grid->getPlayingFaction();
@@ -1094,7 +1055,8 @@ function kw_djambi_piece_reportage_validate(&$errors, DjambiBattlefield $grid, D
     );
     return FALSE;
   }
-  if ($occupant->getFaction()->getControl()->getId() == $piece->getFaction()->getControl()->getId()) {
+  if ($grid->getOption('rule_press_liberty') == 'pravda'
+      && $occupant->getFaction()->getControl()->getId() == $piece->getFaction()->getControl()->getId()) {
     $errors[] = array(
       "location" => "pieces[destination][" . $button_name,
       "msg" => t("It is not a good idea to make a reportage about your own team evil actions.")
@@ -1664,12 +1626,12 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
         $stats['murders'][$faction->getId()][$subfaction->getId()] : 0;
       $total += $murders;
       $std_row = array('data' => $murders, 'class' => array('number'));
-      if ($grid->getOption('rule_canibalism') == 'no') {
-        $row[$subfaction->getId()] = ($faction->getId() != $subfaction->getId()) ? $std_row
-          : array('data' => '-', 'class' => array('locked'));
+      if ($grid->getOption('rule_canibalism') == 'yes' || $grid->getOption('rule_press_liberty') == 'foxnews') {
+        $row[$subfaction->getId()] = $std_row;
       }
       else {
-        $row[$subfaction->getId()] = $std_row;
+        $row[$subfaction->getId()] = ($faction->getId() != $subfaction->getId()) ? $std_row
+          : array('data' => '-', 'class' => array('locked'));
       }
       if (!isset($global_total[$subfaction->getId()])) {
         $global_total[$subfaction->getId()] = array(
@@ -1928,6 +1890,98 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBatt
     case("COMEBACK_AFTER_WITHDRAW"):
       $txt = t("The !faction1 side got some new hope and is back in the game.", $args);
       break;
+    case("RULE1"):
+        $txt = t("Leader surrounding rule");
+    break;
+    case("RULE3"):
+        $txt = t("Team vassalization rule");
+    break;
+    case("RULE2"):
+        $txt = t("Come-back possibilities rule");
+    break;
+    case("RULE4"):
+        $txt = t("Canibalism rule");
+    break;
+    case("RULE5"):
+        $txt = t("Self manipulation rule");
+    break;
+    case("RULE6"):
+        $txt = t("Press liberty rule");
+    break;
+    case("RULE1_STRICT"):
+      $txt = t('A leader is eliminated if he is not occupying the throne case, '
+                  . 'if he or his controlled adjacent pieces are surrounded by dead peaces (without empty cells) '
+                  . 'even if he is still controlling a living necromobile.');
+    break;
+    case("RULE1_LOOSE"):
+      $txt = t('A leader is eliminated if he is not occupying the throne case, '
+                  . 'if he or his controlled adjacent pieces cannot move due to dead pieces barricade '
+                  . 'and if he is not controlling a living necromobile.');
+    break;
+    case("RULE1_THRONE_ACCESS"):
+      $txt = t('A leader is eliminated if the way to throne case is locked by dead pieces (even if he can still move)'
+                  . ' and if he has no living necromobile among his controlled pieces.');
+    break;
+    case("RULE3_TEMPORARY"):
+      $txt = t('A player who acceeds to power gains control of the withdrawn or surrounded leaders sides just during the time of his reign.');
+    break;
+    case("RULE3_FULL_CONTROL"):
+      $txt = t('A player who acceeds to power gains full control of the withdrawn or surrounded leaders sides until the end of the game,'
+                  .' even if he leaves the throne case.');
+    break;
+    case("RULE2_NEVER"):
+      $txt = t('No come-back.');
+    break;
+    case("RULE2_SURROUNDING"):
+      $txt = t('A player who had a surrounded leader can play again if his leader is not surrounded anymore, even if he is controlled by another team.');
+    break;
+    case("RULE2_ALLOWED"):
+      $txt = t('A player who had withdrawn or had a surrounded leader can play again if his leader is still alive, not surrounded and not controlled by an another team.');
+    break;
+    case("RULE4_YES"):
+      $txt = t('The end justifies the means. If needed, there will be sacrifices. They will remain in our memories.');
+    break;
+    case("RULE4_NO"):
+      $txt = t('No way, killing your own pieces is forbidden.');
+    break;
+    case("RULE5_NEVER"):
+      $txt = t('Your diplomats are never allowed to manipulate pieces that you are controlling.');
+    break;
+    case("RULE5_VASSAL"):
+      $txt = t('Your diplomat can manipulate vassalized pieces.');
+    break;
+    case("RULE6_PRAVDA"):
+      $txt = t('Pradva style reporters : your reporters will never involve your own pieces in their scoops, '
+                  . 'but they can eliminate one ennemy per move.');
+    break;
+    case("RULE6_FOXNEWS"):
+      $txt = t('Fox News style reporters : your reporters can involve several pieces in their moves, '
+                  . 'but some scandals can also concern your own troups.');
+    break;
+    case("OPTION2"):
+       $txt = t("Turns before each draw proposal avalaibility");
+    break;
+    case("OPTION2_NEVER"):
+       $txt = t("No draw !");
+    break;
+    case("OPTION2_ALWAYS"):
+       $txt = t("Unlimited draw proposal");
+    break;
+    case("OPTION1_XTIME"):
+       $txt = format_plural($args['!value'], '!value time', '!value times', $args);
+    break;
+    case("OPTION1"):
+       $txt = t("Allowed skipped turns per user before elimination");
+    break;
+    case("OPTION1_NEVER"):
+       $txt = t("Skipping turns is forbidden !");
+    break;
+    case("OPTION1_ALWAYS"):
+       $txt = t("No limits, you can always skip your turn.");
+    break;
+    case("OPTION2_XTURN"):
+       $txt = format_plural($args['!value'], '!value turn', '!value turns', $args);
+    break;
       /*case(""):
        $txt = t("");
       break;*/

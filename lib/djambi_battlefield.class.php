@@ -107,24 +107,123 @@ class DjambiBattlefield {
     return $this;
   }
 
-  public static function getDefaultOptions() {
+  public static function getOptionsInfo() {
     return array(
-      'allowed_skipped_turns_per_user' => -1,
-      'turns_before_draw_proposal' => 10,
-      'piece_scheme' => 'standard',
-      'directions' => 'cardinal',
-      'rule_surrounding' => 'loose', // throne_access, strict, loose
-      'rule_comeback' => 'allowed', // never, surrounding, allowed
-      'rule_vassalization' => 'temporary', // temporary, full_control,
-      'rule_canibalism' => 'no', // yes, no
-      'rule_self_diplomacy' => 'never' // never, vassal
+      'allowed_skipped_turns_per_user' => array(
+          'default' => -1,
+          'configurable' => TRUE,
+          'title' => 'OPTION1',
+          'widget' => 'select',
+          'type' => 'game_option',
+          'choices' => array(
+              0 => 'OPTION1_NEVER',
+              1 => 'OPTION1_XTIME',
+              2 => 'OPTION1_XTIME',
+              3 => 'OPTION1_XTIME',
+              4 => 'OPTION1_XTIME',
+              5 => 'OPTION1_XTIME',
+              10 => 'OPTION1_XTIME',
+              -1 => 'OPTION1_ALWAYS')
+      ),
+      'turns_before_draw_proposal' => array(
+          'default' => 10,
+          'configurable' => TRUE,
+          'title' => 'OPTION2',
+          'widget' => 'select',
+          'type' => 'game_option',
+          'choices' => array(
+              -1 => 'OPTION2_NEVER',
+              0 => 'OPTION2_ALWAYS',
+              2 => 'OPTION2_XTURN',
+              5 => 'OPTION2_XTURN',
+              10 => 'OPTION2_XTURN',
+              20 => 'OPTION2_XTURN')
+      ),
+      'piece_scheme' => array(
+          'default'=> 'standard',
+          'configurable' => FALSE,
+          'type' => 'game_option'
+      ),
+      'directions' => array(
+          'default' => 'cardinal',
+          'configurable' => FALSE,
+          'type' => 'game_option'
+       ),
+      'rule_surrounding' => array(
+         'title' => 'RULE1',
+         'type' => 'rule_variant',
+         'configurable' => TRUE,
+         'default' => 'loose',
+         'widget' => 'radios',
+         'choices' => array(
+           'throne_access' => 'RULE1_THRONE_ACCESS',
+           'strict' => 'RULE1_STRICT',
+           'loose' => 'RULE1_LOOSE'
+         )
+      ),
+      'rule_comeback' => array(
+         'title' => 'RULE2',
+         'type' => 'rule_variant',
+         'configurable' => TRUE,
+         'default' => 'allowed',
+         'widget' => 'radios',
+         'choices' => array(
+           'never' => 'RULE2_NEVER',
+           'surrounding' => 'RULE2_SURROUNDING',
+           'allowed' => 'RULE2_ALLOWED'
+         )
+      ),
+      'rule_vassalization' => array(
+         'title' => 'RULE3',
+         'type' => 'rule_variant',
+         'configurable' => TRUE,
+         'widget' => 'radios',
+         'default' => 'temporary',
+         'choices' => array(
+           'temporary' => 'RULE3_TEMPORARY',
+           'full_control' => 'RULE3_FULL_CONTROL'
+         )
+      ),
+      'rule_canibalism' => array(
+         'title' => 'RULE4',
+         'type' => 'rule_variant',
+         'widget' => 'radios',
+         'configurable' => TRUE,
+         'default' => 'no',
+         'choices' => array(
+           'yes' => 'RULE4_YES',
+           'no' => 'RULE4_NO'
+         )
+      ),
+      'rule_self_diplomacy' => array(
+         'title' => 'RULE5',
+         'type' => 'rule_variant',
+         'configurable' => TRUE,
+         'widget' => 'radios',
+         'default' => 'never',
+         'choices' => array(
+           'never' => 'RULE5_NEVER',
+           'vassal' => 'RULE5_VASSAL'
+         )
+      ),
+      'rule_press_liberty' => array(
+         'title' => 'RULE6',
+         'type' => 'rule_variant',
+         'configurable' => TRUE,
+         'widget' => 'radios',
+         'default' => 'pravda',
+         'choices' => array(
+           'pravda' => 'RULE6_PRAVDA',
+           'foxnews' => 'RULE6_FOXNEWS'
+         )
+      )
     );
   }
 
   private function setDefaultOptions() {
-    $defaults = self::getDefaultOptions();
+    $defaults = self::getOptionsInfo();
     foreach ($defaults as $key => $value) {
-      $this->setOption($key, $value);
+      $this->setOption($key, $value['default']);
     }
   }
 
