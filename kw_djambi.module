@@ -649,7 +649,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
         if ($current_interaction['type'] == 'murder') {
           $form['pieces']['murder']['#selected_piece_id'] = $selected_piece->getId();
           $victim_piece = $current_interaction['target'];
-          $free_cells = $grid->getFreeCells($victim_piece, FALSE);
+          $free_cells = $grid->getFreeCells($victim_piece, FALSE, TRUE);
           foreach ($free_cells as $cell) {
             $alt_text = t('Bury !piece in !case', array(
                 '!piece' => _kw_djambi_get_full_piece_name($victim_piece), '!case' => $cell
@@ -1469,10 +1469,11 @@ function _kw_djambi_build_stats(DjambiBattlefield $grid) {
       @$stats['mobility'][$move['target']] += $distance;
       @$stats['moves']['turns'][$move['target_faction']]++;
       @$stats['moves']['distance'][$move['target_faction']] += $distance;
-      if (!empty($move['special_event']) && $move['special_event'] == 'throne access') {
+      if (!empty($move['special_event']) && $move['special_event'] == 'THRONE_ACCESS') {
         $throne = $move['target_faction'];
       }
-      elseif (!empty($move['special_event']) && ($move['special_event'] == 'throne retreat' || $move['special_event'] == 'throne evacuation')) {
+      elseif (!empty($move['special_event'])
+          && in_array($move['special_event'], array('THRONE_RETREAT', 'THRONE_EVACUATION', 'THRONE_MURDER', 'THRONE_MAUSOLEUM'))) {
         $throne = NULL;
       }
       if (!is_null($throne)) {
@@ -1766,15 +1767,32 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBatt
     $args['!faction2'] = '<span class="faction ' . $faction2->getClass() . '">' . $faction2->getName() . '</span>';
     unset($args['faction2']);
   }
+  if (isset($args['piece']) && !is_null($grid)) {
+    $piece = $grid->getPieceById($args['piece']);
+    $args['!piece'] = '<span class="piece ' . $piece->getType() . '">' . _kw_djambi_get_full_piece_name($piece) . '</span>';
+    unset($args['piece']);
+  }
   switch($message) {
-    case("throne access"):
+    case("THRONE_ACCESS"):
       $txt = t("!piece is now the great and beloved ruler of the djambi world.", $args);
       break;
-    case("throne retreat"):
+    case("THRONE_RETREAT"):
       $txt = t("!piece's reign of despotism and terror is now over.", $args);
       break;
-    case("throne evacuation"):
+    case("THRONE_EVACUATION"):
       $txt= t("!piece body has been exhumed from his mausoleum.", $args);
+      break;
+    case("THRONE_MURDER"):
+      $txt= t("!piece has been killed during his reign !", $args);
+      break;
+    case("THRONE_MAUSOLEUM"):
+      $txt= t("!piece body has been placed in the throne case mausoleum. Let's worship his memory.", $args);
+      break;
+    case('DIPLOMAT_GOLDEN_MOVE'):
+      $txt = t("!piece has just achieved a diplomat golden move !", $args);
+      break;
+    case('ASSASSIN_GOLDEN_MOVE'):
+      $txt = t("!piece has just achieved an assassin golden move !", $args);
       break;
     case("NEW_DJAMBI_GAME"):
       $txt = t("New djambi chess game created.");
@@ -1908,6 +1926,9 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBatt
     case("RULE6"):
         $txt = t("Press liberty rule");
     break;
+    case("RULE7"):
+      $txt = t("Throne case interactions rule");
+      break;
     case("RULE1_STRICT"):
       $txt = t('A leader is eliminated if he is not occupying the throne case, '
                   . 'if he or his controlled adjacent pieces are surrounded by dead peaces (without empty cells) '
@@ -1958,8 +1979,14 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBatt
       $txt = t('Fox News style reporters : your reporters can involve several pieces in their moves, '
                   . 'but some scandals can also concern your own troups.');
     break;
+    case("RULE7_NORMAL"):
+      $txt = t("Standard rules");
+      break;
+    case("RULE7_EXTENDED"):
+      $txt = t("Extended rules : dead leaders can access to power posthumously, allow assassins and diplomats master moves.");
+      break;
     case("OPTION2"):
-       $txt = t("Turns before each draw proposal avalaibility");
+       $txt = t("Turns before each draw proposal availability");
     break;
     case("OPTION2_NEVER"):
        $txt = t("No draw !");

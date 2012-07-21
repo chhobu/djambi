@@ -178,7 +178,18 @@ class DjambiPiece {
     $interactions = array();
     $current_position = $this->position;
     $move_ok = FALSE;
+    $extra_interaction = FALSE;
     $destination = $this->checkNewPosition($destination);
+    if (!$allow_interactions && $this->getFaction()->getBattlefield()->getOption('rule_throne_interactions') == 'extended') {
+      $cells = $this->getFaction()->getBattlefield()->getCells();
+      $current_cell = $cells[DjambiBattlefield::locateCell($current_position)];
+      if ($current_cell['type'] == 'throne' && isset($destination['occupant'])) {
+        $target = $destination['occupant'];
+        if ($target->getHability('access_throne')) {
+          $extra_interaction = TRUE;
+        }
+      }
+    }
     if ($destination && ($destination["x"] != $current_position["x"] || $destination["y"] && $current_position["y"])) {
       if (isset($destination["occupant"])) {
         /* @var $target DjambiPiece */
@@ -189,9 +200,15 @@ class DjambiPiece {
         else {
           $can_manipulate = $target->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId();
         }
-        if ($target->isAlive() && $this->getHability("move_living_pieces") && $allow_interactions
+        if ($target->isAlive() && $this->getHability("move_living_pieces") && ($allow_interactions || $extra_interaction)
           && $can_manipulate) {
-          $interactions[] = array("type" => "manipulation", "target" => $target);
+          if ($allow_interactions) {
+            $interactions[] = array("type" => "manipulation", "target" => $target);
+          }
+          elseif ($extra_interaction) {
+            $target->move($current_position);
+            $this->getFaction()->getBattlefield()->logEvent('event', 'DIPLOMAT_GOLDEN_MOVE', array('piece' => $this->getId()));
+          }
           $move_ok = TRUE;
         }
         elseif (!$target->isAlive() && $this->getHability("move_dead_pieces") && $allow_interactions) {
@@ -200,9 +217,12 @@ class DjambiPiece {
         }
         elseif ($target->isAlive()) {
           // Signature de l'assassin
-          if ($this->getHability("kill_signature") && $allow_interactions) {
+          if ($this->getHability("kill_signature") && ($allow_interactions || $extra_interaction)) {
             $this->kill($target, $current_position);
             $move_ok = TRUE;
+            if ($extra_interaction) {
+              $this->getFaction()->getBattlefield()->logEvent('event', 'ASSASSIN_GOLDEN_MOVE', array('piece' => $this->getId()));
+            }
           }
           // Déplacement du corps de la victime
           elseif ($this->getHability("kill_by_attack") && $allow_interactions) {

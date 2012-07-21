@@ -216,7 +216,18 @@ class DjambiBattlefield {
            'pravda' => 'RULE6_PRAVDA',
            'foxnews' => 'RULE6_FOXNEWS'
          )
-      )
+      ),
+      'rule_throne_interactions' => array(
+          'title' => 'RULE7',
+          'type' => 'rule_variant',
+          'configurable' => TRUE,
+          'widget' => 'radios',
+          'default' => 'normal',
+          'choices' => array(
+            'normal' => 'RULE7_NORMAL',
+            'extended' => 'RULE7_EXTENDED'
+          )
+      ),
     );
   }
 
@@ -500,7 +511,6 @@ class DjambiBattlefield {
     ksort($this->summary);
     foreach ($this->summary as $turn => $data) {
       if ($turn >= $last_turn_key) {
-        drupal_set_message('Suppression du summary ' . $turn . '( > '.$current_turn_key.')');
         unset($this->summary[$turn]);
       }
       else {
@@ -807,11 +817,12 @@ class DjambiBattlefield {
     if ($new_turn && $nb_factions > 2 && !empty($this->turns) && $this->turns[$this->getCurrentTurnId()]['side'] == $current_order['side']) {
       unset($this->play_order[key($this->play_order)]);
     }
-    // Un camp ne peut pas jouer immédiatement après avoir accédé au pouvoir
+    // Un camp ne peut pas jouer immédiatement après avoir accédé au pouvoir ou s'être retiré du pouvoir
     elseif ($new_turn && $nb_factions == 2) {
       $last_turn_id = $this->getCurrentTurnId();
       foreach($this->moves as $move) {
-        if ($move['turn'] == $last_turn_id && !empty($move['special_event']) && in_array($move['special_event'], array('throne access', 'throne retreat')) && $this->turns[$last_turn_id]['side'] == $current_order['side']) {
+        if ($move['turn'] == $last_turn_id && !empty($move['special_event'])
+            && in_array($move['special_event'], array('THRONE_ACCESS', 'THRONE_RETREAT')) && $this->turns[$last_turn_id]['side'] == $current_order['side']) {
           unset($this->play_order[key($this->play_order)]);
           break;
         }
@@ -873,28 +884,41 @@ class DjambiBattlefield {
 
   public function checkAvailableCell(DjambiPiece $piece, $cell, $allow_interactions) {
     $move_ok = FALSE;
-    if (isset($this->cells[$cell]["occupant"])) {
-      if (!$allow_interactions) {
-        $move_ok = FALSE;
-      }
-      else {
-        $occupant = $this->cells[$cell]["occupant"];
+    if (isset($this->cells[$cell]['occupant'])) {
+      $occupant = $this->cells[$cell]['occupant'];
+      $can_attack = FALSE;
+      $can_manipulate = FALSE;
+      if ($piece->getHability('kill_by_attack')) {
         if ($this->getOption('rule_canibalism') == 'yes') {
           $can_attack = TRUE;
-          }
+        }
         else {
           $can_attack = ($occupant->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId()) ? TRUE : FALSE;
         }
+      }
+      if ($piece->getHability('move_living_pieces')) {
         if ($this->getOption('rule_self_diplomacy') == 'vassal') {
           $can_manipulate = ($occupant->getFaction()->getId() != $piece->getFaction()->getId()) ? TRUE : FALSE;
         }
         else {
           $can_manipulate = ($occupant->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId()) ? TRUE : FALSE;
         }
+      }
+      if (!$allow_interactions) {
+        $move_ok = FALSE;
+        if ($this->getOption('rule_throne_interactions') == 'extended') {
+          if ($occupant->isAlive() && $occupant->getHability('access_throne')) {
+            if ($can_manipulate || $can_attack) {
+              $move_ok = TRUE;
+            }
+          }
+        }
+      }
+      else {
         if ($occupant->isAlive() && ($can_attack || $can_manipulate)) {
-          if ($piece->getHability("kill_by_attack") && $can_attack) {
-            if ($this->cells[$cell]["type"] == "throne") {
-              if ($piece->getHability("kill_throne_leader")) {
+          if ($can_attack) {
+            if ($this->cells[$cell]['type'] == 'throne') {
+              if ($piece->getHability('kill_throne_leader')) {
                 $move_ok = TRUE;
               }
             }
@@ -902,17 +926,17 @@ class DjambiBattlefield {
               $move_ok = TRUE;
             }
           }
-          elseif ($piece->getHability("move_living_pieces") && $can_manipulate) {
+          elseif ($can_manipulate) {
             $move_ok = TRUE;
           }
         }
-        elseif (!$occupant->isAlive() && $piece->getHability("move_dead_pieces")) {
+        elseif (!$occupant->isAlive() && $piece->getHability('move_dead_pieces')) {
           $move_ok = TRUE;
         }
       }
     }
     else {
-      if ($this->cells[$cell]["type"] != "throne" || $piece->getHability("access_throne")) {
+      if ($this->cells[$cell]['type'] != 'throne' || $piece->getHability('access_throne')) {
         $move_ok = TRUE;
       }
     }
@@ -952,11 +976,24 @@ class DjambiBattlefield {
     return $special_cells;
   }
 
-  public function getFreeCells(DjambiPiece $piece, $keep_alive = TRUE) {
+  public function getFreeCells(DjambiPiece $piece, $keep_alive = TRUE, $murder = FALSE) {
     $freecells = array();
     foreach ($this->cells as $key => $cell) {
-      if (!isset($cell["occupant"])) {
-        if($cell["type"] != "throne" || ($piece->getType() == "leader" && $piece->isAlive() && $keep_alive)) {
+      if (!isset($cell['occupant'])) {
+        if($cell["type"] == 'throne') {
+          $can_place_throne = FALSE;
+          if ($piece->getHability('access_throne') && $piece->isAlive() && $keep_alive) {
+            $can_place_throne = TRUE;
+          }
+          if ($this->getOption('rule_throne_interactions') == 'extended' && $murder
+            && $piece->getHability('access_throne')) {
+            $can_place_throne = TRUE;
+          }
+          if ($can_place_throne) {
+            $freecells[] = $key;
+          }
+        }
+        else {
           $freecells[] = $key;
         }
       }
@@ -1040,14 +1077,22 @@ class DjambiBattlefield {
   public function logMove(DjambiPiece $target_piece, $destination, $type = "move", DjambiPiece $acting_piece = NULL) {
     $destination_cell = self::locateCell($destination);
     $origin_cell = self::locateCell($target_piece->getPosition());
-    if ($this->cells[$destination_cell]['type'] == 'throne' && $target_piece->getType() == 'leader' && $target_piece->isAlive()) {
-      $special_event = 'throne access';
+    if ($this->cells[$destination_cell]['type'] == 'throne' && $target_piece->getHability('access_throne') && $target_piece->isAlive()) {
+      $special_event = 'THRONE_ACCESS';
     }
-    elseif ($this->cells[$origin_cell]['type'] == 'throne' && $target_piece->getType() == 'leader' && $target_piece->isAlive()) {
-      $special_event = 'throne retreat';
+    elseif ($this->cells[$destination_cell]['type'] == 'throne' && $target_piece->getHability('access_throne') && !$target_piece->isAlive()) {
+      $special_event = 'THRONE_MAUSOLEUM';
     }
-    elseif ($this->cells[$origin_cell]['type'] == 'throne' && $target_piece->getType() == 'leader' && !$target_piece->isAlive()) {
-      $special_event = 'throne evacuation';
+    elseif ($this->cells[$origin_cell]['type'] == 'throne' && $target_piece->getHability('access_throne') && $target_piece->isAlive()) {
+      $special_event = 'THRONE_RETREAT';
+    }
+    elseif ($this->cells[$origin_cell]['type'] == 'throne' && $target_piece->getHability('access_throne') && !$target_piece->isAlive()) {
+      if ($acting_piece->getHability('kill_throne_leader')) {
+        $special_event = 'THRONE_MURDER';
+      }
+      else {
+        $special_event = 'THRONE_EVACUATION';
+      }
     }
     else {
       $special_event = NULL;
