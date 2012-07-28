@@ -175,6 +175,11 @@ class DjambiPoliticalFaction {
   public function setPlaying($playing) {
     $this->playing = $playing;
     if ($playing) {
+      foreach ($this->getBattlefield()->getFactions() as $faction) {
+        if ($faction->getStatus() == KW_DJAMBI_USER_PLAYING) {
+          $faction->setStatus(KW_DJAMBI_USER_READY);
+        }
+      }
       $this->setStatus(KW_DJAMBI_USER_PLAYING);
     }
     return $this;
@@ -383,7 +388,7 @@ class DjambiPoliticalFaction {
             if (!isset($checked[$alternate_position])) {
               if (!empty($cells[$alternate_position]["occupant"])) {
                 $occupant = $cells[$alternate_position]["occupant"];
-                if (!$occupant->isAlive() && $this->cells[$alternate_position]["type"] != "throne") {
+                if (!$occupant->isAlive() && $cells[$alternate_position]["type"] != "throne") {
                   $blocked = TRUE;
                 }
                 elseif(in_array($alternate_position, $thrones)) {

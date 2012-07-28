@@ -176,6 +176,7 @@ class DjambiPiece {
 
   public function move($destination, $allow_interactions = TRUE) {
     $interactions = array();
+    $kills = array();
     $current_position = $this->position;
     $move_ok = FALSE;
     $extra_interaction = FALSE;
@@ -218,7 +219,10 @@ class DjambiPiece {
         elseif ($target->isAlive()) {
           // Signature de l'assassin
           if ($this->getHability("kill_signature") && ($allow_interactions || $extra_interaction)) {
-            $this->kill($target, $current_position);
+            $kills[] = array(
+              'victim' => $target,
+              'position' => $current_position
+            );
             $move_ok = TRUE;
             if ($extra_interaction) {
               $this->getFaction()->getBattlefield()->logEvent('event', 'ASSASSIN_GOLDEN_MOVE', array('piece' => $this->getId()));
@@ -255,7 +259,10 @@ class DjambiPiece {
           }
           elseif (count($victims) > 0) {
             foreach ($victims as $victim) {
-              $this->kill($victim, $victim->getPosition());
+              $kills[] = array(
+                'victim' => $victim,
+                'position' => $victim->getPosition()
+              );
             }
           }
         }
@@ -264,6 +271,11 @@ class DjambiPiece {
       if ($move_ok) {
         $this->faction->getBattlefield()->logMove($this, $destination, 'move', isset($destination['occupant']) ? $destination['occupant'] : NULL);
         $this->setPosition($destination["x"], $destination["y"]);
+        if (!empty($kills)) {
+          foreach($kills as $kill) {
+            $this->kill($kill['victim'], $kill['position']);
+          }
+        }
         // Mouvement supplémentaire pour évacuer le trône
         if (!$this->getHability("access_throne") && $destination["type"] == "throne") {
           $interactions[] = array("type" => "throne_evacuation", "target" => $this);
@@ -301,6 +313,40 @@ class DjambiPiece {
     $destination = $this->checkNewPosition($destination);
     $this->faction->getBattlefield()->logMove($victim, $destination, "necromobility", $this);
     $victim->setPosition($destination["x"], $destination["y"]);
+  }
+
+  public function checkAttackingPossibility(DjambiPiece $occupant) {
+    $can_attack = FALSE;
+    if ($this->getHability('kill_by_attack')) {
+      $canibalism = $this->getFaction()->getBattlefield()->getOption('rule_canibalism');
+      if ($canibalism == 'yes') {
+        $can_attack = TRUE;
+      }
+      elseif ($canibalism == 'vassals') {
+        $can_attack = ($occupant->getFaction()->getId() != $this->getFaction()->getId()) ? TRUE : FALSE;
+      }
+      else {
+        $can_attack = ($occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) ? TRUE : FALSE;
+        if ($canibalism == 'soft' && !$occupant->getFaction()->getControl()->isAlive()) {
+          $can_attack = FALSE;
+        }
+      }
+    }
+    return $can_attack;
+  }
+
+  public function checkManipulatingPossibility(DjambiPiece $occupant) {
+    $can_manipulate = FALSE;
+    if ($this->getHability('move_living_pieces')) {
+      $manipulation_rule = $this->getFaction()->getBattlefield()->getOption('rule_self_diplomacy');
+      if ($manipulation_rule == 'vassal') {
+        $can_manipulate = ($occupant->getFaction()->getId() != $this->getFaction()->getId()) ? TRUE : FALSE;
+      }
+      else {
+        $can_manipulate = ($occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) ? TRUE : FALSE;
+      }
+    }
+    return $can_manipulate;
   }
 
 }

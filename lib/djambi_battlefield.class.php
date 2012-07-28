@@ -31,6 +31,7 @@ class DjambiBattlefield {
       return $this->loadBattlefield($data);
     }
     else {
+      $this->setInfo('sequence', $data['sequence']);
       $nb_factions = count($data['factions']);
       if ($nb_factions == 4) {
         return $this->buildNewBattlefieldWith4Factions($data['factions'],
@@ -78,6 +79,7 @@ class DjambiBattlefield {
     $this->points = isset($data['points']) ? $data['points'] : 0;
     $this->events = isset($data['events']) ? $data['events'] : array();
     $this->summary = isset($data['summary']) ? $data['summary'] : array();
+    $this->setInfo('sequence', $data['sequence']);
     $this->factions = array();
     if (isset($data['options']) && is_array($data['options'])) {
       foreach($data['options'] as $option => $value) {
@@ -192,7 +194,9 @@ class DjambiBattlefield {
          'default' => 'no',
          'choices' => array(
            'yes' => 'RULE4_YES',
-           'no' => 'RULE4_NO'
+           'vassals' => 'RULE4_VASSALS',
+           'no' => 'RULE4_NO',
+           'ethical' => 'RUlE4_ETHICAL'
          )
       ),
       'rule_self_diplomacy' => array(
@@ -200,7 +204,7 @@ class DjambiBattlefield {
          'type' => 'rule_variant',
          'configurable' => TRUE,
          'widget' => 'radios',
-         'default' => 'never',
+         'default' => 'vassal',
          'choices' => array(
            'never' => 'RULE5_NEVER',
            'vassal' => 'RULE5_VASSAL'
@@ -222,7 +226,7 @@ class DjambiBattlefield {
           'type' => 'rule_variant',
           'configurable' => TRUE,
           'widget' => 'radios',
-          'default' => 'normal',
+          'default' => 'extended',
           'choices' => array(
             'normal' => 'RULE7_NORMAL',
             'extended' => 'RULE7_EXTENDED'
@@ -886,24 +890,8 @@ class DjambiBattlefield {
     $move_ok = FALSE;
     if (isset($this->cells[$cell]['occupant'])) {
       $occupant = $this->cells[$cell]['occupant'];
-      $can_attack = FALSE;
-      $can_manipulate = FALSE;
-      if ($piece->getHability('kill_by_attack')) {
-        if ($this->getOption('rule_canibalism') == 'yes') {
-          $can_attack = TRUE;
-        }
-        else {
-          $can_attack = ($occupant->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId()) ? TRUE : FALSE;
-        }
-      }
-      if ($piece->getHability('move_living_pieces')) {
-        if ($this->getOption('rule_self_diplomacy') == 'vassal') {
-          $can_manipulate = ($occupant->getFaction()->getId() != $piece->getFaction()->getId()) ? TRUE : FALSE;
-        }
-        else {
-          $can_manipulate = ($occupant->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId()) ? TRUE : FALSE;
-        }
-      }
+      $can_attack = $piece->checkAttackingPossibility($occupant);
+      $can_manipulate = $piece->checkManipulatingPossibility($occupant);
       if (!$allow_interactions) {
         $move_ok = FALSE;
         if ($this->getOption('rule_throne_interactions') == 'extended') {
@@ -1149,7 +1137,8 @@ class DjambiBattlefield {
       'special_cells' => $special_cells,
       'events' => $this->events,
       'options' => $this->options,
-      'summary' => $this->summary
+      'summary' => $this->summary,
+      'sequence' => $this->getInfo('sequence')
     );
   }
 

@@ -11,7 +11,9 @@ function theme_djambi_grid($variables) {
   $form_pieces = NULL;
   $current_form_action = NULL;
   $has_destination_layer = FALSE;
+  $display_changes = TRUE;
   if (isset($form["pieces"])) {
+    $display_changes = FALSE;
     $form_pieces = $form["pieces"];
     if (isset($form_pieces["murder"])) {
       $current_form_action = "murder";
@@ -39,6 +41,39 @@ function theme_djambi_grid($variables) {
     }
     else {
       $current_form_action = "piece_selection";
+      $display_changes = TRUE;
+    }
+  }
+  // Préparation de l'affichage des derniers mouvements
+  $show_changes = FALSE;
+  $show_moves_settings = $form['show_moves']['#value'];
+  if ($show_moves_settings['show'] && $display_changes) {
+    $moves = $grid->getMoves();
+    $new_moves = array();
+    $changing_cells = array();
+    $turn = $grid->getCurrentTurnId() - $show_moves_settings['turn'];
+    $i = 1;
+    if (!empty($moves)) {
+      $show_changes = TRUE;
+      foreach ($moves as $key => $move) {
+        if ($move['turn'] >= $turn) {
+          if ($move['type'] == 'move') {
+            $faction_id = $move['target_faction'];
+          }
+          else {
+            $faction_id = $move['acting_faction'];
+          }
+          $acting_faction = $grid->getFactionById($faction_id);
+          $changing_cells[$move['from']] = $acting_faction->getClass();
+          $changing_cells[$move['to']] = $acting_faction->getClass();
+          $new_moves[$i++] = array(
+            'description' => _kw_djambi_describe_move($move, $grid),
+            'location' => $move['to'],
+            'order' => $move['turn'] + 1,
+            'faction' => $acting_faction->getClass()
+          );
+        }
+      }
     }
   }
   // Construction de la grille
@@ -56,8 +91,20 @@ function theme_djambi_grid($variables) {
   }
   foreach ($grid->getCells() as $key => $cell) {
     $row_inner_html = "";
-    $extra_classes = array($cell["type"],
+    $extra_classes = array('cell', $cell["type"],
         isset($form_pieces["movable"]) && isset($cell["reachable"]) ? "reachable" : "unreachable");
+    if ($show_changes && isset($changing_cells[$key])) {
+      $extra_classes[] = 'recent-change';
+      $extra_classes[] = $changing_cells[$key];
+      $row_inner_html .= "<div class='changes'>";
+      foreach ($new_moves as $order => $move) {
+        if ($move['location'] == $key) {
+          $row_inner_html .= "<div class='change " .$move['faction']. "' data-order='" . $order . "'><span class='order'>" . $move['order'] . "</span>"
+          . "<div class='description'>" . $move['description'] . "</div></div>";
+        }
+      }
+      $row_inner_html .= '</div>';
+    }
     if ($has_destination_layer) {
       if (isset($form_pieces[$current_form_action]["cell-" . $key])) {
         $destination = drupal_render($form_pieces[$current_form_action]["cell-" . $key]);
@@ -113,7 +160,7 @@ function theme_djambi_grid($variables) {
   }
   // Création des légendes de la grille
   $caption = "";;
-  $caption_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
+  $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
   $fieldset_title = _kw_djambi_get_translatable_messages($grid->getStatus());
   $turn = end($grid->getTurns());
   $fieldset_title .= ' - <span class="turn">' . t("Turn #%turn", array("%turn" => $turn["turn"])) . '</span>';
@@ -127,21 +174,27 @@ function theme_djambi_grid($variables) {
     $playing_next_faction2 = $grid->getFactionById($next_play_order["side"]);
     $next_play_order = next($play_order);
     $playing_next_faction3 = $grid->getFactionById($next_play_order["side"]);
-    $caption_lines[t("Now playing")] = t("!color side", array("!color" =>
+    $infos_lines[t("Now playing")] = t("!color side", array("!color" =>
         "<span class='faction " . $now_playing_faction->getClass() . "'>" . $now_playing_faction->getName("t") . "</span>"
     ));
     if ($grid->getStatus() != KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
-      $caption_lines[t("Playing next")] = t("!color1 side, then !color2 side, then !color3 side", array(
+      $infos_lines[t("Playing next")] = t("!color1 side, then !color2 side, then !color3 side", array(
         "!color1" => "<span class='faction " . $playing_next_faction1->getClass() . "'>" . $playing_next_faction1->getName() . "</span>",
         "!color2" => "<span class='faction " . $playing_next_faction2->getClass() . "'>" . $playing_next_faction2->getName() . "</span>",
         "!color3" => "<span class='faction " . $playing_next_faction3->getClass() . "'>" . $playing_next_faction3->getName() . "</span>"
       ));
       if (isset($form["textes"]["phase"])) {
-        $caption_lines[t("Current phase")] = $form["textes"]["phase"]["#markup"];
+        $infos_lines[t("Current phase")] = $form["textes"]["phase"]["#markup"];
         unset($form["textes"]["phase"]);
       }
       else {
-        $caption_lines[t("Current phase")] = t("Waiting for !side move...", array('!side' => $now_playing_faction->getName()));
+        $last_change = $grid->getInfo('changed');
+        $infos_lines[t("Current phase")] = '<span class="refresh">'
+          . t("Waiting for !side move for !duration...", array(
+            '!side' => $now_playing_faction->getName(),
+            '!duration' => '<span class="time-elapsed">' . kw_tools_duration(time() - $last_change) . '</span>'
+        )) . '(' . t('Last update : !date', array('!date' => '<span class="time-last-update">' . format_date(time(), 'custom', 'H:i:s') . '</span>'))
+        . '<span class="refresh-link"> - ' . l(t('Refresh'), 'node/' . $grid->getId()) . '</span>)</span>';
       }
     }
     else {
@@ -162,34 +215,37 @@ function theme_djambi_grid($variables) {
           $waiting[] = $faction_name;
         }
       }
-      $caption_lines[t("Current phase")] = t("Draw asked by !faction side.", array('!faction' => $peacemonger));
+      $infos_lines[t("Current phase")] = t("Draw asked by !faction side.", array('!faction' => $peacemonger));
       if (!empty($accepted)) {
-        $caption_lines[t("Sides having accepted the draw")] = implode(', ', $accepted);
+        $infos_lines[t("Sides having accepted the draw")] = implode(', ', $accepted);
       }
       if (!empty($waiting)) {
-        $caption_lines[t("Undecided sides")] = implode(', ', $waiting);
+        $infos_lines[t("Undecided sides")] = implode(', ', $waiting);
       }
     }
   }
   $c = 0;
-  foreach ($caption_lines as $legend => $line) {
-    if ($caption != "") {
-      $caption .= "<span class='separateur'> / </span>";
+  if (!empty($infos_lines)) {
+    $infos_items = array();
+    foreach ($infos_lines as $legend => $line) {
+      $infos_items[] = '<span class="label">' . $legend . ' : </span><span class="value">' . $line . '</span>';
     }
-    $caption .= "<span class='caption-line' id='DjambiGrid" . $grid->getId() . "-caption" . $c++ . "'><span class='caption-label'>" . $legend . " : </span>"
-    . "<span class='caption-value'>" . $line . "</span></span>";
+    $form['grid']['infos'] = array(
+      '#markup' => theme('item_list', array('items' => $infos_items)),
+      '#weight' => -10
+    );
   }
   // Affichage du tableau
   $rows[5]["data"][5]["title"] = t("Throne case !");
   $rows[5]["data"][5]["data"] .= "<div class='element-invisible'>" . t("Throne case !") . "</div>";
-  $form['grid']['#title'] = $fieldset_title;
   $form['grid']['table'] = array(
       '#markup' => theme("table", array(
           "header" => $header,
           "rows" => $rows,
           "attributes" => array("class" => array("djambigrid"), "id" => "DjambiGrid" . $grid->getId()),
-          "caption" => $caption
-      ))
+          "caption" => $fieldset_title
+      )),
+      '#weight' => 0
   );
   // Affichage
   unset($form['pieces']);
