@@ -249,7 +249,10 @@ class DjambiPiece {
               if ($occupant->isAlive()) {
                 if ($grid->getOption('rule_press_liberty') == 'foxnews' ||
                     $occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) {
-                  $victims[$key] = $occupant;
+                  $canibalism = $grid->getOption('rule_canibalism');
+                  if ($canibalism != 'ethical' || $occupant->getFaction()->getControl()->isAlive()) {
+                    $victims[$key] = $occupant;
+                  }
                 }
               }
             }
@@ -327,7 +330,7 @@ class DjambiPiece {
       }
       else {
         $can_attack = ($occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) ? TRUE : FALSE;
-        if ($canibalism == 'soft' && !$occupant->getFaction()->getControl()->isAlive()) {
+        if ($canibalism == 'ethical' && !$occupant->getFaction()->getControl()->isAlive()) {
           $can_attack = FALSE;
         }
       }

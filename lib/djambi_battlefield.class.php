@@ -196,7 +196,7 @@ class DjambiBattlefield {
            'yes' => 'RULE4_YES',
            'vassals' => 'RULE4_VASSALS',
            'no' => 'RULE4_NO',
-           'ethical' => 'RUlE4_ETHICAL'
+           'ethical' => 'RULE4_ETHICAL'
          )
       ),
       'rule_self_diplomacy' => array(

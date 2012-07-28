@@ -1219,7 +1219,7 @@ function kw_djambi_piece_manipulation_validate(&$errors, DjambiBattlefield $grid
     );
     return FALSE;
   }
-  $free_cells = $grid->getFreeCells($piece);
+  $free_cells = $grid->getFreeCells($manipulated);
   if (!in_array($destination, $free_cells)) {
     $errors[] = array(
       "location" => "pieces[destination][" . $button_name,
@@ -2136,7 +2136,7 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBatt
     case("RULE4_NO"):
       $txt = t('No way, killing your own pieces is forbidden.');
     break;
-    case("RULE4_SOFT"):
+    case("RULE4_ETHICAL"):
       $txt = t('Responsible game : you cannot kill your own pieces and neutral pieces.');
       break;
     case("RULE4_VASSALS"):
