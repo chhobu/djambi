@@ -205,6 +205,16 @@ span.rule-variant, span.game-option {
 .djambi .controls input.form-submit:hover {
   background-color: #ccc;
   border-width: 1px;}
+.events {
+  background-color: #EEE;
+  border-radius: 1em;
+  box-shadow: 5px 5px 5px #999;
+  font-size: 90%;
+  margin-top: 1em !important;
+  padding: 0.25em 1em;}
+.events h3 {
+  text-align: center;
+  border-bottom: 1px solid #999;}
 .machiavel {
   border-radius: 0.5em 1em 0.5em 1em;
   box-shadow: 2px 2px 2px #999;

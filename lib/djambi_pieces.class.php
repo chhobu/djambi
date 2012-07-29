@@ -115,7 +115,7 @@ class DjambiPiece {
     $directions = $this->getFaction()->getBattlefield()->getDirections();
     $next_cases = $cells[DjambiBattlefield::locateCell($this->getPosition())]['neighbours'];
     foreach ($next_cases as $direction => $cell) {
-      $move_ok = $this->getFaction()->getBattlefield()->checkAvailableCell($this, $cell, $allow_interactions);
+      $move_ok = $this->checkAvailableMove($cell, $allow_interactions);
       if (!$move_ok && isset($cells[$cell]['occupant'])) {
         unset($next_cases[$direction]);
         continue;
@@ -133,7 +133,7 @@ class DjambiPiece {
             }
             else {
               $next_cell = $cells[$next_cell]['neighbours'][$direction];
-              $test = $this->getFaction()->getBattlefield()->checkAvailableCell($this, $next_cell, $allow_interactions);
+              $test = $this->checkAvailableMove($next_cell, $allow_interactions);
               if ($test) {
                 if (!in_array($next_cell, $next_cases)) {
                   $next_cases[$direction . $i] = $next_cell;
@@ -316,6 +316,53 @@ class DjambiPiece {
     $destination = $this->checkNewPosition($destination);
     $this->faction->getBattlefield()->logMove($victim, $destination, "necromobility", $this);
     $victim->setPosition($destination["x"], $destination["y"]);
+  }
+
+  public function checkAvailableMove($cell, $allow_interactions) {
+    $move_ok = FALSE;
+    $grid = $this->getFaction()->getBattlefield();
+    $cells = $grid->getCells();
+    if (isset($cells[$cell]['occupant'])) {
+      $occupant = $cells[$cell]['occupant'];
+      $can_attack = $this->checkAttackingPossibility($occupant);
+      $can_manipulate = $this->checkManipulatingPossibility($occupant);
+      if (!$allow_interactions) {
+        $move_ok = FALSE;
+        if ($grid->getOption('rule_throne_interactions') == 'extended') {
+          if ($occupant->isAlive() && $occupant->getHability('access_throne')) {
+            if ($can_manipulate || $can_attack) {
+              $move_ok = TRUE;
+            }
+          }
+        }
+      }
+      else {
+        if ($occupant->isAlive() && ($can_attack || $can_manipulate)) {
+          if ($can_attack) {
+            if ($cells[$cell]['type'] == 'throne') {
+              if ($this->getHability('kill_throne_leader')) {
+                $move_ok = TRUE;
+              }
+            }
+            else {
+              $move_ok = TRUE;
+            }
+          }
+          elseif ($can_manipulate) {
+            $move_ok = TRUE;
+          }
+        }
+        elseif (!$occupant->isAlive() && $this->getHability('move_dead_pieces')) {
+          $move_ok = TRUE;
+        }
+      }
+    }
+    else {
+      if ($cells[$cell]['type'] != 'throne' || $this->getHability('access_throne')) {
+        $move_ok = TRUE;
+      }
+    }
+    return $move_ok;
   }
 
   public function checkAttackingPossibility(DjambiPiece $occupant) {

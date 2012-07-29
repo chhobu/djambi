@@ -10,6 +10,7 @@ define('KW_DJAMBI_USER_WINNER', 'winner'); // Fin du jeu, vainqueur
 define('KW_DJAMBI_USER_DRAW', 'draw'); // Fin du jeu, nul
 define('KW_DJAMBI_USER_KILLED', 'killed'); // Fin du jeu, perdant
 define('KW_DJAMBI_USER_WITHDRAW', 'withdraw'); // Fin du jeu, abandon
+define('KW_DJAMBI_USER_VASSALIZED', 'vassalized'); // Fin du jeu, abandon
 define('KW_DJAMBI_USER_SURROUNDED', 'surrounded'); // Fin du jeu, encerclement
 define('KW_DJAMBI_USER_DEFECT', 'defect'); // Fin du jeu, disqualification
 define('KW_DJAMBI_USER_EMPTY_SLOT', 'empty'); // Création de partie, place libre
@@ -55,7 +56,8 @@ class DjambiBattlefield {
 
   public static function getAvailbaleNumberPlayers() {
     return array(
-        '4std' => '4STD_DESCRIPTION'
+        '4std' => '4STD_DESCRIPTION',
+        '2std' => '2STD_DESCRIPTION'
     );
   }
 
@@ -727,8 +729,8 @@ class DjambiBattlefield {
           if ($piece->getHability("access_throne") && $piece->isAlive()) {
             foreach ($turn_scheme as $key => $turn) {
               if ($turn["type"] == "throne" && $turn["case"] == $throne) {
-                $turn_scheme[$key]["side"] = $piece->getFaction()->getId();
-                $rulers[] = $piece->getFaction()->getId();
+                $turn_scheme[$key]["side"] = $piece->getFaction()->getControl()->getId();
+                $rulers[] = $piece->getFaction()->getControl()->getId();
               }
             }
           }
@@ -884,51 +886,6 @@ class DjambiBattlefield {
       $active_faction->withdraw();
       $this->changeTurn();
     }
-  }
-
-  public function checkAvailableCell(DjambiPiece $piece, $cell, $allow_interactions) {
-    $move_ok = FALSE;
-    if (isset($this->cells[$cell]['occupant'])) {
-      $occupant = $this->cells[$cell]['occupant'];
-      $can_attack = $piece->checkAttackingPossibility($occupant);
-      $can_manipulate = $piece->checkManipulatingPossibility($occupant);
-      if (!$allow_interactions) {
-        $move_ok = FALSE;
-        if ($this->getOption('rule_throne_interactions') == 'extended') {
-          if ($occupant->isAlive() && $occupant->getHability('access_throne')) {
-            if ($can_manipulate || $can_attack) {
-              $move_ok = TRUE;
-            }
-          }
-        }
-      }
-      else {
-        if ($occupant->isAlive() && ($can_attack || $can_manipulate)) {
-          if ($can_attack) {
-            if ($this->cells[$cell]['type'] == 'throne') {
-              if ($piece->getHability('kill_throne_leader')) {
-                $move_ok = TRUE;
-              }
-            }
-            else {
-              $move_ok = TRUE;
-            }
-          }
-          elseif ($can_manipulate) {
-            $move_ok = TRUE;
-          }
-        }
-        elseif (!$occupant->isAlive() && $piece->getHability('move_dead_pieces')) {
-          $move_ok = TRUE;
-        }
-      }
-    }
-    else {
-      if ($this->cells[$cell]['type'] != 'throne' || $piece->getHability('access_throne')) {
-        $move_ok = TRUE;
-      }
-    }
-    return $move_ok;
   }
 
   public function countLivingFactions() {
@@ -1099,7 +1056,7 @@ class DjambiBattlefield {
       $move['acting_faction'] = $acting_piece->getFaction()->getControl()->getId();
     }
     if (!is_null($special_event)) {
-      $move['special_event'] = $special_event;
+      $this->logEvent('event', $special_event, array('piece' => $move['target']));
     }
     $this->moves[] = $move;
   }

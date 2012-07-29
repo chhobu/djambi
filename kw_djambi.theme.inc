@@ -12,6 +12,7 @@ function theme_djambi_grid($variables) {
   $current_form_action = NULL;
   $has_destination_layer = FALSE;
   $display_changes = TRUE;
+  $display_events = TRUE;
   if (isset($form["pieces"])) {
     $display_changes = FALSE;
     $form_pieces = $form["pieces"];
@@ -51,10 +52,16 @@ function theme_djambi_grid($variables) {
     $moves = $grid->getMoves();
     $new_moves = array();
     $changing_cells = array();
-    $turn = $grid->getCurrentTurnId() - $show_moves_settings['turn'];
-    $i = 1;
     if (!empty($moves)) {
+      if ($show_moves_settings['type'] == 'turn-based') {
+        $last_move = $moves[max(array_keys($moves))];
+        $turn = $last_move['turn'] - $show_moves_settings['turn'] + 1;
+      }
+      else {
+        $turn = $grid->getCurrentTurnId() - $show_moves_settings['turn'];
+      }
       $show_changes = TRUE;
+      $i = 1;
       foreach ($moves as $key => $move) {
         if ($move['turn'] >= $turn) {
           if ($move['type'] == 'move') {
@@ -161,9 +168,25 @@ function theme_djambi_grid($variables) {
   // Création des légendes de la grille
   $caption = "";;
   $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
+  if ($grid->getMode()) {
+    foreach ($grid->getFactions() as $random_faction) {
+      if ($random_faction->getStatus() != KW_DJAMBI_USER_VASSALIZED) {
+        break;
+      }
+    }
+    $current_user = user_load($random_faction->getUserDataItem('uid'));
+    $player = theme('username', array('account' => $current_user));
+    if ($current_user->uid == 0) {
+      $ip = $random_faction->getUserDataItem('ip');
+      if (!empty($ip)) {
+        $player .= ' (' . t('IP adress : !ip', array('!ip' => $ip)) . ')';
+      }
+    }
+    $infos_lines[t('Player')] = t('!player, controlling all sides.', array('!player' => $player));
+  }
   $fieldset_title = _kw_djambi_get_translatable_messages($grid->getStatus());
-  $turn = end($grid->getTurns());
-  $fieldset_title .= ' - <span class="turn">' . t("Turn #%turn", array("%turn" => $turn["turn"])) . '</span>';
+  $current_turn = end($grid->getTurns());
+  $fieldset_title .= ' - <span class="turn">' . t("Turn #%turn", array("%turn" => $current_turn["turn"])) . '</span>';
   if (in_array($grid->getStatus(), array(KW_DJAMBI_STATUS_PENDING, KW_DJAMBI_STATUS_DRAW_PROPOSAL))) {
     $play_order = $grid->getPlayOrder();
     $current_play_order = current($play_order);
@@ -188,13 +211,7 @@ function theme_djambi_grid($variables) {
         unset($form["textes"]["phase"]);
       }
       else {
-        $last_change = $grid->getInfo('changed');
-        $infos_lines[t("Current phase")] = '<span class="refresh">'
-          . t("Waiting for !side move for !duration...", array(
-            '!side' => $now_playing_faction->getName(),
-            '!duration' => '<span class="time-elapsed">' . kw_tools_duration(time() - $last_change) . '</span>'
-        )) . '(' . t('Last update : !date', array('!date' => '<span class="time-last-update">' . format_date(time(), 'custom', 'H:i:s') . '</span>'))
-        . '<span class="refresh-link"> - ' . l(t('Refresh'), 'node/' . $grid->getId()) . '</span>)</span>';
+        $infos_lines[t("Current phase")] = _kw_djambi_waiting_label($now_playing_faction, $grid);
       }
     }
     else {
@@ -221,6 +238,10 @@ function theme_djambi_grid($variables) {
       }
       if (!empty($waiting)) {
         $infos_lines[t("Undecided sides")] = implode(', ', $waiting);
+        $last_change = $grid->getInfo('changed');
+        if (!_kw_djambi_check_current_user($playing_faction)) {
+          $infos_lines[t("Pending decision")] = _kw_djambi_waiting_label($now_playing_faction, $grid);
+        }
       }
     }
   }
@@ -247,8 +268,42 @@ function theme_djambi_grid($variables) {
       )),
       '#weight' => 0
   );
+  // Affichage des derniers événements
+  if ($display_events) {
+    $events = $grid->getEvents();
+    $recent_events = array();
+    if (!isset($turn)) {
+      $turn = $grid->getCurrentTurnId() - 1;
+    }
+    foreach($events as $event) {
+      if ($event['type'] != 'notice' && $event['turn'] >= $turn) {
+        $recent_events[] = '<strong>' . format_date($event['time'], 'custom', 'H:i:s') . '</strong> : ' . _kw_djambi_describe_event($event, $grid);
+      }
+    }
+    if (!empty($recent_events)) {
+      $form['grid']['recent_events'] = array(
+          '#markup' => '<div class="events">' . theme('item_list', array(
+              'items' => $recent_events,
+              'title' => t('Recent events'),
+          )) . '</div>',
+          '#weight' => 20
+      );
+    }
+  }
   // Affichage
   unset($form['pieces']);
   $html = drupal_render_children($form);
   return $html;
+}
+
+function _kw_djambi_waiting_label(DjambiPoliticalFaction $now_playing_faction, DjambiBattlefield $grid) {
+  $last_change = $grid->getInfo('changed');
+  $args = array(
+      '!side' => $now_playing_faction->getName(),
+      '!duration' => '<span class="time-elapsed">' . kw_tools_duration(time() - $last_change) . '</span>'
+  );
+  return '<span class="refresh">'
+  . ($grid->getStatus() == KW_DJAMBI_STATUS_DRAW_PROPOSAL ? t("Waiting for !side decision for !duration...", $args) : t("Waiting for !side move for !duration...", $args))
+  . '(' . t('Last update : !date', array('!date' => '<span class="time-last-update">' . format_date(time(), 'custom', 'H:i:s') . '</span>'))
+  . '<span class="refresh-link"> - ' . l(t('Refresh'), 'node/' . $grid->getId()) . '</span>)</span>';
 }

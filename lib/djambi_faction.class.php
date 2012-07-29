@@ -18,9 +18,9 @@ class DjambiPoliticalFaction {
     $this->skipped_turns = isset($data['skipped_turns']) ? $data['skipped_turns'] : 0;
     $this->last_draw_proposal = isset($data['last_draw_proposal']) ? $data['last_draw_proposal'] : 0;
     $this->draw_status = isset($data['draw_status']) ? $data['draw_status'] : NULL;
-    $this->status = $this->getUserDataItem('status');
     $this->ranking = isset($data['ranking']) ? $data['ranking'] : NULL;
     $this->master = isset($data['master']) ? $data['master'] : NULL;
+    $this->setStatus($this->getUserDataItem('status'));
   }
 
   public static function buildFactionsInfos() {
@@ -103,12 +103,15 @@ class DjambiPoliticalFaction {
   }
 
   public function setStatus($status) {
+    if ($this->status == KW_DJAMBI_USER_VASSALIZED) {
+      return $this;
+    }
     $this->status = $status;
     if (in_array($status, array(KW_DJAMBI_USER_PLAYING, KW_DJAMBI_USER_READY))) {
       $this->setAlive(TRUE);
     }
     elseif (in_array($status, array(KW_DJAMBI_USER_DEFECT, KW_DJAMBI_USER_SURROUNDED,
-        KW_DJAMBI_USER_WITHDRAW, KW_DJAMBI_USER_KILLED))) {
+        KW_DJAMBI_USER_WITHDRAW, KW_DJAMBI_USER_KILLED, KW_DJAMBI_USER_VASSALIZED))) {
       $this->setAlive(FALSE);
     }
     return $this;
