@@ -1,6 +1,5 @@
 (function ($) {
   Drupal.behaviors.Djambi = {attach: function(context, settings) {
-    $('.djambi .refresh-link').remove();
     var timeouts = new Array();
     var intervals = new Array();
     var clearTimeouts = function() {
@@ -58,25 +57,36 @@
         }
       });
     });
+    $('.djambi .refresh-button').hide();
     $('.djambi', context).once('Djambi', function() {
       var gridId = $(this).data('grid');
-      if ($(this).find('.refresh').length > 0) {
+      if ($(this).data('refresh') == 'yes') {
         var refreshInterval = setInterval(function() {
+          console.log('Calling interval function...');
           $grid = $('#DjambiContainer' + gridId);
-          if ($grid.find('.refresh').length > 0) {
+          if ($grid.data('refresh') == 'no') {
+            clearInterval(refreshInterval);
+          }
+          else {
             jQuery.ajax('/djambi/' + gridId + '/check-update/' + $grid.data('version')).done(function(json) {
               result = jQuery.parseJSON(json);
               if(result.changed == 0) {
                 $grid.find('.time-elapsed').html(result['time-elapsed']);
                 $grid.find('.time-last-update').html(result['time-last-update']);
+                if(typeof result['pings'] != 'undefined') {
+                  $players_table = $grid.find('.players');
+                  for (key in result['pings']) {
+                    value = result.pings[key];
+                    $tr = $players_table.find('tr[data-djuid="'+ key +'"]');
+                    $tr.find('td.ping-info').html(value['status'])
+                      .removeClass().addClass('ping-info').addClass(value['class'])
+                      .attr('title', value['title']);
+                    $tr.find('td.joined').html(value['joined']);
+                  }
+                }
               }
               else {
-                $('#DjambiContainer' + gridId).replaceWith(result['html']);
-                $grid = $('#DjambiContainer' + gridId);
-                Drupal.attachBehaviors($grid);
-                if ($grid.data('status') == 'finished') {
-                  clearInterval(refreshInterval);
-                }
+                $('.djambi .refresh-button').show().attr('value', Drupal.t('Refreshing...')).mousedown();
               }
             });
           }

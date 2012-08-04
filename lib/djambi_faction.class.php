@@ -32,11 +32,21 @@ class DjambiPoliticalFaction {
     return $factions;
   }
 
+  public function updateUserData($data) {
+    foreach ($data as $key => $value) {
+      $this->user_data[$key] = $value;
+    }
+    return $this;
+  }
+
   public function getUserData() {
     return $this->user_data;
   }
 
   public function getUserDataItem($item) {
+    if (!isset($this->user_data[$item])) {
+      return NULL;
+    }
     return $this->user_data[$item];
   }
 
@@ -107,11 +117,10 @@ class DjambiPoliticalFaction {
       return $this;
     }
     $this->status = $status;
-    if (in_array($status, array(KW_DJAMBI_USER_PLAYING, KW_DJAMBI_USER_READY))) {
+    if (in_array($status, array(KW_DJAMBI_USER_PLAYING, KW_DJAMBI_USER_READY, KW_DJAMBI_USER_DRAW, KW_DJAMBI_USER_WINNER))) {
       $this->setAlive(TRUE);
     }
-    elseif (in_array($status, array(KW_DJAMBI_USER_DEFECT, KW_DJAMBI_USER_SURROUNDED,
-        KW_DJAMBI_USER_WITHDRAW, KW_DJAMBI_USER_KILLED, KW_DJAMBI_USER_VASSALIZED))) {
+    else {
       $this->setAlive(FALSE);
     }
     return $this;

@@ -1,9 +1,11 @@
 <?php
 define('KW_DJAMBI_MODE_SANDBOX', 'bac-a-sable');
+define('KW_DJAMBI_MODE_FRIENDLY', 'amical');
 
 define('KW_DJAMBI_STATUS_PENDING', 'pending');
 define('KW_DJAMBI_STATUS_FINISHED', 'finished');
 define('KW_DJAMBI_STATUS_DRAW_PROPOSAL', 'draw_proposal');
+define('KW_DJAMBI_STATUS_RECRUITING', 'recruiting');
 
 define('KW_DJAMBI_USER_PLAYING', 'playing'); // Partie en cours
 define('KW_DJAMBI_USER_WINNER', 'winner'); // Fin du jeu, vainqueur
@@ -44,7 +46,8 @@ class DjambiBattlefield {
 
   public static function getModes($with_description = FALSE) {
     $modes = array(
-        KW_DJAMBI_MODE_SANDBOX => 'MODE_SANDBOX_DESCRIPTION'
+        KW_DJAMBI_MODE_FRIENDLY => 'MODE_FRIENDLY_DESCRIPTION',
+        KW_DJAMBI_MODE_SANDBOX => 'MODE_SANDBOX_DESCRIPTION',
     );
     if ($with_description) {
       return $modes;
@@ -405,8 +408,38 @@ class DjambiBattlefield {
   }
 
   public function getPlayingFaction() {
+    if (!$this->isPending()) {
+      return FALSE;
+    }
     $play_order = current($this->getPlayOrder());
     return $this->getFactionById($play_order["side"]);
+  }
+
+  public function isPending() {
+    if (in_array($this->getStatus(), array(KW_DJAMBI_STATUS_PENDING, KW_DJAMBI_STATUS_DRAW_PROPOSAL))) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  public function isFinished() {
+    if ($this->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
+  }
+
+  public function isNotBegin() {
+    if ($this->getStatus() == KW_DJAMBI_STATUS_RECRUITING) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
   }
 
   public function getPieceById($piece_id) {
@@ -729,7 +762,9 @@ class DjambiBattlefield {
           if ($piece->getHability("access_throne") && $piece->isAlive()) {
             foreach ($turn_scheme as $key => $turn) {
               if ($turn["type"] == "throne" && $turn["case"] == $throne) {
-                $turn_scheme[$key]["side"] = $piece->getFaction()->getControl()->getId();
+                if ($piece->getFaction()->getControl()->getId() == $piece->getFaction()->getId()) {
+                  $turn_scheme[$key]["side"] = $piece->getFaction()->getControl()->getId();
+                }
                 $rulers[] = $piece->getFaction()->getControl()->getId();
               }
             }
@@ -828,7 +863,8 @@ class DjambiBattlefield {
       $last_turn_id = $this->getCurrentTurnId();
       foreach($this->moves as $move) {
         if ($move['turn'] == $last_turn_id && !empty($move['special_event'])
-            && in_array($move['special_event'], array('THRONE_ACCESS', 'THRONE_RETREAT')) && $this->turns[$last_turn_id]['side'] == $current_order['side']) {
+            && in_array($move['special_event'], array('THRONE_ACCESS', 'THRONE_RETREAT'))
+            && $this->turns[$last_turn_id]['side'] == $current_order['side']) {
           unset($this->play_order[key($this->play_order)]);
           break;
         }
@@ -948,16 +984,37 @@ class DjambiBattlefield {
 
   public function play() {
     if ($this->status == KW_DJAMBI_STATUS_PENDING) {
-      $this->getPlayOrder(TRUE);
-      $this->defineMovablePieces();
       if (empty($this->summary)) {
+        $this->prepareSummary();
         $this->updateSummary();
       }
+      $this->getPlayOrder(TRUE);
+      $this->defineMovablePieces();
     }
   }
 
   public function getSummary() {
     return $this->summary;
+  }
+
+  public function prepareSummary() {
+    $vassals = array();
+    $players = array();
+    foreach($this->factions as $faction) {
+      if ($faction->getStatus() == KW_DJAMBI_USER_VASSALIZED) {
+        $vassals[] = $faction->getId();
+      }
+      else {
+        $players[] = $faction;
+      }
+    }
+    if (!empty($vassals) && !empty($players) && count($vassals) == count($players)) {
+      foreach ($vassals as $id) {
+        $control = current($players);
+        $this->getFactionById($id)->setControl($control, TRUE);
+        next($players);
+      }
+    }
   }
 
   public function updateSummary() {
@@ -1057,6 +1114,7 @@ class DjambiBattlefield {
     }
     if (!is_null($special_event)) {
       $this->logEvent('event', $special_event, array('piece' => $move['target']));
+      $move['special_event'] = $special_event;
     }
     $this->moves[] = $move;
   }

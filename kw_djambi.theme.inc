@@ -168,7 +168,7 @@ function theme_djambi_grid($variables) {
   // Création des légendes de la grille
   $caption = "";;
   $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
-  if ($grid->getMode()) {
+  if ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
     foreach ($grid->getFactions() as $random_faction) {
       if ($random_faction->getStatus() != KW_DJAMBI_USER_VASSALIZED) {
         break;
@@ -184,10 +184,34 @@ function theme_djambi_grid($variables) {
     }
     $infos_lines[t('Player')] = t('!player, controlling all sides.', array('!player' => $player));
   }
+  elseif ($grid->isPending()) {
+    $pheader = array(
+      array('data' => t('Sides')),
+      array('data' => t('Players')),
+      array('data' => t('IP address')),
+      array('data' => t('Ping')),
+      array('data' => t('Status'))
+    );
+    $prows = array();
+    foreach ($grid->getFactions() as $faction) {
+      if (!in_array($faction->getStatus(), array(KW_DJAMBI_USER_VASSALIZED, KW_DJAMBI_USER_EMPTY_SLOT))) {
+        $prow = array();
+        $ping = _kw_djambi_format_ping_infos($faction->getUserDataItem('ping'));
+        $prow[] = array('data' => '<span class="faction ' . $faction->getClass() . '">' . $faction->getName() . '</span>');
+        $prow[] = array('data' => theme('username', array('account' => user_load($faction->getUserDataItem('uid')))));
+        $prow[] = array('data' => $faction->getUserDataItem('ip'));
+        $prow[] = array('data' => $ping['status'], 'class' => array('ping-info', $ping['class']), 'title' => $ping['title']);
+        $prow[] = array('data' => $faction->getStatus());
+        $prows[] = array('data' => $prow, 'data-djuid' => $faction->getUserDataItem('djuid'));
+      }
+    }
+    $infos_lines[t('Players')] = theme('table', array('rows' => $prows, 'header' => $pheader,
+        'attributes' => array('class' => array('players'))));
+  }
   $fieldset_title = _kw_djambi_get_translatable_messages($grid->getStatus());
   $current_turn = end($grid->getTurns());
   $fieldset_title .= ' - <span class="turn">' . t("Turn #%turn", array("%turn" => $current_turn["turn"])) . '</span>';
-  if (in_array($grid->getStatus(), array(KW_DJAMBI_STATUS_PENDING, KW_DJAMBI_STATUS_DRAW_PROPOSAL))) {
+  if ($grid->isPending()) {
     $play_order = $grid->getPlayOrder();
     $current_play_order = current($play_order);
     $now_playing_faction = $grid->getFactionById($current_play_order["side"]);
@@ -246,16 +270,7 @@ function theme_djambi_grid($variables) {
     }
   }
   $c = 0;
-  if (!empty($infos_lines)) {
-    $infos_items = array();
-    foreach ($infos_lines as $legend => $line) {
-      $infos_items[] = '<span class="label">' . $legend . ' : </span><span class="value">' . $line . '</span>';
-    }
-    $form['grid']['infos'] = array(
-      '#markup' => theme('item_list', array('items' => $infos_items)),
-      '#weight' => -10
-    );
-  }
+  _kw_djambi_add_info_lines($infos_lines, $form);
   // Affichage du tableau
   $rows[5]["data"][5]["title"] = t("Throne case !");
   $rows[5]["data"][5]["data"] .= "<div class='element-invisible'>" . t("Throne case !") . "</div>";
@@ -296,14 +311,94 @@ function theme_djambi_grid($variables) {
   return $html;
 }
 
-function _kw_djambi_waiting_label(DjambiPoliticalFaction $now_playing_faction, DjambiBattlefield $grid) {
+function theme_djambi_recruiting_phase($variables) {
+  global $user;
+  $form = $variables["form"];
+  // Détermination de la phase de jeu
+  /* @var $grid DjambiBattlefield */
+  $grid = $form["#grid"];
+  $header = array(
+    0 => array('data' => t('Faction')),
+    1 => array('data' => t('User')),
+    2 => array('data' => t('IP address')),
+    3 => array('data' => t('Ping')),
+    4 => array('data' => t('Waiting time')),
+    5 => array('data' => t('Action'))
+  );
+  $rows = array();
+  $empty = 0;
+  foreach (element_children($form['grid']['factions']) as $id) {
+    if (!empty($form['grid']['factions'][$id]['infos'])) {
+      $ip = $form['grid']['factions'][$id]['infos']['#value']['ip'];
+      $ping = $form['grid']['factions'][$id]['infos']['#value']['ping'];
+      $ping_array = _kw_djambi_format_ping_infos($ping);
+      $joined = format_interval(time() - $form['grid']['factions'][$id]['infos']['#value']['joined']);
+    }
+    else {
+      $ip = $ping_array['status'] = $joined = '?';
+      $ping_array['class'] = 'empty';
+      $ping_array['title'] = '?';
+      $empty++;
+    }
+    $row = array(
+      0 => array('data' => $form['grid']['factions'][$id]['label']['#title']),
+      1 => array('data' => $form['grid']['factions'][$id]['label']['#markup']),
+      2 => array('data' => $ip),
+      3 => array('data' => $ping_array['status'], 'class' => array($ping_array['class'], 'ping-info'),
+            'title' => $ping_array['title']),
+      4 => array('data' => $joined, 'class' => array('joined')),
+      5 => array('data' => !empty($form['grid']['factions'][$id]['action']) ? drupal_render($form['grid']['factions'][$id]['action']) : '-')
+    );
+    $rows[] = array('data' => $row,
+            'data-djuid' => !empty($form['grid']['factions'][$id]['infos']['#value']['djuid']) ? $form['grid']['factions'][$id]['infos']['#value']['djuid'] : NULL);
+  }
+  unset($form['grid']['factions']);
+  $caption = t('Waiting for other players : !remaining', array('!remaining' =>
+      format_plural($empty, '1 empty slot remaining', '!nb empty slots remaining', array('!nb' => $empty))));
+  $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
+  $infos_lines[t("Unbegun game")] = _kw_djambi_waiting_label(NULL, $grid);
+  _kw_djambi_add_info_lines($infos_lines, $form);
+  $form['grid']['players'] = array(
+      '#markup' => theme('table', array('header' => $header, 'rows' => $rows,
+          'caption' => $caption, 'attributes' => array('class' => array('players')))),
+      '#weight' => 10
+  );
+  $html = drupal_render_children($form);
+  return $html;
+}
+
+function _kw_djambi_add_info_lines($infos_lines, &$form) {
+  if (!empty($infos_lines)) {
+    $infos_items = array();
+    foreach ($infos_lines as $legend => $line) {
+      $infos_items[] = '<span class="label">' . $legend . ' : </span><span class="value">' . $line . '</span>';
+    }
+    $form['grid']['infos'] = array(
+        '#markup' => theme('item_list', array('items' => $infos_items)),
+        '#weight' => -10
+    );
+  }
+}
+
+function _kw_djambi_waiting_label($now_playing_faction, DjambiBattlefield $grid) {
   $last_change = $grid->getInfo('changed');
-  $args = array(
+  if (!is_null($now_playing_faction)) {
+    $args = array(
       '!side' => $now_playing_faction->getName(),
       '!duration' => '<span class="time-elapsed">' . kw_tools_duration(time() - $last_change) . '</span>'
-  );
-  return '<span class="refresh">'
-  . ($grid->getStatus() == KW_DJAMBI_STATUS_DRAW_PROPOSAL ? t("Waiting for !side decision for !duration...", $args) : t("Waiting for !side move for !duration...", $args))
-  . '(' . t('Last update : !date', array('!date' => '<span class="time-last-update">' . format_date(time(), 'custom', 'H:i:s') . '</span>'))
-  . '<span class="refresh-link"> - ' . l(t('Refresh'), 'node/' . $grid->getId()) . '</span>)</span>';
+    );
+  }
+  switch ($grid->getStatus()) {
+    case(KW_DJAMBI_STATUS_RECRUITING) :
+      $label = t("Waiting for new players...");
+    break;
+    case(KW_DJAMBI_STATUS_DRAW_PROPOSAL) :
+      $label = t("Waiting for !side decision for !duration...", $args);
+    break;
+    default:
+      $label = t("Waiting for !side move for !duration...", $args);
+  }
+  return '<span class="refresh">' . $label
+  . ' (' . t('Last update : !date', array('!date' => '<span class="time-last-update">' . format_date(time(), 'custom', 'H:i:s') . '</span>'))
+  . '</span>';
 }
