@@ -494,15 +494,6 @@ function _kw_djambi_load_game($node) {
 }
 
 /**
- * Implements hook_preprocess_page().
- * Ajoute un texte alternatif sur le logo
- * @param array $variables
- */
-function kw_djambi_preprocess_page(&$variables) {
-  $variables["logo_alt"] = t("The strategy game advised to traitors and bastards.");
-}
-
-/**
  * Sauvegarde en BdD du jeu
  * @param DjambiBattlefield $grid
  */
@@ -522,12 +513,16 @@ function _kw_djambi_save_game(DjambiBattlefield $grid) {
       $moves++;
     }
   }
+  $autodelete_option = 'std';
+  if ($grid->isFinished() && in_array($grid->getMode(), array(KW_DJAMBI_MODE_FRIENDLY))) {
+    $autodelete_option = 'extended';
+  }
   $query1->fields(array(
       'nb_moves' => $moves,
       'data' => $data,
       'changed' => time(),
       'status' => $grid->getStatus(),
-      'autodelete' => $grid->getInfo('autodelete') == 0 ? 0 : _kw_djambi_autodelete_time(),
+      'autodelete' => $grid->getInfo('autodelete') == 0 ? 0 : _kw_djambi_autodelete_time($autodelete_option),
       'compressed' => $compress ? 1 : 0
   ));
   $query1->condition('nid', $grid->getId());
@@ -587,8 +582,16 @@ function _kw_djambi_get_full_piece_name(DjambiPiece $piece) {
  * Fixe le temps de conservation d'une partie
  * @param String $mode
  */
-function _kw_djambi_autodelete_time() {
-  return time() + 60 * 60 * 24;
+function _kw_djambi_autodelete_time($mode = 'std') {
+  if ($mode == 'no_autodelete') {
+    return 0;
+  }
+  if ($mode == 'extended') {
+    return time() + 60 * 60 * 24 * 365;
+  }
+  else {
+    return time() + 60 * 60 * 24;
+  }
 }
 
 /**
@@ -665,9 +668,14 @@ function _kw_djambi_describe_event($event, DjambiBattlefield $grid) {
 /**
  * Vérifie si la faction passée en argument est contrôlée par l'utilisateur courant.
  */
-function _kw_djambi_check_current_user(DjambiPoliticalFaction $faction) {
+function _kw_djambi_check_current_user(DjambiPoliticalFaction $faction, $control = TRUE) {
   global $user;
-  $user_data = $faction->getControl()->getUserData();
+  if ($control) {
+    $user_data = $faction->getControl()->getUserData();
+  }
+  else {
+    $user_data = $faction->getUserData();
+  }
   if ($user->uid > 0) {
     if ($user_data['uid'] == $user->uid) {
       return TRUE;
@@ -708,7 +716,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
     $current_user_faction = NULL;
     $playable_factions = array();
     foreach ($grid->getFactions() as $faction) {
-      if (_kw_djambi_check_current_user($faction)) {
+      if (_kw_djambi_check_current_user($faction, FALSE)) {
         $current_user_faction = $faction;
       }
       if ($faction->getStatus() != KW_DJAMBI_USER_VASSALIZED) {
@@ -812,7 +820,8 @@ function kw_djambi_game_form($form, &$form_state, $node) {
                 'ip' => $faction->getUserDataItem('ip'),
                 'ping' => $faction->getUserDataItem('ping'),
                 'joined' => $faction->getUserDataItem('joined'),
-                'djuid' => $faction->getUserDataItem('djuid')
+                'djuid' => $faction->getUserDataItem('djuid'),
+                'me' => !is_null($current_user_faction) && $current_user_faction->getId() == $faction->getId() ? TRUE : FALSE
             )
         );
       }
@@ -829,6 +838,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
             '#value' => !is_null($current_user_faction) ? t('Play this side') : t('Join this game'),
             '#submit' => array('kw_djambi_game_form_participate_submit'),
             '#name' => 'use-' . $faction->getId(),
+            '#ajax' => $ajax_settings
         );
       }
     }

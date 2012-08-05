@@ -215,6 +215,9 @@ span.rule-variant, span.game-option {
 .events h3 {
   text-align: center;
   border-bottom: 1px solid #999;}
+.djambi .players tr.me {
+  background-color: #fec;
+  font-weight: bold;}
 .machiavel {
   border-radius: 0.5em 1em 0.5em 1em;
   box-shadow: 2px 2px 2px #999;

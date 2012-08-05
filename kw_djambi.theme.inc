@@ -194,16 +194,27 @@ function theme_djambi_grid($variables) {
     );
     $prows = array();
     foreach ($grid->getFactions() as $faction) {
+      $prow = array();
+      $ping = _kw_djambi_format_ping_infos($faction->getUserDataItem('ping'));
+      $prow[] = array('data' => '<span class="faction ' . $faction->getClass() . '">' . $faction->getName() . '</span>');
       if (!in_array($faction->getStatus(), array(KW_DJAMBI_USER_VASSALIZED, KW_DJAMBI_USER_EMPTY_SLOT))) {
-        $prow = array();
-        $ping = _kw_djambi_format_ping_infos($faction->getUserDataItem('ping'));
-        $prow[] = array('data' => '<span class="faction ' . $faction->getClass() . '">' . $faction->getName() . '</span>');
-        $prow[] = array('data' => theme('username', array('account' => user_load($faction->getUserDataItem('uid')))));
+        $me = _kw_djambi_check_current_user($faction, FALSE);
+        $prow[] = array('data' => theme('username', array('account' => user_load($faction->getUserDataItem('uid'))))
+          . ($me ? ' (' . t('Me !') . ')' : ''));
         $prow[] = array('data' => $faction->getUserDataItem('ip'));
         $prow[] = array('data' => $ping['status'], 'class' => array('ping-info', $ping['class']), 'title' => $ping['title']);
-        $prow[] = array('data' => $faction->getStatus());
-        $prows[] = array('data' => $prow, 'data-djuid' => $faction->getUserDataItem('djuid'));
       }
+      else {
+        $me = FALSE;
+        $prow[] = array('data' => '-');
+        $prow[] = array('data' => '-');
+        $prow[] = array('data' => '-');
+      }
+      $prow[] = array('data' => $faction->getStatus() .
+          ($faction->getControl()->getId() != $faction->getId() ? ', '
+              . t('controlled by !faction', array('!faction' => '<span class="faction ' . $faction->getControl()->getClass() . '">' . $faction->getControl()->getName() . '</span>')) : ''));
+      $prows[] = array('data' => $prow, 'data-djuid' => $faction->getUserDataItem('djuid'),
+            'class' => $me ? array('me') : array('not-me'));
     }
     $infos_lines[t('Players')] = theme('table', array('rows' => $prows, 'header' => $pheader,
         'attributes' => array('class' => array('players'))));
@@ -342,14 +353,15 @@ function theme_djambi_recruiting_phase($variables) {
     }
     $row = array(
       0 => array('data' => $form['grid']['factions'][$id]['label']['#title']),
-      1 => array('data' => $form['grid']['factions'][$id]['label']['#markup']),
+      1 => array('data' => $form['grid']['factions'][$id]['label']['#markup'] .
+          ($form['grid']['factions'][$id]['infos']['#value']['me'] ? ' ('. t('Me !') . ')' : '')),
       2 => array('data' => $ip),
       3 => array('data' => $ping_array['status'], 'class' => array($ping_array['class'], 'ping-info'),
             'title' => $ping_array['title']),
       4 => array('data' => $joined, 'class' => array('joined')),
       5 => array('data' => !empty($form['grid']['factions'][$id]['action']) ? drupal_render($form['grid']['factions'][$id]['action']) : '-')
     );
-    $rows[] = array('data' => $row,
+    $rows[] = array('data' => $row, 'class' => $form['grid']['factions'][$id]['infos']['#value']['me'] ? array('me') : array('not-me'),
             'data-djuid' => !empty($form['grid']['factions'][$id]['infos']['#value']['djuid']) ? $form['grid']['factions'][$id]['infos']['#value']['djuid'] : NULL);
   }
   unset($form['grid']['factions']);
