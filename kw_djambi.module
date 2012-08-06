@@ -99,7 +99,7 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
     $form['basics']['mode'] = array(
         '#type' => 'radios',
         '#title' => t('Game mode'),
-        '#default_value' => KW_DJAMBI_MODE_SANDBOX,
+        '#default_value' => KW_DJAMBI_MODE_FRIENDLY,
         '#options' => $mode_options
     );
     $form['advanced'] = array(
@@ -178,8 +178,8 @@ function kw_djambi_new_game_submit($form, &$form_state) {
 
   $mode = $form_state["values"]["mode"];
   $cookie = _kw_djambi_cookie();
+  _kw_djambi_check_user_already_playing($user, $mode, $cookie);
   if ($mode == KW_DJAMBI_MODE_SANDBOX) {
-    _kw_djambi_check_user_already_playing($user, $mode, $cookie);
     $node->dj_status = KW_DJAMBI_STATUS_PENDING;
   }
   elseif ($mode == KW_DJAMBI_MODE_FRIENDLY) {
@@ -308,7 +308,12 @@ function _kw_djambi_check_user_already_playing($user, $mode, $cookie) {
   $q->join("node", "n2", "n.nid = n2.nid");
   $q->fields("n", array("nid"));
   $q->fields("n2", array("created"));
-  $q->condition("n.status", array(KW_DJAMBI_STATUS_PENDING, KW_DJAMBI_STATUS_DRAW_PROPOSAL));
+  if ($mode == KW_DJAMBI_MODE_SANDBOX) {
+    $q->condition("n.status", array(KW_DJAMBI_STATUS_PENDING, KW_DJAMBI_STATUS_DRAW_PROPOSAL));
+  }
+  elseif ($mode == KW_DJAMBI_MODE_FRIENDLY) {
+    $q->condition("n.status", array(KW_DJAMBI_STATUS_RECRUITING));
+  }
   $q->condition("n.mode", $mode);
   $q->condition("u.uid", $user->uid);
   if ($user->uid == 0 && !is_null($cookie)) {
@@ -318,12 +323,20 @@ function _kw_djambi_check_user_already_playing($user, $mode, $cookie) {
   // Si partie en cours : redirection
   if ($results) {
     $result = current($results);
-    drupal_set_message(t("You already have begun a !game on !date. "
+    if ($mode == KW_DJAMBI_MODE_SANDBOX) {
+      drupal_set_message(t("You have already begun a !game on !date. "
         . "This game does not seem to be finished : "
         . " switching back to the last played move of the game.",
         array("!date" => format_date($result->created),
             "!game" => _kw_djambi_get_translatable_messages($mode))
-    ));
+      ), 'warning');
+    }
+    elseif ($mode == KW_DJAMBI_MODE_FRIENDLY)  {
+      drupal_set_message(t("You are already involved in a !game which is in a recruiting phase : "
+          . "you cannot create a new game.",
+          array("!game" => _kw_djambi_get_translatable_messages($mode))
+      ), 'warning');
+    }
     drupal_goto("node/" . $result->nid);
   }
 }
@@ -415,9 +428,11 @@ function kw_djambi_check_update($nid, $version) {
       $return['pings'][$player['djuid']] = array(
         'status' => $ping['status'],
         'title' => $ping['title'],
-        'class' => $ping['class'],
-        'joined' => format_interval(time() - $data['joined'])
+        'class' => $ping['class']
       );
+      if (isset($data['joined'])) {
+        $return['pings'][$player['djuid']]['joined'] = format_interval(time() - $data['joined']);
+      }
     }
   }
   echo drupal_json_encode($return);
@@ -712,8 +727,8 @@ function kw_djambi_game_form($form, &$form_state, $node) {
   }
   $form['#grid'] = $grid;
   // Mise à jour des informations utilisateur
-  if (!$grid->isFinished() && $grid->getStatus() != KW_DJAMBI_MODE_SANDBOX) {
-    $current_user_faction = NULL;
+  $current_user_faction = NULL;
+  if (!$grid->isFinished()) {
     $playable_factions = array();
     foreach ($grid->getFactions() as $faction) {
       if (_kw_djambi_check_current_user($faction, FALSE)) {
@@ -723,7 +738,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
         $playable_factions[] = $faction;
       }
     }
-    if (!is_null($current_user_faction)) {
+    if (!is_null($current_user_faction) && $grid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
       $user_data = _kw_djambi_update_user_infos($current_user_faction->getUserData(),
           $current_user_faction->getUserDataItem('djuid'));
       $current_user_faction->updateUserData($user_data);
@@ -764,7 +779,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
         '#attributes' => array('class' => array('controls')),
         '#weight' => 10
     );
-    if ($grid->getStatus() != KW_DJAMBI_MODE_FRIENDLY || !is_null($current_user_faction)) {
+    if ($grid->getMode() != KW_DJAMBI_MODE_SANDBOX || is_null($current_user_faction)) {
       $refresh = 'yes';
       $form['grid']['controls']['resfresh'] = array(
           '#type' => 'submit',

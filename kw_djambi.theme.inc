@@ -195,9 +195,9 @@ function theme_djambi_grid($variables) {
     $prows = array();
     foreach ($grid->getFactions() as $faction) {
       $prow = array();
-      $ping = _kw_djambi_format_ping_infos($faction->getUserDataItem('ping'));
       $prow[] = array('data' => '<span class="faction ' . $faction->getClass() . '">' . $faction->getName() . '</span>');
       if (!in_array($faction->getStatus(), array(KW_DJAMBI_USER_VASSALIZED, KW_DJAMBI_USER_EMPTY_SLOT))) {
+        $ping = _kw_djambi_format_ping_infos($faction->getUserDataItem('ping'));
         $me = _kw_djambi_check_current_user($faction, FALSE);
         $prow[] = array('data' => theme('username', array('account' => user_load($faction->getUserDataItem('uid'))))
           . ($me ? ' (' . t('Me !') . ')' : ''));
@@ -354,14 +354,14 @@ function theme_djambi_recruiting_phase($variables) {
     $row = array(
       0 => array('data' => $form['grid']['factions'][$id]['label']['#title']),
       1 => array('data' => $form['grid']['factions'][$id]['label']['#markup'] .
-          ($form['grid']['factions'][$id]['infos']['#value']['me'] ? ' ('. t('Me !') . ')' : '')),
+          (isset($form['grid']['factions'][$id]['infos']) && $form['grid']['factions'][$id]['infos']['#value']['me'] ? ' ('. t('Me !') . ')' : '')),
       2 => array('data' => $ip),
       3 => array('data' => $ping_array['status'], 'class' => array($ping_array['class'], 'ping-info'),
             'title' => $ping_array['title']),
       4 => array('data' => $joined, 'class' => array('joined')),
       5 => array('data' => !empty($form['grid']['factions'][$id]['action']) ? drupal_render($form['grid']['factions'][$id]['action']) : '-')
     );
-    $rows[] = array('data' => $row, 'class' => $form['grid']['factions'][$id]['infos']['#value']['me'] ? array('me') : array('not-me'),
+    $rows[] = array('data' => $row, 'class' => isset($form['grid']['factions'][$id]['infos']) && $form['grid']['factions'][$id]['infos']['#value']['me'] ? array('me') : array('not-me'),
             'data-djuid' => !empty($form['grid']['factions'][$id]['infos']['#value']['djuid']) ? $form['grid']['factions'][$id]['infos']['#value']['djuid'] : NULL);
   }
   unset($form['grid']['factions']);
@@ -412,5 +412,5 @@ function _kw_djambi_waiting_label($now_playing_faction, DjambiBattlefield $grid)
   }
   return '<span class="refresh">' . $label
   . ' (' . t('Last update : !date', array('!date' => '<span class="time-last-update">' . format_date(time(), 'custom', 'H:i:s') . '</span>'))
-  . '</span>';
+  . ')</span>';
 }

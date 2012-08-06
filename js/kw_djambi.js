@@ -62,7 +62,6 @@
       var gridId = $(this).data('grid');
       if ($(this).data('refresh') == 'yes') {
         var refreshInterval = setInterval(function() {
-          console.log('Calling interval function...');
           $grid = $('#DjambiContainer' + gridId);
           if ($grid.data('refresh') == 'no') {
             clearInterval(refreshInterval);
