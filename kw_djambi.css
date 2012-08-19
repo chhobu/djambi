@@ -111,8 +111,12 @@ span.faction {
 span.piece {
   padding: 0 2px 0 20px;
   white-space: nowrap;}
-span.piece.militant {
-  background: url(img/militant16.png) no-repeat 2px 50%;}
+.links li a.add-djambi-game, a.play-djambi-game, a.view-djambi-game {
+  padding-left: 20px;}
+span.piece.militant, .links li a.add-djambi-game, a.play-djambi-game {
+  background-image: url(img/militant16.png);
+  background-repeat: no-repeat;
+  background-position: 2px 50%;}
 span.piece.leader {
   background: url(img/leader16.png) no-repeat 2px 50%;}
 span.piece.necromobile {
@@ -121,7 +125,7 @@ span.piece.diplomate {
   background: url(img/diplomat16.png) no-repeat 2px 50%;}
 span.piece.assassin {
   background: url(img/assassin16.png) no-repeat 2px 50%;}
-span.piece.reporter {
+span.piece.reporter, a.view-djambi-game {
   background: url(img/reporter16.png) no-repeat 2px 50%;}
 table .number {
   text-align: right;}
@@ -222,7 +226,7 @@ span.rule-variant, span.game-option {
   border-radius: 0.5em 1em 0.5em 1em;
   box-shadow: 2px 2px 2px #999;
   background-color: #EEEEEE;
-  background-image: url("../img/machiavel.png");
+  background-image: url("img/machiavel.png");
   background-position: -6px -6px;
   background-repeat: no-repeat;
   border: 3px solid #999;

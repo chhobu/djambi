@@ -57,6 +57,26 @@ class DjambiBattlefield {
     }
   }
 
+  public static function getStatuses($with_description = FALSE, $with_recruiting = TRUE, $with_pending = TRUE, $with_finished = TRUE) {
+    $statuses = array();
+    if ($with_recruiting) {
+      $statuses[KW_DJAMBI_STATUS_RECRUITING] = 'STATUS_RECRUITING_DESCRIPTION';
+    }
+    if ($with_pending) {
+      $statuses[KW_DJAMBI_STATUS_PENDING] = 'STATUS_PENDING_DESCRIPTION';
+      $statuses[KW_DJAMBI_STATUS_DRAW_PROPOSAL] = 'STATUS_DRAW_PROPOSAL_DESCRIPTION';
+    }
+    if ($with_finished) {
+      $statuses[KW_DJAMBI_STATUS_FINISHED] = 'STATUS_FINISHED_DESCRIPTION';
+    }
+    if ($with_description) {
+      return $statuses;
+    }
+    else {
+      return array_keys($statuses);
+    }
+  }
+
   public static function getAvailbaleNumberPlayers() {
     return array(
         '4std' => '4STD_DESCRIPTION',
@@ -670,6 +690,7 @@ class DjambiBattlefield {
     elseif ($changes) {
       $this->updateSummary();
     }
+    $this->definePlayOrder();
   }
 
   private function findKings() {

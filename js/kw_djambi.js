@@ -157,5 +157,15 @@
         }
       });
     }
+    $('.refresh-my-djambi-panel').hide();
+    $('.refresh-my-djambi-panel', context).once('Djambi', function() {
+      $block = $(this).parents('.block');
+      if (!$block.hasClass('refresh-processed')) {
+        $block.addClass('refresh-processed');
+        var panelInterval = setInterval(function() {
+          $('.refresh-my-djambi-panel a').click();
+        }, 10000);
+      }
+    });
   }};
 })(jQuery);

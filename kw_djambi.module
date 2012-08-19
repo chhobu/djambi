@@ -11,6 +11,12 @@ function kw_djambi_menu() {
     'access callback' => TRUE,
     'type' => MENU_CALLBACK
   );
+  $items['djambi/refresh/%'] = array(
+    'page callback' => 'kw_djambi_refresh_area',
+    'page arguments' => array(2),
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
   return $items;
 }
 
@@ -125,15 +131,39 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         '#options' => $nb_players_options
     );
     $mode_options = DjambiBattlefield::getModes(TRUE);
+    global $user;
+    $cookie = _kw_djambi_cookie();
+    $allowed = _kw_djambi_check_user_already_playing($user, array_keys($mode_options), $cookie, FALSE);
     foreach ($mode_options as $option => $description) {
-      $mode_options[$option] = _kw_djambi_get_translatable_messages($description);
+      if (!isset($allowed[$option])) {
+        unset($mode_options[$option]);
+      }
+      else {
+        $mode_options[$option] = _kw_djambi_get_translatable_messages($description);
+      }
     }
-    $form['basics']['mode'] = array(
+    if (empty($mode_options) || (isset($_GET['mode']) && !isset($allowed[$_GET['mode']]))) {
+      drupal_access_denied();
+    }
+    if (isset($_GET['mode']) && isset($mode_options[$_GET['mode']])) {
+      $form['basics']['mode'] = array(
+        '#type' => 'value',
+        '#value' => $_GET['mode']
+      );
+      $form['basics']['mode_item'] = array(
+        '#type' => 'item',
+        '#title' => t('Game mode'),
+        '#markup' => $mode_options[$_GET['mode']]
+      );
+    }
+    else {
+      $form['basics']['mode'] = array(
         '#type' => 'radios',
         '#title' => t('Game mode'),
         '#default_value' => KW_DJAMBI_MODE_FRIENDLY,
         '#options' => $mode_options
-    );
+      );
+    }
     $form['advanced'] = array(
         '#type' => 'fieldset',
         '#title' => t('Advanced options'),
@@ -149,7 +179,7 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
       if ($data['configurable']) {
         $form['advanced'][$option] = array(
             '#type' => $data['widget'],
-            '#default_value' => $data['default']
+            '#default_value' => isset($_GET[$option]) ? $_GET[$option] : $data['default']
         );
         if (!empty($data['title'])) {
           $form['advanced'][$option]['#title'] = _kw_djambi_get_translatable_messages($data['title']);
@@ -166,6 +196,9 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
           $choices = array();
           foreach ($data['choices'] as $choice_key => $description) {
             $choices[$choice_key] = _kw_djambi_get_translatable_messages($description, array('!value' => $choice_key));
+          }
+          if (isset($_GET[$option]) && !isset($choices[$_GET[$option]])) {
+            $form['advanced'][$option]['#default_value'] = $data['default'];
           }
           $form['advanced'][$option]['#options'] = $choices;
         }
@@ -333,43 +366,69 @@ function _kw_djambi_cookie() {
 /**
  * Vérification : l'utilisateur courant participe-t-il déjà à une partie ?
  */
-function _kw_djambi_check_user_already_playing($user, $mode, $cookie) {
+function _kw_djambi_check_user_already_playing($user, $modes, $cookie, $redirect = TRUE) {
+  if (!is_array($modes)) {
+    $modes_array[] = $modes;
+  }
+  else {
+    $modes_array = $modes;
+  }
   // Recherche d'une partie en cours pour l'utilisateur courant
   $q = db_select("djambi_users", "u");
   $q->join("djambi_node", "n", "n.nid = u.nid");
   $q->join("node", "n2", "n.nid = n2.nid");
-  $q->fields("n", array("nid"));
+  $q->fields("n", array("nid", "mode", "status"));
   $q->fields("n2", array("created"));
-  if ($mode == KW_DJAMBI_MODE_SANDBOX) {
-    $q->condition("n.status", array(KW_DJAMBI_STATUS_PENDING, KW_DJAMBI_STATUS_DRAW_PROPOSAL));
-  }
-  elseif ($mode == KW_DJAMBI_MODE_FRIENDLY) {
-    $q->condition("n.status", array(KW_DJAMBI_STATUS_RECRUITING));
-  }
-  $q->condition("n.mode", $mode);
+  $q->condition("n.mode", $modes);
+  $q->condition("n.status", DjambiBattlefield::getStatuses(FALSE, TRUE, TRUE, FALSE));
   $q->condition("u.uid", $user->uid);
   if ($user->uid == 0 && !is_null($cookie)) {
     $q->condition('u.cookie', $cookie);
   }
   $results = $q->execute()->fetchAll();
+  $allowed = array_flip($modes_array);
+  $force_redirect = FALSE;
+  foreach ($results as $result) {
+    if ($result->mode == KW_DJAMBI_MODE_SANDBOX && in_array($result->status, DjambiBattlefield::getStatuses(FALSE, TRUE, TRUE, FALSE))
+        && isset($allowed[KW_DJAMBI_MODE_SANDBOX])) {
+      unset($allowed[KW_DJAMBI_MODE_SANDBOX]);
+      if ($redirect) {
+        $force_redirect = TRUE;
+        break;
+      }
+    }
+    if ($result->mode == KW_DJAMBI_MODE_FRIENDLY && in_array($result->status, DjambiBattlefield::getStatuses(FALSE, TRUE, FALSE, FALSE))
+        && isset($allowed[KW_DJAMBI_MODE_FRIENDLY])) {
+      unset($allowed[KW_DJAMBI_MODE_FRIENDLY]);
+      if ($redirect) {
+        $force_redirect = TRUE;
+        break;
+      }
+    }
+    if (empty($allowed)) {
+      break;
+    }
+  }
   // Si partie en cours : redirection
-  if ($results) {
-    $result = current($results);
-    if ($mode == KW_DJAMBI_MODE_SANDBOX) {
+  if ($force_redirect) {
+    if ($result->mode == KW_DJAMBI_MODE_SANDBOX) {
       drupal_set_message(t("You have already begun a !game on !date. "
         . "This game does not seem to be finished : "
         . " switching back to the last played move of the game.",
         array("!date" => format_date($result->created),
-            "!game" => _kw_djambi_get_translatable_messages($mode))
+            "!game" => _kw_djambi_get_translatable_messages($result->mode))
       ), 'warning');
     }
-    elseif ($mode == KW_DJAMBI_MODE_FRIENDLY)  {
+    elseif ($result->mode == KW_DJAMBI_MODE_FRIENDLY)  {
       drupal_set_message(t("You are already involved in a !game which is in a recruiting phase : "
           . "you cannot create a new game.",
-          array("!game" => _kw_djambi_get_translatable_messages($mode))
+          array("!game" => _kw_djambi_get_translatable_messages($result->mode))
       ), 'warning');
     }
     drupal_goto("node/" . $result->nid);
+  }
+  else {
+    return $allowed;
   }
 }
 
@@ -471,7 +530,50 @@ function kw_djambi_check_update($nid, $version) {
   die();
 }
 
+/**
+ * Callback : fonction permettant de rafraîchir une zone de l'écran,
+ *   générée avec la fonction $callback
+ */
+function kw_djambi_refresh_area($callback) {
+  switch ($callback) {
+    case('_kw_djambi_list_user_games'):
+      module_load_include('inc', 'kw_djambi', 'kw_djambi.blocks');
+      $fragment = 'block-kw-djambi-djambi-panel';
+      $target = '#' . $fragment . ' .content';
+      $args = array();
+    break;
+    default:
+      drupal_access_denied();
+  }
+  if(!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+    $ajax = TRUE;
+  }
+  else {
+    $ajax = FALSE;
+  }
+  if ($ajax) {
+    $output = call_user_func_array($callback, $args);
+    $commands[] = ajax_command_html($target, drupal_render($output));
+    $page = array('#type' => 'ajax', '#commands' => $commands);
+    ajax_deliver($page);
+  }
+  else {
+    if (isset($_GET['destination'])) {
+      $destination = $_GET['destination'];
+    }
+    else {
+      $destination = '<front>';
+    }
+    drupal_goto($destination, array(
+      'query' => array('destination' => $destination),
+      'fragment' => $fragment
+    ));
+  }
+}
 
+/**
+ * Mise en forme des informations concernant le ping d'un utilisateur
+ */
 function _kw_djambi_format_ping_infos($ping_time) {
   $ping['title'] = t("Last connection information sent by this player : !time",
       array('!time' => format_date($ping_time, 'short')));
@@ -855,7 +957,7 @@ function kw_djambi_game_form_validate($form, &$form_state) {
 /**
  * Traduction des chaînes de caractères présentes dans les classes du dossier lib
  */
-function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBattlefield $grid = NULL) {
+function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiBattlefield $grid = NULL) {
   if (isset($args['faction1']) && !is_null($grid)) {
     $faction1 = $grid->getFactionById($args['faction1']);
     $args['!faction1'] = '<span class="faction ' . $faction1->getClass() . '">' . $faction1->getName() . '</span>';
@@ -931,14 +1033,29 @@ function _kw_djambi_get_translatable_messages($message, $args = NULL, DjambiBatt
     case(KW_DJAMBI_MODE_FRIENDLY):
       $txt = t("Friendly game");
       break;
+    case(KW_DJAMBI_STATUS_RECRUITING):
+      $txt = t("Waiting for new players...");
+      break;
+    case('STATUS_RECRUITING_DESCRIPTION'):
+      $txt = t("recruiting");
+      break;
     case(KW_DJAMBI_STATUS_PENDING):
       $txt = t("Game in progress...");
+      break;
+    case('STATUS_PENDING_DESCRIPTION'):
+      $txt = t("pending");
       break;
     case(KW_DJAMBI_STATUS_FINISHED):
       $txt = t("Game over !");
       break;
+    case('STATUS_FINISHED_DESCRIPTION'):
+      $txt = t("finished");
+      break;
     case(KW_DJAMBI_STATUS_DRAW_PROPOSAL):
       $txt = t("Peace negociation...");
+      break;
+    case('STATUS_DRAW_PROPOSAL_DESCRIPTION'):
+      $txt = t("negociating");
       break;
     case("Sniper"):
       $txt = t("Sniper");
