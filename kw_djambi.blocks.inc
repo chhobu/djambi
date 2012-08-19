@@ -137,6 +137,49 @@ function _kw_djambi_list_viewable_games($modes = NULL) {
       'callback' => 'l',
       'args' => array(':title', 'node/:nid')
   ));
+  $grid->addColumn('mode', t('Mode'), ':mode_label', array(
+      'field' => 'dn.mode',
+      'filtrable' => KW_FILTRABLE_ENUM,
+      'filtrable_options' => array('choices' => $mode_choices)
+  ));
+  $grid->addVariable('mode_label', array(
+      'callback' => '_kw_djambi_list_build_custom_label',
+      'args' => array(':mode', $mode_choices)
+  ));
+  $grid->addColumn('nb_players', t('Players'), '<div class="digit">:nb_players</div>', array(
+      'field' => 'pl.slots',
+      'filtrable' => KW_FILTRABLE_ENUM,
+      'filtrable_options' => array('choices' => DjambiBattlefield::getAvailbaleNumberPlayers(FALSE))
+  ));
+  $grid->addColumn("players", t('Players list'), ':players_list', array(
+      'hidden' => TRUE,
+      'always_execute' => TRUE
+  ));
+  $grid->addVariable('players_list', array(
+      'subquery_output' => ":name",
+      'subquery' => "SELECT D.nid, D.cookie, U.* "
+      . "FROM {djambi_users} D INNER JOIN {users} U ON U.uid = D.uid AND D.status != :status "
+      . "WHERE D.nid IN (:input) ORDER BY U.name",
+      'subquery_args' => array(':status' => KW_DJAMBI_USER_VASSALIZED),
+      'subquery_callback' => '_kw_djambi_list_build_games_users_list',
+      'export' => array('with_me'),
+      'output_mode' => 'ul',
+  ));
+  $subquery3 = db_select('users', 'u');
+  $subquery3->innerJoin('djambi_users', 'd', 'd.uid = u.uid');
+  $subquery3->condition('u.uid', 0, '>');
+  $subquery3->addField('u', 'name');
+  $subquery3->addField('d', 'nid');
+  $subquery3->groupBy('u.name');
+  $subquery3->groupBy('d.nid');
+  $grid->addFilter('playing', t('Player name'), KW_FILTRABLE_STRING, array(
+      "jointure" => array(
+          "table" => $subquery3,
+          "alias" => "plf",
+          "condition" => "plf.nid = dn.nid",
+          "filtering" => "name"
+      ),
+  ));
   $grid->addColumn('status', t('Status'), ':status_label', array(
       'field' => 'dn.status',
       'filtrable' => KW_FILTRABLE_ENUM,
@@ -167,47 +210,6 @@ function _kw_djambi_list_viewable_games($modes = NULL) {
   $grid->addColumn('moves', t('Moves'), '<div class="digit">:moves</div>', array(
       'field' => 'dn.nb_moves',
       'sortable' => TRUE
-  ));
-  $grid->addColumn('mode', t('Mode'), ':mode_label', array(
-      'field' => 'dn.mode',
-      'filtrable' => KW_FILTRABLE_ENUM,
-      'filtrable_options' => array('choices' => $mode_choices)
-  ));
-  $grid->addVariable('mode_label', array(
-      'callback' => '_kw_djambi_list_build_custom_label',
-      'args' => array(':mode', $mode_choices)
-  ));
-  $grid->addColumn('nb_players', t('Players'), '<div class="digit">:nb_players</div>', array(
-      'field' => 'pl.slots'
-  ));
-  $grid->addColumn("players", t('Players list'), ':players_list', array(
-      'hidden' => TRUE,
-      'always_execute' => TRUE
-  ));
-  $grid->addVariable('players_list', array(
-      'subquery_output' => ":name",
-      'subquery' => "SELECT D.nid, D.cookie, U.* "
-      . "FROM {djambi_users} D INNER JOIN {users} U ON U.uid = D.uid AND D.status != :status "
-      . "WHERE D.nid IN (:input) ORDER BY U.name",
-      'subquery_args' => array(':status' => KW_DJAMBI_USER_VASSALIZED),
-      'subquery_callback' => '_kw_djambi_list_build_games_users_list',
-      'export' => array('with_me'),
-      'output_mode' => 'ul',
-  ));
-  $subquery3 = db_select('users', 'u');
-  $subquery3->innerJoin('djambi_users', 'd', 'd.uid = u.uid');
-  $subquery3->condition('u.uid', 0, '>');
-  $subquery3->addField('u', 'name');
-  $subquery3->addField('d', 'nid');
-  $subquery3->groupBy('u.name');
-  $subquery3->groupBy('d.nid');
-  $grid->addFilter('playing', t('Player name'), KW_FILTRABLE_STRING, array(
-      "jointure" => array(
-        "table" => $subquery3,
-        "alias" => "plf",
-        "condition" => "plf.nid = dn.nid",
-        "filtering" => "name"
-      ),
   ));
   $subquery4 = db_select('djambi_users', 'du');
   $subquery4->innerJoin('users', 'u', 'u.uid = du.uid');

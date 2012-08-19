@@ -77,11 +77,21 @@ class DjambiBattlefield {
     }
   }
 
-  public static function getAvailbaleNumberPlayers() {
-    return array(
-        '4std' => '4STD_DESCRIPTION',
-        '2std' => '2STD_DESCRIPTION'
+  public static function getAvailbaleNumberPlayers($with_description = TRUE) {
+    $games = array(
+        '4std' => array('description' => '4STD_DESCRIPTION', 'nb' => 4),
+        '2std' => array('description' => '2STD_DESCRIPTION', 'nb' => 2)
     );
+    $return = array();
+    foreach($games as $key => $game) {
+      if ($with_description) {
+        $return[$key] = $game['description'];
+      }
+      else {
+        $return[$game['nb']] = $game['nb'];
+      }
+    }
+    return $return;
   }
 
   public function getInfo($info) {
@@ -687,10 +697,12 @@ class DjambiBattlefield {
     if ($total < 2) {
       $this->endGame($living_factions);
     }
-    elseif ($changes) {
-      $this->updateSummary();
+    else {
+      $this->definePlayOrder();
+      if ($changes) {
+        $this->updateSummary();
+      }
     }
-    $this->definePlayOrder();
   }
 
   private function findKings() {

@@ -328,7 +328,7 @@ class DjambiPoliticalFaction {
     foreach ($pieces as $key => $piece) {
       if ($piece->isAlive()) {
         // Contrôle 1 : chef vivant ?
-        if ($piece->getHability("must_live")) {
+        if ($piece->getHability("must_live") && $piece->getFaction()->getId() == $this->getId()) {
           $control_leader = TRUE;
           $leaders[] = $piece;
         }
