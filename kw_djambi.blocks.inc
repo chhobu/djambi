@@ -28,13 +28,18 @@ function _kw_djambi_list_games() {
   return $elements;
 }
 
-function _kw_djambi_list_recruiting_games($modes = NULL) {
+function _kw_djambi_list_recruiting_games($modes = NULL, $item_id = NULL) {
   if (is_null($modes)) {
     $modes = DjambiBattlefield::getModes();
   }
   $options = array(
     'form_display' => 'advanced',
-    'file' => drupal_get_path('module', 'kw_djambi') . '/kw_djambi.blocks.inc'
+    'file' => drupal_get_path('module', 'kw_djambi') . '/kw_djambi.blocks.inc',
+    'mode' => is_null($item_id) ? 'list' : 'item',
+    'mode_context' => array(
+        'item_id' => $item_id,
+        'entity_type' => 'node',
+    ),
   );
   $grid = new KwDatagrid('DjambiGameRecrutingList', 'djambi_node', 'dn', __FUNCTION__, array(), $options);
   $grid->setTitle(t('New djambi games'));
@@ -96,7 +101,7 @@ function _kw_djambi_list_recruiting_games($modes = NULL) {
   return $grid->build();
 }
 
-function _kw_djambi_list_viewable_games($modes = NULL) {
+function _kw_djambi_list_viewable_games($modes = NULL, $item_id = NULL) {
   if (is_null($modes)) {
     $modes = DjambiBattlefield::getModes();
   }
@@ -111,8 +116,13 @@ function _kw_djambi_list_viewable_games($modes = NULL) {
     $statuses[$status] = _kw_djambi_get_translatable_messages($label);
   }
   $options = array(
-      'form_display' => 'advanced',
-      'file' => drupal_get_path('module', 'kw_djambi') . '/kw_djambi.blocks.inc'
+    'form_display' => 'advanced',
+    'file' => drupal_get_path('module', 'kw_djambi') . '/kw_djambi.blocks.inc',
+    'mode' => is_null($item_id) ? 'list' : 'item',
+    'mode_context' => array(
+        'item_id' => $item_id,
+        'entity_type' => 'node',
+    ),
   );
   $grid = new KwDatagrid('DjambiGameViewableList', 'djambi_node', 'dn', __FUNCTION__, array(), $options);
   $grid->setTitle(t('Pending and finished djambi games'));
@@ -131,6 +141,7 @@ function _kw_djambi_list_viewable_games($modes = NULL) {
   $grid->addColumn('title', t('Game'), ':title_link', array(
       'field' => 'n.title',
       'sortable' => TRUE,
+      'itemable' => TRUE,
       'main' => TRUE
   ));
   $grid->addVariable('title_link', array(
