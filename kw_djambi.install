@@ -54,6 +54,10 @@ function kw_djambi_schema() {
         'type' => 'int',
         'not null' => TRUE,
         'default' => 0,
+      ),
+      'disposition' => array(
+        'type' => 'varchar',
+        'length' => 10
       )
     ),
     'primary key' => array('nid'),
@@ -142,4 +146,11 @@ function kw_djambi_update_7101() {
   ));
   db_add_index('djambi_users', 'link_to_user', array('uid'));
   db_add_index('djambi_users', 'link_to_cookie', array('cookie'));
+}
+
+function kw_djambi_update_7102() {
+  db_add_field('djambi_node', 'disposition', array(
+    'type' => 'varchar',
+    'length' => 10
+  ));
 }

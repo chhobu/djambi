@@ -10,12 +10,13 @@ table.djambigrid {
 .djambigrid tbody th.graduation {
   vertical-align: middle;
   text-align: right;}
-.djambigrid .cell.std, .djambigrid .cell.throne {
+.djambigrid .cell {
   height: 50px;
   width: 50px;
-  border: 2px solid #999;
   padding: 0;
-  background-color: #eee;
+  background-color: #eee;}
+.djambigrid  td.cell.std, .djambigrid td.cell.throne {
+  border: 2px solid #999;
   text-align: center;
   vertical-align: middle;}
 .djambigrid div.piece {
@@ -234,3 +235,144 @@ span.rule-variant, span.game-option {
   font-weight: bold;
   min-height: 25px;
   padding: 0.5em 1em 0.5em 60px;}
+  
+.hexagonal-grid-wrapper {
+  text-align: center;
+  overflow: hidden;}
+.hexagonal-grid {
+  margin: 20px 0;}
+.hexagonal-grid .row {
+  margin-top: -2px;}
+.hexagonal-grid .row.even {
+  margin-left: 52px;}
+.hexagonal-grid .cell {
+  border-left: 2px solid #000;
+  border-right: 2px solid #000;
+  overflow: visible;
+  display: inline-block;
+  height: 30px;
+  margin-top: 18px;
+  text-align: center;
+  margin-left: -2px;}
+.hexagonal-grid .cell.disabled {
+  visibility: hidden;}
+.hexagonal-grid .cell.first {
+  margin-left: 0;}
+.hexagonal-grid .cell-top {
+  border-bottom: 20px solid #000;
+  border-left: 27px solid transparent;
+  border-right: 27px solid transparent;
+  width: 0;
+  height: 0;
+  background-color: transparent;
+  display: block;
+  position: absolute;
+  margin-top: -20px;
+  margin-left: -1px;}
+.hexagonal-grid .cell-top-inside {
+  border-bottom: 18px solid #eee;
+  border-left: 25px solid transparent;
+  border-right: 25px solid transparent;
+  width: 0;
+  height: 0;
+  background-color: transparent;
+  display: block;
+  position: absolute;
+  margin-top: -18px;
+  margin-left: 1px;}
+.hexagonal-grid .cell-bottom {
+  border-top: 20px solid #000;
+  border-left: 27px solid transparent;
+  border-right: 27px solid transparent;
+  width: 0;
+  height: 0;
+  background-color: transparent;
+  position: absolute;
+  margin-left: -1px;
+  margin-top: 30px;}
+.hexagonal-grid .cell-bottom-inside {
+  border-top: 18px solid #eee;
+  border-left: 25px solid transparent;
+  border-right: 25px solid transparent;
+  width: 0;
+  height: 0;
+  background-color: transparent;
+  display: block;
+  position: absolute;
+  margin-top: 30px;
+  margin-left: 1px;}
+.hexagonal-grid .cell-coordonates {
+  position: absolute;
+  font-size: 80%;
+  padding: 2px;
+  color: #666;}
+.hexagonal-grid .cell:hover .cell-coordonates {
+  z-index: 100;
+  background-color: #666;
+  color: #fff;}
+.hexagonal-grid .cell-content {
+  position: absolute;
+  margin-top: -8px;
+  margin-left: 3px;}
+  
+.hexagonal-grid .cell.reachable .cell-top-inside {
+  border-bottom-color: #ddd;}
+.hexagonal-grid .cell.reachable .cell-bottom-inside {
+  border-top-color: #ddd;}
+.hexagonal-grid.dragging .cell.reachable, .hexagonal-grid.dragging .cell.with-movable-piece {
+  background-color: #eee;}
+.hexagonal-grid.dragging .cell.reachable .cell-top-inside, 
+.hexagonal-grid.dragging .cell.with-movable-piece .cell-top-inside {
+  border-bottom-color: #eee;}
+.hexagonal-grid.dragging .cell.reachable .cell-bottom-inside, 
+.hexagonal-grid.dragging .cell.with-movable-piece .cell-bottom-inside {
+  border-top-color: #eee;}
+.hexagonal-grid .cell.with-movable-piece .cell-top-inside {
+  border-bottom-color: #ccc;}
+.hexagonal-grid .cell.with-movable-piece .cell-bottom-inside {
+  border-top-color: #ccc;}
+.hexagonal-grid .cell.unselectable .cell-top-inside {
+  border-bottom-color: #eee;}
+.hexagonal-grid .cell.unselectable .cell-bottom-inside {
+  border-top-color: #eee;}
+.hexagonal-grid .cell.unselectable.with-movable-piece .cell-top-inside {
+  border-bottom-color: #ddd;}
+.hexagonal-grid.dragging .cell.unselectable.with-movable-piece .cell-bottom-inside {
+  border-top-color: #ddd;}
+.hexagonal-grid .cell.unselectable.with-selected-piece {
+  background-color: #000;}
+.hexagonal-grid .cell.unselectable.with-selected-piece .cell-top-inside {
+  border-bottom-color: #000;}
+.hexagonal-grid .cell.unselectable.with-selected-piece .cell-bottom-inside {
+  border-top-color: #000;}
+.hexagonal-grid .cell.throne {
+  background-image: url(img/throne30.png);}
+.hexagonal-grid .cell.throne .cell-top-inside {
+  border-bottom-color: #000;}
+.hexagonal-grid .cell.throne .cell-bottom-inside {
+  border-top-color: #000;}
+.hexagonal-grid .cell.recent-change.jaune .cell-top-inside {
+  border-bottom-color: #fe9;}
+.hexagonal-grid .cell.recent-change.jaune .cell-bottom-inside {
+  border-top-color: #fe9;}
+.hexagonal-grid .cell.recent-change.rouge .cell-top-inside {
+  border-bottom-color: ): #f99;}
+.hexagonal-grid .cell.recent-change.rouge .cell-bottom-inside {
+  border-top-color: ): #f99;}
+.hexagonal-grid .cell.recent-change.bleu .cell-top-inside {
+  border-bottom-color: #cef;}
+.hexagonal-grid .cell.recent-change.bleu .cell-bottom-inside {
+  border-top-color: #cef;}
+.hexagonal-grid .cell.recent-change.vert .cell-top-inside {
+  border-bottom-color: #cf6;}
+.hexagonal-grid .cell.recent-change.vert .cell-bottom-inside {
+  border-top-color: #cf6;}
+.hexagonal-grid.dragging .cell.reachable.selectable, .hexagonal-grid.dragging .cell.reachable.selectable.with-piece .piece {
+  background: #ddd url(img/apply.png) no-repeat center center;}
+.hexagonal-grid.dragging .cell.reachable.selectable .cell-top-inside {
+  border-bottom-color: #ddd;}
+.hexagonal-grid.dragging .cell.reachable.selectable .cell-bottom-inside {
+  border-top-color: #ddd;}
+.hexagonal-grid .piece {
+  position: relative;
+  z-index: 10;}

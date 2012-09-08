@@ -44,7 +44,11 @@ function kw_djambi_theme() {
      'djambi_recruiting_phase' => array(
          'render element' => 'form',
          'file' => 'kw_djambi.theme.inc'
-     )
+     ),
+     'hexagonal_grid' => array(
+         'variables' => array('rows' => array(), 'caption' => NULL, 'attributes' => array()),
+         'file' => 'kw_djambi.theme.inc'
+     ),
   );
 }
 
@@ -120,7 +124,7 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         '#type' => 'fieldset',
         '#title' => t('Game presets')
     );
-    $nb_players_options = DjambiBattlefield::getAvailbaleNumberPlayers();
+    $nb_players_options = DjambiBattlefield::getDispositions('description');
     foreach ($nb_players_options as $option => $description) {
       $nb_players_options[$option] = _kw_djambi_get_translatable_messages($description);
     }
@@ -250,78 +254,24 @@ function kw_djambi_new_game_submit($form, &$form_state) {
   elseif ($mode == KW_DJAMBI_MODE_FRIENDLY) {
     $node->dj_status = KW_DJAMBI_STATUS_RECRUITING;
   }
-
+  $dispositions = DjambiBattlefield::getDispositions();
   $disposition = $form_state['values']['nb_players'];
-  switch ($disposition) {
-    case('2std'):
-      $players = array(
-        1 => 'human',
-        2 => 'vassal',
-        3 => 'human',
-        4 => 'vassal'
-      );
-      break;
-    default:
-      $players = array_fill(1, 4, 'human');
-  }
-  $node->dj_players = count($players);
-  $node->dj_mode = $mode;
-  $node->dj_begin = time();
-  $node->dj_delete = _kw_djambi_autodelete_time();
-
-  foreach ($players as $key => $player) {
-    switch ($player) {
-      case('human'):
-        if ($mode == KW_DJAMBI_MODE_SANDBOX || ($key == 1 && $mode == KW_DJAMBI_MODE_FRIENDLY)) {
-          $data['ip'] = $_SERVER['REMOTE_ADDR'];
-          if ($mode != KW_DJAMBI_MODE_SANDBOX) {
-            $data['ping'] = $data['joined'] = time();
-          }
-          $node->dj_users[$key] = array(
-            'uid' => $user->uid,
-            'data' => $data,
-            'status' => KW_DJAMBI_USER_READY,
-            'cookie' => $cookie
-          );
-        }
-        else {
-          $node->dj_users[$key] = array(
-            'uid' => 0,
-            'data' => array(),
-            'status' => KW_DJAMBI_USER_EMPTY_SLOT,
-            'cookie' => NULL
-          );
-        }
-        break;
-      case('vassal'):
-        $node->dj_users[$key] = array(
-          'uid' => 0,
-          'data' => array(),
-          'status' => KW_DJAMBI_USER_VASSALIZED,
-          'cookie' => NULL
-        );
-        break;
-    }
-  }
-
-  $factions_data = DjambiPoliticalFaction::buildFactionsInfos();
-  $factions = array();
-  $i = 0;
-  foreach($factions_data as $key => $faction_data) {
-    $i++;
-    if ($i > $node->dj_players) {
-      break;
-    }
-    $faction = new DjambiPoliticalFaction($node->dj_users[$i], $key,
-        $faction_data);
-    $factions[$i] = $faction;
-  }
-
-  $grid = new DjambiBattlefield(0, TRUE, array('factions' => $factions, 'sequence' => $game_id));
+  $grid = new DjambiBattlefield(0, array(
+      'sequence' => $game_id,
+      'mode' => $mode,
+      'disposition' => $disposition,
+      'user_id' => $user->uid,
+      'user_cookie' => $cookie,
+  ));
   foreach ($form_state['values']['advanced'] as $option => $value) {
     $grid->setOption($option, $value);
   }
-
+  $node->dj_players = $dispositions[$disposition]['nb'];
+  $node->dj_mode = $mode;
+  $node->dj_begin = time();
+  $node->dj_delete = _kw_djambi_autodelete_time();
+  $node->dj_disposition = $disposition;
+  $node->dj_users = $grid->getInfo('players_info');
   $node->dj_data = $grid->toDatabase();
   $node->dj_prepared = TRUE;
   $node->dj_battlefield = $grid;
@@ -449,7 +399,8 @@ function kw_djambi_node_insert($node) {
       'begin' => $node->dj_begin,
       'changed' => $node->dj_begin,
       'autodelete' => $node->dj_delete,
-      'compressed' => 0
+      'compressed' => 0,
+      'disposition' => $node->dj_disposition
     );
     drupal_write_record('djambi_node', $record);
     $factions = $battlefield->getFactions();
@@ -608,7 +559,8 @@ function _kw_djambi_format_ping_infos($ping_time) {
  */
 function _kw_djambi_load_game($node) {
   $query = db_select('djambi_node', 'dj')
-      ->fields('dj', array('nid', 'data', 'status', 'mode', 'compressed', 'autodelete', 'changed'))
+      ->fields('dj', array('nid', 'data', 'status', 'mode', 'compressed',
+          'autodelete', 'changed', 'disposition'))
       ->condition('dj.nid', $node->nid);
   $result = $query->execute()->fetchAssoc();
   $query = db_select('djambi_users', 'dju')
@@ -641,11 +593,12 @@ function _kw_djambi_load_game($node) {
   }
   $data = unserialize($data);
   $data["users"] = $users;
-  $battlefield = new DjambiBattlefield($result["nid"], FALSE, $data);
+  $battlefield = new DjambiBattlefield($result["nid"], $data);
   $battlefield->setMode($result["mode"]);
   $battlefield->setStatus($result["status"]);
   $battlefield->setInfo('autodelete', $result['autodelete']);
   $battlefield->setInfo('changed', $result['changed']);
+  $battlefield->setDisposition($result['disposition']);
   $battlefield->play();
   return $battlefield;
 }
@@ -1139,6 +1092,9 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
       break;
     case("2STD_DESCRIPTION"):
       $txt = t("2 players, on a standard (9x9) square grid. Each side controls an additional vassalized faction.");
+      break;
+    case("3HEX_DESCRIPTION"):
+      $txt = t("3 players, on a hexagonal grid");
       break;
     case("COMEBACK_AFTER_SURROUND"):
       $txt = t("The !faction1 leader is not surrounded anymore by dead pieces. It's a come back for !faction1 side !", $args);

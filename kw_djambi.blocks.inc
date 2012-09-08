@@ -2,7 +2,7 @@
 function _kw_djambi_list_games() {
   global $djambi_can_create_friendly_games;
   $djambi_can_create_friendly_games = TRUE;
-  drupal_add_css(drupal_get_path('module', 'kw_djambi').'/kw_djambi.css');
+  drupal_add_css(drupal_get_path('module', 'kw_djambi').'/kw_djambi.css', array('every_page' => TRUE));
   $modes = DjambiBattlefield::getModes();
   $elements['grid1'] = _kw_djambi_list_recruiting_games($modes);
   $elements['grid1']['#weight'] = 1;
@@ -160,7 +160,7 @@ function _kw_djambi_list_viewable_games($modes = NULL, $item_id = NULL) {
   $grid->addColumn('nb_players', t('Players'), '<div class="digit">:nb_players</div>', array(
       'field' => 'pl.slots',
       'filtrable' => KW_FILTRABLE_ENUM,
-      'filtrable_options' => array('choices' => DjambiBattlefield::getAvailbaleNumberPlayers(FALSE))
+      'filtrable_options' => array('choices' => DjambiBattlefield::getDispositions('nb'))
   ));
   $grid->addColumn("players", t('Players list'), ':players_list', array(
       'hidden' => TRUE,
@@ -441,7 +441,8 @@ function _kw_djambi_list_user_games() {
       );
     }
   }
-  drupal_add_js(drupal_get_path('module', 'kw_djambi') . '/js/kw_djambi.js');
+  drupal_add_js(drupal_get_path('module', 'kw_djambi') . '/js/kw_djambi.js',
+      array('every_page' => TRUE));
     $links['refresh-my-djambi-panel'] = array(
       'title' => t('Refresh'),
       'href' => 'djambi/refresh/' . __FUNCTION__,

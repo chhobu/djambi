@@ -13,6 +13,8 @@ function theme_djambi_grid($variables) {
   $has_destination_layer = FALSE;
   $display_changes = TRUE;
   $display_events = TRUE;
+  $dispositions = DjambiBattlefield::getDispositions();
+  $disposition = $grid->getDisposition();
   if (isset($form["pieces"])) {
     $display_changes = FALSE;
     $form_pieces = $form["pieces"];
@@ -84,21 +86,23 @@ function theme_djambi_grid($variables) {
     }
   }
   // Construction de la grille
-  for ($i = 0; $i <= $grid->getDimensions(); $i++) {
-    $header[] = array("data" => DjambiBattlefield::intToAlpha($i), "class" => array("graduation"));
-    if ($i > 0) {
-      $rows[$i] = array(
+  if ($dispositions[$disposition]['grid'] != 'hexagonal') {
+    for ($i = 0; $i <= $grid->getDimensions(); $i++) {
+      $header[] = array("data" => DjambiBattlefield::intToAlpha($i), "class" => array("graduation"));
+      if ($i > 0) {
+        $rows[$i] = array(
           "data" => array(
               0 => array("data" => $i, "header" => TRUE, "class" => array("graduation"))
           ),
           "no_striping" => TRUE,
           "class" => array("no-hover")
-      );
+        );
+      }
     }
   }
   foreach ($grid->getCells() as $key => $cell) {
     $row_inner_html = "";
-    $extra_classes = array('cell', $cell["type"],
+    $extra_classes = array('cell', $cell['type'],
         isset($form_pieces["movable"]) && isset($cell["reachable"]) ? "reachable" : "unreachable");
     if ($show_changes && isset($changing_cells[$key])) {
       $extra_classes[] = 'recent-change';
@@ -285,14 +289,24 @@ function theme_djambi_grid($variables) {
   // Affichage du tableau
   $rows[5]["data"][5]["title"] = t("Throne case !");
   $rows[5]["data"][5]["data"] .= "<div class='element-invisible'>" . t("Throne case !") . "</div>";
+  if ($dispositions[$disposition]['grid'] == 'hexagonal') {
+    $markup = theme('hexagonal_grid', array(
+      'rows' => $rows,
+      'attributes' => array('class' => array('djambigrid'), 'id' => 'DjambiGrid' . $grid->getId()),
+      'caption' => $fieldset_title
+    ));
+  }
+  else {
+    $markup = theme('table', array(
+      'header' => $header,
+      'rows' => $rows,
+      'attributes' => array('class' => array('djambigrid'), 'id' => 'DjambiGrid' . $grid->getId()),
+      'caption' => $fieldset_title
+    ));
+  }
   $form['grid']['table'] = array(
-      '#markup' => theme("table", array(
-          "header" => $header,
-          "rows" => $rows,
-          "attributes" => array("class" => array("djambigrid"), "id" => "DjambiGrid" . $grid->getId()),
-          "caption" => $fieldset_title
-      )),
-      '#weight' => 0
+    '#markup' => $markup,
+    '#weight' => 0
   );
   // Affichage des derniers événements
   if ($display_events) {
@@ -322,6 +336,55 @@ function theme_djambi_grid($variables) {
   return $html;
 }
 
+/**
+ * Génération d'une pseudo-grille avec cases hexagonales
+ */
+function theme_hexagonal_grid($variables) {
+  $rows = $variables['rows'];
+  $attributes = $variables['attributes'];
+  $caption = $variables['caption'];
+  $attributes['class'][] = 'hexagonal-grid';
+  $html = '<div class="hexagonal-grid-wrapper"><div ' . drupal_attributes($attributes) . '>';
+  $i = 0;
+  foreach ($rows as $y => $row) {
+    $i++;
+    $attributes = array();
+    foreach ($row as $key => $value) {
+      if ($key != 'data') {
+        $attributes[$key] = $value;
+      }
+    }
+    $attributes['class'][] = ($i % 2 == 0 ? 'even' : 'odd');
+    $attributes['class'][] = 'row';
+    $html .= '<div ' . drupal_attributes($attributes) . '>';
+    foreach ($row['data'] as $x => $cell) {
+      $attributes = array();
+      foreach ($cell as $key => $value) {
+        if ($key != 'data') {
+          $attributes[$key] = $value;
+        }
+      }
+      if (empty($attributes['class']) || !in_array('cell', $attributes['class'])) {
+        $attributes['class'][] = 'cell';
+      }
+      $html .= "<div " . drupal_attributes($attributes) . ">";
+      if (!in_array('disabled', $cell['class'])) {
+        $html .= "<div class='cell-top'></div><div class='cell-top-inside'></div>";
+        $html .= "<div class='cell-bottom'></div><div class='cell-bottom-inside'></div>";
+        $html .= "<div class='cell-coordonates'>" . $cell['data-coord'] . "</div>";
+        $html .= "<div class='cell-content'>" . $cell['data'] . "</div>";
+      }
+      $html .= "</div>";
+    }
+    $html .= "</div>";
+  }
+  $html .= '</div></div>';
+  return $html;
+}
+
+/**
+ * Affichage d'un tableau affiché pendant la phase de recrutement
+ */
 function theme_djambi_recruiting_phase($variables) {
   global $user;
   $form = $variables["form"];
@@ -379,6 +442,9 @@ function theme_djambi_recruiting_phase($variables) {
   return $html;
 }
 
+/**
+ * Affichage de lignes d'informations sur la partie en cours
+ */
 function _kw_djambi_add_info_lines($infos_lines, &$form) {
   if (!empty($infos_lines)) {
     $infos_items = array();
@@ -392,6 +458,10 @@ function _kw_djambi_add_info_lines($infos_lines, &$form) {
   }
 }
 
+/**
+ * Affichage d'informations sur la phase en cours
+ * (potentiellement mise à jour régulièrement par Ajax)
+ */
 function _kw_djambi_waiting_label($now_playing_faction, DjambiBattlefield $grid) {
   $last_change = $grid->getInfo('changed');
   if (!is_null($now_playing_faction)) {

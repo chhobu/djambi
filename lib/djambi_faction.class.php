@@ -234,6 +234,9 @@ class DjambiPoliticalFaction {
           $alive = FALSE;
         }
       }
+      if (!isset($start_scheme[$key])) {
+        continue;
+      }
       $piece = new DjambiPiece($this, $key, $scheme['shortname'], $scheme['longname'],
         $scheme['type'], $start_scheme[$key]['x'], $start_scheme[$key]['y'], $alive);
       if (isset($scheme['habilities']) && is_array($scheme['habilities'])) {

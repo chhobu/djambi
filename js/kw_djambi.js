@@ -96,22 +96,32 @@
       if($(this).parents(".djambigrid tbody").hasClass("dragging")) {$(this).stop().css("background-color","");return;}
       if(!$(this).data("originalBgColor")) {$(this).data("originalBgColor", $(this).css("background-color"));}
       var colors = ["#fea", "#eeb", "#dfb", "#fdb", "#bdf", "#ddf", "#fd6", "#de9", "#fcc", "#fcb"];
-      $(this).stop().animate({ backgroundColor: colors[Math.floor(Math.random() * colors.length)]}, 1000);
+      color = colors[Math.floor(Math.random() * colors.length)];
+      $(this).stop().animate({backgroundColor: color}, 1000);
+      $(this).find('.cell-top-inside').stop().animate({borderBottomColor: color}, 1000);
+      $(this).find('.cell-bottom-inside').stop().animate({borderTopColor: color}, 1000);
     },function() {
       if($(this).parents(".djambigrid tbody").hasClass("dragging")) {$(this).stop().css("background-color","");return;}
-      $(this).stop().animate({backgroundColor: $(this).data("originalBgColor")}, 1000, function() {
+      origColor = $(this).data("originalBgColor");
+      $(this).stop().animate({backgroundColor: origColor}, 1000, function() {
         $(this).css("background-color", "");
         $(this).removeData("originalBgColor");
-      });  
+      });
+      $(this).find('.cell-top-inside').stop().animate({borderBottomColor: origColor}, 1000, function() {
+        $(this).css("border-bottom-color", "");
+      });
+      $(this).find('.cell-bottom-inside').stop().animate({borderTopColor: origColor}, 1000, function() {
+        $(this).css("border-top-color", "");
+      });
     });
     var $pieces = $(".piece.movable");
     if ($pieces.length > 0 && $(".djambigrid .cell.with-selected-piece").length == 0) {
       $pieces.draggable({
         cursor: "move",
-        containment: $(".djambigrid tbody"),
+        containment: $(".djambigrid").is("table") ? $(".djambigrid tbody") : $(".djambigrid"),
         revert: "invalid",
-        snap: ".cell",
-        snapMode: "inner",
+        snap: ".cell-content",
+        snapTolerance: 10,
         create: function(event,ui) {
           $(this).children("input").each(function() {
             $(this).hide().after("<a href='#'><img src='"+$(this).attr("src")+"' alt=\""+$(this).attr("alt")+"\" /></a>");
@@ -126,7 +136,10 @@
         },
         start: function(event,ui) {
           var allowedMoves = $(this).data("moves").split(" ");
-          var $grid = $(this).parents(".djambigrid tbody");
+          $grid = $(this).parents(".djambigrid");
+          if ($grid.is('table')) {
+            var $grid = $(this).parents(".djambigrid tbody");
+          }
           $grid.addClass("dragging");
           $(this).data("destination", null).parents(".cell").addClass("unselectable with-selected-piece");
           $(this).children("a").addClass("moved");
@@ -140,7 +153,10 @@
           }
         },
         stop: function(event,ui) {
-          var $grid = $(this).parents(".djambigrid tbody");
+          $grid = $(this).parents(".djambigrid");
+          if ($grid.is('table')) {
+            var $grid = $(this).parents(".djambigrid tbody");
+          }
           $(this).parents(".cell").removeClass("unselectable with-selected-piece");
           $grid.removeClass("dragging");
           var $tds = $grid.find(".cell");

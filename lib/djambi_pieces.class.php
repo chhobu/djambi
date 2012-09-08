@@ -113,47 +113,50 @@ class DjambiPiece {
     $rows = $this->getFaction()->getBattlefield()->getRows();
     $cols = $this->getFaction()->getBattlefield()->getCols();
     $directions = $this->getFaction()->getBattlefield()->getDirections();
-    $next_cases = $cells[DjambiBattlefield::locateCell($this->getPosition())]['neighbours'];
-    foreach ($next_cases as $direction => $cell) {
-      $move_ok = $this->checkAvailableMove($cell, $allow_interactions);
-      if (!$move_ok && isset($cells[$cell]['occupant'])) {
-        unset($next_cases[$direction]);
-        continue;
-      }
-      elseif (!isset($cells[$cell]['occupant'])) {
-        $obstacle = FALSE;
-        $next_cell = $cell;
-        for ($i = 2; $obstacle == FALSE; $i++) {
-          if ($this->getHability('limited_move') && $i > $this->getHability('limited_move')) {
-            $obstacle = TRUE;
-          }
-          else {
-            if (!isset($cells[$next_cell]['neighbours'][$direction])) {
+    $current_cell = $cells[DjambiBattlefield::locateCell($this->getPosition())];
+    if (!empty($current_cell['neighbours'])) {
+      $next_cases = $current_cell['neighbours'];
+      foreach ($next_cases as $direction => $cell) {
+        $move_ok = $this->checkAvailableMove($cell, $allow_interactions);
+        if (!$move_ok && isset($cells[$cell]['occupant'])) {
+          unset($next_cases[$direction]);
+          continue;
+        }
+        elseif (!isset($cells[$cell]['occupant'])) {
+          $obstacle = FALSE;
+          $next_cell = $cell;
+          for ($i = 2; $obstacle == FALSE; $i++) {
+            if ($this->getHability('limited_move') && $i > $this->getHability('limited_move')) {
               $obstacle = TRUE;
             }
             else {
-              $next_cell = $cells[$next_cell]['neighbours'][$direction];
-              $test = $this->checkAvailableMove($next_cell, $allow_interactions);
-              if ($test) {
-                if (!in_array($next_cell, $next_cases)) {
-                  $next_cases[$direction . $i] = $next_cell;
+              if (!isset($cells[$next_cell]['neighbours'][$direction])) {
+                $obstacle = TRUE;
+              }
+              else {
+                $next_cell = $cells[$next_cell]['neighbours'][$direction];
+                $test = $this->checkAvailableMove($next_cell, $allow_interactions);
+                if ($test) {
+                  if (!in_array($next_cell, $next_cases)) {
+                    $next_cases[$direction . $i] = $next_cell;
+                  }
+                  else {
+                    $obstacle = TRUE;
+                  }
                 }
-                else {
+                if (isset($cells[$next_cell]['occupant'])) {
                   $obstacle = TRUE;
                 }
               }
-              if (isset($cells[$next_cell]['occupant'])) {
-                $obstacle = TRUE;
-              }
             }
           }
-        }
-        if ($cells[$cell]['type'] == 'throne' && !$this->getHability('access_throne')) {
-          unset($next_cases[$direction]);
+          if ($cells[$cell]['type'] == 'throne' && !$this->getHability('access_throne')) {
+            unset($next_cases[$direction]);
+          }
         }
       }
     }
-    if (count($next_cases) > 0) {
+    if (!empty($next_cases)) {
       $this->setMovable(TRUE);
       $this->setAllowableMoves($next_cases);
       foreach ($next_cases as $cell) {

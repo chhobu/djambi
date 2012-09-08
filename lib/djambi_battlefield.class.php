@@ -22,26 +22,96 @@ define('KW_DJAMBI_USER_READY', 'ready'); // Création de partie, prêt à jouer
 class DjambiBattlefield {
   private $id, $rows, $cols, $cells, $factions, $directions,
     $moves, $mode, $status, $turns, $play_order, $events, $options,
-    $infos, $rules, $living_factions_at_turn_begin, $summary;
+    $infos, $rules, $living_factions_at_turn_begin, $summary, $disposition;
 
-  public function __construct($id, $new_game, $data) {
+  public function __construct($id, $data) {
     $this->id = $id;
     $this->setDefaultOptions();
     $this->moves = array();
     $this->events = array();
     $this->summary = array();
-    if (!$new_game) {
+    if ($id > 0) {
       return $this->loadBattlefield($data);
     }
     else {
       $this->setInfo('sequence', $data['sequence']);
-      $nb_factions = count($data['factions']);
-      if ($nb_factions == 4) {
-        return $this->buildNewBattlefieldWith4Factions($data['factions'],
-            isset($data['options']) ? $data['options'] : NULL);
+      $this->setDisposition($data['disposition']);
+      $this->setMode($data['mode']);
+      return $this->createNewGame($data['user_id'], $data['user_cookie']);
+    }
+  }
+
+  private function createNewGame($user_id, $user_cookie) {
+    $dispositions = self::getDispositions();
+    // Construction des factions
+    switch ($this->disposition) {
+      case('2std'):
+        $players = array(
+        1 => 'human',
+        2 => 'vassal',
+        3 => 'human',
+        4 => 'vassal'
+        );
+        break;
+      default:
+        $players = array_fill(1, $this->disposition['nb'], 'human');
+    }
+    $players_info = array();
+    foreach ($players as $key => $player) {
+      switch ($player) {
+        case('human'):
+          if ($this->mode == KW_DJAMBI_MODE_SANDBOX || ($key == 1 && $this->mode == KW_DJAMBI_MODE_FRIENDLY)) {
+            $data['ip'] = $_SERVER['REMOTE_ADDR'];
+            if ($this->mode != KW_DJAMBI_MODE_SANDBOX) {
+              $data['ping'] = $data['joined'] = time();
+            }
+            $players_info[$key] = array(
+                'uid' => $user_id,
+                'data' => $data,
+                'status' => KW_DJAMBI_USER_READY,
+                'cookie' => $user_cookie
+            );
+          }
+          else {
+            $players_info[$key] = array(
+                'uid' => 0,
+                'data' => array(),
+                'status' => KW_DJAMBI_USER_EMPTY_SLOT,
+                'cookie' => NULL
+            );
+          }
+          break;
+        case('vassal'):
+          $players_info[$key] = array(
+            'uid' => 0,
+            'data' => array(),
+            'status' => KW_DJAMBI_USER_VASSALIZED,
+            'cookie' => NULL
+          );
+          break;
       }
     }
-    return FALSE;
+    $this->setInfo('players_info', $players_info);
+    $factions_data = DjambiPoliticalFaction::buildFactionsInfos();
+    $nb_factions = count($players_info);
+    $i = 0;
+    foreach ($factions_data as $key => $faction_data) {
+      $i++;
+      if ($i > count($players_info)) {
+        break;
+      }
+      $faction = new DjambiPoliticalFaction($players_info[$i], $key, $faction_data);
+      $this->factions[$i] = $faction;
+    }
+    $this->setOption('directions', $dispositions[$this->disposition]['directions']);
+    if ($nb_factions == 4) {
+      $this->buildSquareBattlefieldWith4Factions();
+    }
+    elseif ($nb_factions == 3) {
+      $this->buildHexagonalBattlefieldWith3Factions();
+    }
+    $this->logEvent('info', 'NEW_DJAMBI_GAME');
+    return $this;
   }
 
   public static function getModes($with_description = FALSE) {
@@ -77,21 +147,58 @@ class DjambiBattlefield {
     }
   }
 
-  public static function getAvailbaleNumberPlayers($with_description = TRUE) {
+  public static function getDispositions($elements = 'all') {
     $games = array(
-        '4std' => array('description' => '4STD_DESCRIPTION', 'nb' => 4),
-        '2std' => array('description' => '2STD_DESCRIPTION', 'nb' => 2)
+        '4std' => array(
+            'description' => '4STD_DESCRIPTION',
+            'nb' => 4,
+            'scheme' => 'standard',
+            'grid' => 'table',
+            'directions' => 'cardinal'
+        ),
+        '2std' => array(
+            'description' => '2STD_DESCRIPTION',
+            'nb' => 2,
+            'scheme' => 'standard',
+            'grid' => 'table',
+            'directions' => 'cardinal'
+        ),
+        '3hex' => array(
+            'description' => '3HEX_DESCRIPTION',
+            'nb' => 3,
+            'scheme' => 'standard',
+            'grid' => 'hexagonal',
+            'directions' => 'hexagonal'
+        )
     );
+    if ($elements == 'all') {
+      return $games;
+    }
     $return = array();
     foreach($games as $key => $game) {
-      if ($with_description) {
-        $return[$key] = $game['description'];
+      if (isset($game[$elements])) {
+        $return[$key] = $game[$elements];
       }
       else {
-        $return[$game['nb']] = $game['nb'];
+        $return[$key] = $game;
       }
     }
     return $return;
+  }
+
+  public function setDisposition($disposition) {
+    $dispositions = self::getDispositions();
+    if (isset($dispositions[$disposition])) {
+      $this->disposition = $disposition;
+    }
+    return $this;
+  }
+
+  public function getDisposition() {
+    if (is_null($this->disposition)) {
+      $this->disposition = '4std';
+    }
+    return $this->disposition;
   }
 
   public function getInfo($info) {
@@ -121,7 +228,7 @@ class DjambiBattlefield {
         $this->setOption($option, $value);
       }
     }
-    $this->cells = $this->buildStdField($data['special_cells']);
+    $this->cells = $this->buildField($data['special_cells']);
     $pieces_scheme = new DjambiPieceScheme($this->getOption('piece_scheme'));
     $controls = array();
     foreach ($data['factions'] as $key => $faction_data) {
@@ -277,7 +384,7 @@ class DjambiBattlefield {
     }
   }
 
-  private function buildStdField($special_cells = array()) {
+  private function buildField($special_cells = array()) {
     $cells = array();
     $this->buildDirectionsArray();
     for ($x = 1; $x <= $this->cols; $x++) {
@@ -285,109 +392,204 @@ class DjambiBattlefield {
         $cells[self::locateCellByXY($x, $y)] = array('x' => $x, 'y' => $y, 'type' => 'std', 'occupant' => NULL);
       }
     }
+    foreach ($special_cells as $key => $type) {
+      $cells[$key]['type'] = $type;
+    }
     foreach ($cells as $key => $cell) {
+      if ($cell['type'] == 'disabled') {
+        continue;
+      }
       $neighbours = array();
       foreach ($this->directions as $d => $direction) {
-        $neighbour = self::locateCellByXY($cell['x'] + $direction['x'], $cell['y'] + $direction['y']);
-        if (isset($cells[$neighbour])) {
+        $new_x = $cell['x'] + $direction['x'];
+        $new_y = $cell['y'] + $direction['y'];
+        if (!empty($direction['modulo_x'])) {
+          if ($cell['y'] % 2 == 1) {
+            if (in_array($d, array('NE', 'SE'))) {
+              $new_x = $cell['x'];
+            }
+          }
+          else {
+            if (in_array($d, array('NW', 'SW'))) {
+              $new_x = $cell['x'];
+            }
+          }
+        }
+        $neighbour = self::locateCellByXY($new_x, $new_y);
+        if (isset($cells[$neighbour]) && $cells[$neighbour]['type'] != 'disabled') {
           $neighbours[$d] = $neighbour;
         }
       }
       $cells[$key]['neighbours'] = $neighbours;
-    }
-    foreach ($special_cells as $key => $type) {
-      $cells[$key]['type'] = $type;
     }
     return $cells;
   }
 
   private function buildDirectionsArray() {
     switch($this->getOption('directions')) {
+      case('hexagonal'):
+        $this->directions = array(
+          'NE' => array('x' => 1, 'y' => -1, 'diagonal' => FALSE, 'modulo_x' => TRUE),
+          'E' => array('x' => 1, 'y' => 0, 'diagonal' => FALSE),
+          'SE' => array('x' => 1, 'y' => 1, 'diagonal' => FALSE, 'modulo_x' => TRUE),
+          'SW' => array('x' => -1, 'y' => 1, 'diagonal' => FALSE, 'modulo_x' => TRUE),
+          'W' => array('x' => -1, 'y' => 0, 'diagonal' => FALSE),
+          'NW' => array('x' => -1, 'y' => -1, 'diagonal' => FALSE, 'modulo_x' => TRUE)
+        );
+        break;
       case('cardinal'):
       default :
         $this->directions = array(
-            'N' => array('y' => 0, 'x' => -1, 'diagonal' => FALSE),
-            'NE' => array('y' => 1, 'x' => -1, 'diagonal' => TRUE),
-            'E' => array('y' => 1, 'x' => 0, 'diagonal' => FALSE),
-            'SE' => array('y' => 1, 'x' => 1, 'diagonal' => TRUE),
-            'S' => array('y' => 0, 'x' => 1, 'diagonal' => FALSE),
-            'SW' => array('y' => -1, 'x' => 1, 'diagonal' => TRUE),
-            'W' => array('y' => -1, 'x' => 0, 'diagonal' => FALSE),
-            'NW' => array('y' => -1, 'x' => -1, 'diagonal' => TRUE)
+            'N' => array('x' => 0, 'y' => -1, 'diagonal' => FALSE),
+            'NE' => array('x' => 1, 'y' => -1, 'diagonal' => TRUE),
+            'E' => array('x' => 1, 'y' => 0, 'diagonal' => FALSE),
+            'SE' => array('x' => 1, 'y' => 1, 'diagonal' => TRUE),
+            'S' => array('x' => 0, 'y' => 1, 'diagonal' => FALSE),
+            'SW' => array('x' => -1, 'y' => 1, 'diagonal' => TRUE),
+            'W' => array('x' => -1, 'y' => 0, 'diagonal' => FALSE),
+            'NW' => array('x' => -1, 'y' => -1, 'diagonal' => TRUE)
         );
     }
   }
 
-  private function buildNewBattlefieldWith4Factions($factions, $options) {
+  private function buildHexagonalBattlefieldWith3Factions() {
     $this->rows = 9;
     $this->cols = 9;
-    if (!empty($options) && is_array($options)) {
-      foreach($options as $option => $value) {
-        $this->setOption($option, $value);
-      }
-    }
-    $this->factions = $factions;
-    $this->cells = $this->buildStdField(array('E5' => 'throne'));
+    $special_cells = array(
+      'E5' => 'throne',
+      'A1' => 'disabled',
+      'B1' => 'disabled',
+      'H1' => 'disabled',
+      'I1' => 'disabled',
+      'A2' => 'disabled',
+      'H2' => 'disabled',
+      'I2' => 'disabled',
+      'A3' => 'disabled',
+      'I3' => 'disabled',
+      'I4' => 'disabled',
+      'I6' => 'disabled',
+      'A7' => 'disabled',
+      'I7' => 'disabled',
+      'A8' => 'disabled',
+      'H8' => 'disabled',
+      'I8' => 'disabled',
+      'A9' => 'disabled',
+      'B9' => 'disabled',
+      'H9' => 'disabled',
+      'I9' => 'disabled'
+    );
+    $this->cells = $this->buildField($special_cells);
     $pieces_scheme = new DjambiPieceScheme();
     foreach ($this->factions as $key => $faction) {
-      if ($faction->getStartOrder() == 4) {
-        $start_scheme = array(
-          'L'  => array('x' => 1, 'y' => 1),
-          'R'  => array('x' => 1, 'y' => 2),
-          'M1' => array('x' => 1, 'y' => 3),
-          'A'  => array('x' => 2, 'y' => 1),
-          'D'  => array('x' => 2, 'y' => 2),
-          'M2' => array('x' => 2, 'y' => 3),
-          'M3' => array('x' => 3, 'y' => 1),
-          'M4' => array('x' => 3, 'y' => 2),
-          'N'  => array('x' => 3, 'y' => 3)
-        );
-      }
-      elseif ($faction->getStartOrder() == 3) {
-        $start_scheme = array(
-          'L'  => array('x' => 9, 'y' => 1),
-          'R'  => array('x' => 9, 'y' => 2),
-          'M1' => array('x' => 9, 'y' => 3),
-          'A'  => array('x' => 8, 'y' => 1),
-          'D'  => array('x' => 8, 'y' => 2),
-          'M2' => array('x' => 8, 'y' => 3),
-          'M3' => array('x' => 7, 'y' => 1),
-          'M4' => array('x' => 7, 'y' => 2),
-          'N'  => array('x' => 7, 'y' => 3)
-        );
-      }
-      elseif ($faction->getStartOrder() == 2) {
-        $start_scheme = array(
-          'L'  => array('x' => 9, 'y' => 9),
-          'R'  => array('x' => 9, 'y' => 8),
-          'M1' => array('x' => 9, 'y' => 7),
-          'A'  => array('x' => 8, 'y' => 9),
-          'D'  => array('x' => 8, 'y' => 8),
-          'M2' => array('x' => 8, 'y' => 7),
-          'M3' => array('x' => 7, 'y' => 9),
-          'M4' => array('x' => 7, 'y' => 8),
-          'N'  => array('x' => 7, 'y' => 7)
-        );
-
-      }
-      elseif ($faction->getStartOrder() == 1) {
-        $start_scheme = array(
-          'L'  => array('x' => 1, 'y' => 9),
-          'R'  => array('x' => 1, 'y' => 8),
-          'M1' => array('x' => 1, 'y' => 7),
-          'A'  => array('x' => 2, 'y' => 9),
-          'D'  => array('x' => 2, 'y' => 8),
-          'M2' => array('x' => 2, 'y' => 7),
-          'M3' => array('x' => 3, 'y' => 9),
-          'M4' => array('x' => 3, 'y' => 8),
-          'N'  => array('x' => 3, 'y' => 7)
-        );
+      switch ($faction->getStartOrder()) {
+        case(1) :
+          $start_scheme = array(
+            'L'  => array('x' => 1, 'y' => 5),
+            'R'  => array('x' => 1, 'y' => 4),
+            'M1' => array('x' => 2, 'y' => 3),
+            'A'  => array('x' => 1, 'y' => 6),
+            'D'  => array('x' => 2, 'y' => 5),
+            'M2' => array('x' => 2, 'y' => 4),
+            'M3' => array('x' => 2, 'y' => 6),
+            'M4' => array('x' => 2, 'y' => 7),
+            'N'  => array('x' => 3, 'y' => 5)
+          );
+          break;
+        case(2) :
+          $start_scheme = array(
+            'L'  => array('x' => 7, 'y' => 9),
+            'R'  => array('x' => 6, 'y' => 9),
+            'M1' => array('x' => 5, 'y' => 9),
+            'A'  => array('x' => 7, 'y' => 8),
+            'D'  => array('x' => 6, 'y' => 8),
+            'M2' => array('x' => 5, 'y' => 8),
+            'M3' => array('x' => 8, 'y' => 7),
+            'M4' => array('x' => 7, 'y' => 7),
+            'N'  => array('x' => 6, 'y' => 7)
+          );
+          break;
+        case(3) :
+          $start_scheme = array(
+            'L'  => array('x' => 7, 'y' => 1),
+            'R'  => array('x' => 6, 'y' => 1),
+            'M1' => array('x' => 5, 'y' => 1),
+            'A'  => array('x' => 7, 'y' => 2),
+            'D'  => array('x' => 6, 'y' => 2),
+            'M2' => array('x' => 5, 'y' => 2),
+            'M3' => array('x' => 8, 'y' => 3),
+            'M4' => array('x' => 7, 'y' => 3),
+            'N'  => array('x' => 6, 'y' => 3)
+          );
+          break;
       }
       $faction->setBattlefield($this);
       $faction->createPieces($pieces_scheme->getPieceScheme(), $start_scheme);
     }
-    $this->logEvent('info', 'NEW_DJAMBI_GAME');
-    return $this;
+  }
+
+  private function buildSquareBattlefieldWith4Factions() {
+    $this->rows = 9;
+    $this->cols = 9;
+    $this->cells = $this->buildField(array('E5' => 'throne'));
+    $pieces_scheme = new DjambiPieceScheme();
+    foreach ($this->factions as $key => $faction) {
+      switch ($faction->getStartOrder()) {
+        case (4) :
+          $start_scheme = array(
+            'L'  => array('x' => 1, 'y' => 1),
+            'R'  => array('x' => 1, 'y' => 2),
+            'M1' => array('x' => 1, 'y' => 3),
+            'A'  => array('x' => 2, 'y' => 1),
+            'D'  => array('x' => 2, 'y' => 2),
+            'M2' => array('x' => 2, 'y' => 3),
+            'M3' => array('x' => 3, 'y' => 1),
+            'M4' => array('x' => 3, 'y' => 2),
+            'N'  => array('x' => 3, 'y' => 3)
+            );
+        break;
+        case (3) :
+          $start_scheme = array(
+            'L'  => array('x' => 9, 'y' => 1),
+            'R'  => array('x' => 9, 'y' => 2),
+            'M1' => array('x' => 9, 'y' => 3),
+            'A'  => array('x' => 8, 'y' => 1),
+            'D'  => array('x' => 8, 'y' => 2),
+            'M2' => array('x' => 8, 'y' => 3),
+            'M3' => array('x' => 7, 'y' => 1),
+            'M4' => array('x' => 7, 'y' => 2),
+            'N'  => array('x' => 7, 'y' => 3)
+          );
+        break;
+        case (2) :
+          $start_scheme = array(
+            'L'  => array('x' => 9, 'y' => 9),
+            'R'  => array('x' => 9, 'y' => 8),
+            'M1' => array('x' => 9, 'y' => 7),
+            'A'  => array('x' => 8, 'y' => 9),
+            'D'  => array('x' => 8, 'y' => 8),
+            'M2' => array('x' => 8, 'y' => 7),
+            'M3' => array('x' => 7, 'y' => 9),
+            'M4' => array('x' => 7, 'y' => 8),
+            'N'  => array('x' => 7, 'y' => 7)
+          );
+        break;
+        case (1) :
+          $start_scheme = array(
+            'L'  => array('x' => 1, 'y' => 9),
+            'R'  => array('x' => 1, 'y' => 8),
+            'M1' => array('x' => 1, 'y' => 7),
+            'A'  => array('x' => 2, 'y' => 9),
+            'D'  => array('x' => 2, 'y' => 8),
+            'M2' => array('x' => 2, 'y' => 7),
+            'M3' => array('x' => 3, 'y' => 9),
+            'M4' => array('x' => 3, 'y' => 8),
+            'N'  => array('x' => 3, 'y' => 7)
+          );
+        break;
+      }
+      $faction->setBattlefield($this);
+      $faction->createPieces($pieces_scheme->getPieceScheme(), $start_scheme);
+    }
   }
 
   public static function locateCell($position) {
