@@ -356,9 +356,9 @@ span.rule-variant, span.game-option {
 .hexagonal-grid .cell.recent-change.jaune .cell-bottom-inside {
   border-top-color: #fe9;}
 .hexagonal-grid .cell.recent-change.rouge .cell-top-inside {
-  border-bottom-color: ): #f99;}
+  border-bottom-color: #f99;}
 .hexagonal-grid .cell.recent-change.rouge .cell-bottom-inside {
-  border-top-color: ): #f99;}
+  border-top-color: #f99;}
 .hexagonal-grid .cell.recent-change.bleu .cell-top-inside {
   border-bottom-color: #cef;}
 .hexagonal-grid .cell.recent-change.bleu .cell-bottom-inside {
@@ -373,6 +373,6 @@ span.rule-variant, span.game-option {
   border-bottom-color: #ddd;}
 .hexagonal-grid.dragging .cell.reachable.selectable .cell-bottom-inside {
   border-top-color: #ddd;}
-.hexagonal-grid .piece {
-  position: relative;
-  z-index: 10;}
+.hexagonal-grid.dragging .with-selected-piece .piece {
+  position: absolute;
+  z-index: 100;}
