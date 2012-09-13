@@ -813,7 +813,8 @@ class DjambiBattlefield {
     }
     else {
       $this->logEvent("event", "DRAW");
-      foreach ($living_factions as $faction) {
+      foreach ($living_factions as $faction_id) {
+        $faction = $this->getFactionById($faction_id);
         $faction->setStatus(KW_DJAMBI_USER_DRAW);
         $faction->setRanking($nb_living_factions);
       }

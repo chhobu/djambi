@@ -99,7 +99,7 @@ span.faction {
 .djambigrid .cell.with-piece div.destination-layer {
   margin-bottom: -42px;}
 .djambigrid .cell.throne {
-  background: #000 url(img/throne.png) no-repeat center center;}
+  background: #fff url(img/throne.png) no-repeat center center;}
 .djambigrid input[type=image] {
   padding: 0;
   margin: 0;}
@@ -348,9 +348,9 @@ span.rule-variant, span.game-option {
 .hexagonal-grid .cell.throne {
   background-image: url(img/throne30.png);}
 .hexagonal-grid .cell.throne .cell-top-inside {
-  border-bottom-color: #000;}
+  border-bottom-color: #fff;}
 .hexagonal-grid .cell.throne .cell-bottom-inside {
-  border-top-color: #000;}
+  border-top-color: #fff;}
 .hexagonal-grid .cell.recent-change.jaune .cell-top-inside {
   border-bottom-color: #fe9;}
 .hexagonal-grid .cell.recent-change.jaune .cell-bottom-inside {

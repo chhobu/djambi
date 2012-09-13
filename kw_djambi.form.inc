@@ -758,7 +758,12 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
         array('data' => t('Awarded to'))
     );
     $rows = array();
-    $winners_array = array_keys($ranking, 1, TRUE);
+    $winners_array = array();
+    $win_rank = 0;
+    while (empty($winners_array)) {
+      $win_rank++;
+      $winners_array = array_keys($ranking, $win_rank, TRUE);
+    }
     $winners = array();
     foreach ($winners_array as $winner) {
       $faction = $grid->getFactionById($winner);
@@ -775,7 +780,7 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
         ));
     $ranking_array = array();
     foreach ($ranking as $side => $rank) {
-      if (empty($rank) || $rank == 1) {
+      if (empty($rank) || $rank == $win_rank) {
         continue;
       }
       $faction = $grid->getFactionById($side);

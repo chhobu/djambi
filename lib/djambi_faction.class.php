@@ -294,17 +294,17 @@ class DjambiPoliticalFaction {
     $this->getBattlefield()->logEvent('info', 'DRAW_ACCEPTED', array('faction1' => $this->getId()));
     $this->setDrawStatus(2);
     $factions = $this->getBattlefield()->getFactions();
-    $alive_factions = 0;
+    $alive_factions = array();
     $accepted_draws = 0;
     foreach ($factions as $faction) {
       if ($faction->isAlive()) {
-        $alive_factions++;
+        $alive_factions[] = $faction->getId();
         if ($faction->getDrawStatus() > 0) {
           $accepted_draws++;
         }
       }
     }
-    if ($accepted_draws == $alive_factions) {
+    if ($accepted_draws == count($alive_factions)) {
       $this->getBattlefield()->endGame($alive_factions);
     }
     else {
