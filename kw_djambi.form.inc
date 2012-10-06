@@ -257,16 +257,18 @@ function _kw_djambi_build_part_rules(&$form, DjambiBattlefield $grid) {
           $title = $option['type'];
         }
         $rules_rows[] = array(
-            array('class' => array(str_replace(array('_', ' '), '-', $option['type'])), 'data' => $title),
-            array('class' => array('label'), 'data' => !empty($option['title']) ? _kw_djambi_get_translatable_messages($option['title']) : NULL),
-            array('data' => _kw_djambi_get_translatable_messages($option['choices'][$value], array('!value' => $value)))
+            array('data' =>
+                '<span class="' . str_replace(array('_', ' '), '-', $option['type']) . '">'
+                . $title . '</span> - <strong>'
+                . (!empty($option['title']) ? _kw_djambi_get_translatable_messages($option['title']) : NULL)
+                . '</strong>'),
+            array('class' => array('description'), 'data' => _kw_djambi_get_translatable_messages($option['choices'][$value], array('!value' => $value)))
         );
       }
     }
   }
   if (!empty($rules_rows)) {
     $rules_header = array(
-        array('data' => 'Type'),
         array('data' => 'Label'),
         array('data' => 'Value')
     );
@@ -363,8 +365,8 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, DjambiBattle
       $descriptions[] = t('There is no limitation concerning turn skippings.');
     }
     else {
-      $descriptions[] = format_plural($allowed_skip_turns, t('You can only skip your turn 1 time.'),
-          'You can skip your turn only !nb times', array('!nb' => $allowed_skip_turns));
+      $descriptions[] = format_plural($allowed_skip_turns, 'You can only skip your turn 1 time.',
+          'You can skip your turn only @count times');
     }
   }
   // Proposer une nulle

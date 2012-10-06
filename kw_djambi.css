@@ -20,6 +20,7 @@ table.djambigrid {
   text-align: center;
   vertical-align: middle;}
 .djambigrid div.piece {
+  background-image: none;
   border-radius: 21px;
   border: 2px solid #ccc;
   box-shadow: 2px 2px 2px #000;
@@ -32,7 +33,8 @@ table.djambigrid {
   width: 32px;
   text-align: center;}
 .djambigrid div.piece input, .djambigrid div.piece img {
-  margin: -2px;}
+  margin: -2px;
+  display: block;}
 .djambigrid div.piece input {
   border: 0px;
   background: none;
@@ -99,34 +101,35 @@ span.faction {
 .djambigrid .cell.with-piece div.destination-layer {
   margin-bottom: -42px;}
 .djambigrid .cell.throne {
-  background: #fff url(img/throne.png) no-repeat center center;}
+  background: #000 url(img/throne.png) no-repeat center center;}
 .djambigrid input[type=image] {
   padding: 0;
-  margin: 0;}
+  margin: 0;
+  border: 0px;}
 .faction {
   background: url(img/leader16.png) no-repeat 4px 50%;
   padding-left: 22px;
   white-space: nowrap;}
 span.faction {
   padding-right: 0.25em;}
-span.piece {
+.piece {
   padding: 0 2px 0 20px;
   white-space: nowrap;}
 .links li a.add-djambi-game, a.play-djambi-game, a.view-djambi-game {
   padding-left: 20px;}
-span.piece.militant, .links li a.add-djambi-game, a.play-djambi-game {
+.piece.militant, .links li a.add-djambi-game, a.play-djambi-game {
   background-image: url(img/militant16.png);
   background-repeat: no-repeat;
   background-position: 2px 50%;}
-span.piece.leader {
+.piece.leader {
   background: url(img/leader16.png) no-repeat 2px 50%;}
-span.piece.necromobile {
+.piece.necromobile {
   background: url(img/necromobile16.png) no-repeat 2px 50%;}
-span.piece.diplomate {
+.piece.diplomate {
   background: url(img/diplomat16.png) no-repeat 2px 50%;}
-span.piece.assassin {
+.piece.assassin {
   background: url(img/assassin16.png) no-repeat 2px 50%;}
-span.piece.reporter, a.view-djambi-game {
+.piece.reporter, a.view-djambi-game {
   background: url(img/reporter16.png) no-repeat 2px 50%;}
 table .number {
   text-align: right;}
@@ -223,6 +226,25 @@ span.rule-variant, span.game-option {
 .djambi .players tr.me {
   background-color: #fec;
   font-weight: bold;}
+.djambigrid .cell span.help-link, .djambigrid .dragging .cell:hover span.help-link {
+  display: none;}
+.djambigrid .cell:hover span.help-link, .djambigrid .cell:focus span.help-link {
+  float: left;
+  position: absolute;
+  display: block;
+  width: 18px;
+  height: 18px;
+  border-radius: 9px;
+  overflow: hidden;
+  z-index: 10;
+  margin-left: 40px;
+  margin-top: -5px;}
+.djambigrid .cell:hover span.help-link a, .djambigrid .cell:focus span.help-link a {
+  cursor: help;
+  display: block; 
+  padding-left: 18px;
+  height: 18px;
+  background: url(/misc/message-16-help.png) no-repeat 1px 1px #000;}
 .machiavel {
   border-radius: 0.5em 1em 0.5em 1em;
   box-shadow: 2px 2px 2px #999;
@@ -346,7 +368,8 @@ span.rule-variant, span.game-option {
 .hexagonal-grid .cell.unselectable.with-selected-piece .cell-bottom-inside {
   border-top-color: #000;}
 .hexagonal-grid .cell.throne {
-  background-image: url(img/throne30.png);}
+  background-image: url(img/throne30.png);
+  background-color: #fff;}
 .hexagonal-grid .cell.throne .cell-top-inside {
   border-bottom-color: #fff;}
 .hexagonal-grid .cell.throne .cell-bottom-inside {
@@ -376,3 +399,69 @@ span.rule-variant, span.game-option {
 .hexagonal-grid.dragging .with-selected-piece .piece {
   position: absolute;
   z-index: 100;}
+/*==========================================
+============ LISTES SPECIALES ==============
+===========================================*/
+ul.cases {
+  text-align: center;}
+ul.cases li {
+  background-color: #eee;
+  border: 2px solid #999;
+  border-radius: 0.5em;
+  color: #666;
+  display: inline-block;
+  font-size: 90%;
+  list-style-type: none;
+  margin: 0.5em;
+  padding: 0.5em;
+  text-align: center;
+  vertical-align: top;
+  width: 150px;
+  min-height: 80px;
+  overflow: hidden;
+  line-height: 120%;
+  -moz-transition: color 500ms ease, background-color 500ms ease;
+  -webkit-transition: color 500ms ease, background-color 500ms ease;
+  transition: color 500ms ease, background-color 500ms ease;}
+ul.cases li a {
+  font-weight: normal;}
+ul.cases li.more {
+  background-color: transparent;
+  border: none;}
+ul.cases li .big {
+  display: block;
+  margin: 0.25em 0;}
+ul.cases li img, ul.cases span.piece {
+  display: block;
+  margin: -110px auto 0;
+  border-radius: 55px;
+  border: 5px solid #000;
+  padding: 8px;
+  background-color: #fc0;
+  box-shadow: 5px 5px 5px #999;
+  -moz-transition: margin 500ms ease;
+  -webkit-transition: margin 500ms ease;
+  transition: margin 500ms ease;}
+ul.cases a span.piece.dead {
+  background-color: #000;
+  height: 70px;
+  width: 90px;
+  font-size: 500%;
+  color: #999;
+  padding: 28px 8px 8px;}
+ul.cases li:hover, ul.cases li:focus {
+  color: #fff;
+  background-color: #666;}
+ul.cases li a:hover, ul.cases li:hover a {
+  color: #fff;
+  text-decoration: none;}
+ul.cases li:hover img, ul.cases li:hover span.piece, ul.cases li:focus img, ul.cases li:focus span.piece {
+  margin-top: 0px;
+  box-shadow: 5px 5px 5px #333;}
+/*==========================================
+================== DECORATION ==============
+===========================================*/
+#block-views-citation-du-jour-block {
+  border-top: 3px solid #ccc;
+  background: url(img/background.png) scroll no-repeat 0px 0px #fff;
+  padding-top: 1460px;}

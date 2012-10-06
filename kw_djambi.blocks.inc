@@ -325,6 +325,7 @@ function _kw_djambi_list_build_winnername($name, $uid, $status, $faction) {
 
 function _kw_djambi_list_user_games() {
   global $user;
+  drupal_add_css(drupal_get_path('module', 'kw_djambi').'/kw_djambi.css', array('every_page' => TRUE));
   $cookie = _kw_djambi_cookie();
   $elements = array();
   // Liste des parties en cours
@@ -435,8 +436,9 @@ function _kw_djambi_list_user_games() {
     $links = array();
     if (!empty($allowed_new_games)) {
       $links['add-djambi-game'] = array(
-        'title' => t('Create a new Djambi game'),
-        'href' => 'node/add/kw-djambi',
+        'title' => t('Play a new Djambi game'),
+        'href' => 'djambi',
+        'rel' => 'nofollow',
         'attributes' => array('class' => array('add-djambi-game'))
       );
     }

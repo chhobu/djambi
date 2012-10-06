@@ -17,6 +17,11 @@ function kw_djambi_menu() {
     'access callback' => TRUE,
     'type' => MENU_CALLBACK
   );
+  $items['djambi'] = array(
+    'page callback' => 'kw_djambi_start_game',
+    'access callback' => TRUE,
+    'type' => MENU_CALLBACK
+  );
   return $items;
 }
 
@@ -61,12 +66,15 @@ function kw_djambi_block_info() {
       'cache' => DRUPAL_NO_CACHE
   );
   $blocks['djambi_panel'] = array(
-      'info' => t('My djambi games'),
+      'info' => t('My Djambi games'),
       'cache' => DRUPAL_NO_CACHE
   );
   return $blocks;
 }
 
+/**
+ * Implements hook_block_view().
+ */
 function kw_djambi_block_view($delta) {
   switch ($delta) {
     case ('djambi_games') :
@@ -150,24 +158,17 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
       drupal_access_denied();
     }
     if (isset($_GET['mode']) && isset($mode_options[$_GET['mode']])) {
-      $form['basics']['mode'] = array(
-        '#type' => 'value',
-        '#value' => $_GET['mode']
-      );
-      $form['basics']['mode_item'] = array(
-        '#type' => 'item',
-        '#title' => t('Game mode'),
-        '#markup' => $mode_options[$_GET['mode']]
-      );
+      $default_mode = $_GET['mode'];
     }
     else {
-      $form['basics']['mode'] = array(
-        '#type' => 'radios',
-        '#title' => t('Game mode'),
-        '#default_value' => KW_DJAMBI_MODE_FRIENDLY,
-        '#options' => $mode_options
-      );
+      $default_mode = KW_DJAMBI_MODE_FRIENDLY;
     }
+    $form['basics']['mode'] = array(
+      '#type' => 'radios',
+      '#title' => t('Game mode'),
+      '#default_value' => $default_mode,
+      '#options' => $mode_options
+    );
     $form['advanced'] = array(
         '#type' => 'fieldset',
         '#title' => t('Advanced options'),
@@ -222,8 +223,7 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         $form['no_autodelete'] = array(
             '#type' => 'checkbox',
             '#title' => t('Do not autodelete this game'),
-            '#description' => t('Finished or inactive games are automatically removed after an amount of time.'
-                .' Check this box to keep this game alive.'),
+            '#description' => t('Finished or inactive games are automatically removed after an amount of time. Check this box to keep this game alive.'),
             '#default_value' => $grid->getInfo('autodelete') == 0 ? 1 : 0,
             '#return_value' => 1
         );
@@ -290,6 +290,31 @@ function kw_djambi_node_form_extra_submit($form, &$form_state) {
     -> condition('nid', $form['#node']->nid)
     -> execute();
   }
+}
+
+/**
+ * Callback permettant la création rapide d'une partie
+ */
+function kw_djambi_start_game() {
+  // Recherche d'une partie en attente
+  global $user;
+  $cookie = _kw_djambi_cookie();
+  $allowed_new_games = _kw_djambi_check_user_already_playing($user, DjambiBattlefield::getModes(), $cookie, FALSE);
+  $new_game = db_query('SELECT dn.nid FROM {djambi_node} dn
+      WHERE dn.status = :status AND dn.autodelete > :time
+      ORDER BY dn.changed DESC LIMIT 0,1',
+      array(':status' => KW_DJAMBI_STATUS_RECRUITING, ':time' => time()));
+  foreach ($new_game as $game) {
+    if ($allowed_new_games) {
+      drupal_set_message(t("We found a game still recruiting players. You may also !create_link.",
+        array('!create_link' => l(t('create your own new game'), 'node/add/kw-djambi')))
+      );
+    }
+    drupal_goto('node/' . $game->nid);
+    break;
+  }
+  // Si aucune partie, redirection vers l'interface de création de partie
+  drupal_goto('node/add/kw-djambi');
 }
 
 /**
@@ -362,16 +387,15 @@ function _kw_djambi_check_user_already_playing($user, $modes, $cookie, $redirect
   // Si partie en cours : redirection
   if ($force_redirect) {
     if ($result->mode == KW_DJAMBI_MODE_SANDBOX) {
-      drupal_set_message(t("You have already begun a !game on !date. "
-        . "This game does not seem to be finished : "
-        . " switching back to the last played move of the game.",
+      drupal_set_message(t("You have already begun a !game on !date.
+          This game does not seem to be finished :
+          switching back to the last played move of the game.",
         array("!date" => format_date($result->created),
             "!game" => _kw_djambi_get_translatable_messages($result->mode))
       ), 'warning');
     }
     elseif ($result->mode == KW_DJAMBI_MODE_FRIENDLY)  {
-      drupal_set_message(t("You are already involved in a !game which is in a recruiting phase : "
-          . "you cannot create a new game.",
+      drupal_set_message(t("You are already involved in a !game which is in a recruiting phase : you cannot create a new game.",
           array("!game" => _kw_djambi_get_translatable_messages($result->mode))
       ), 'warning');
     }
@@ -435,8 +459,8 @@ function kw_djambi_node_delete($node) {
  * Implements hook_node_view().
  */
 function kw_djambi_node_view($node, $view_mode) {
-  if ($node->type == "kw_djambi" && $view_mode =="full") {
-    $node->content["grid"] = drupal_get_form("kw_djambi_game_form", $node);
+  if ($node->type == 'kw_djambi' && $view_mode =='full') {
+    $node->content['grid'] = drupal_get_form('kw_djambi_game_form', $node);
     $datagrid = $node->content['grid']['#grid'];
     module_load_include('inc', 'kw_djambi', 'kw_djambi.blocks');
     if ($datagrid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
@@ -447,6 +471,56 @@ function kw_djambi_node_view($node, $view_mode) {
         $node->content['navigation'] = _kw_djambi_list_recruiting_games(NULL, $node->nid);
       }
     }
+  }
+  elseif ($node->type == 'rule_element' && !empty($node->content['body'])) {
+    $text = $node->content['body'][0]['#markup'];
+    $vocabulary = taxonomy_vocabulary_machine_name_load('game_concept');
+    $query = 'SELECT T.name, N.nid, N.title
+    FROM {field_data_field_game_concept} F
+    INNER JOIN {node} N on N.vid = F.revision_id
+    INNER JOIN {taxonomy_term_data} T ON T.tid = F.field_game_concept_tid
+    WHERE N.status = 1 AND N.type = :type AND N.nid != :nid';
+    $result = db_query($query, array(
+        ':type' => 'rule_element',
+        ':nid' => $node->nid
+      ))->fetchAllAssoc('name');
+    if (!empty($result)) {
+      $chapitres = explode('<h2', $text);
+      foreach ($chapitres as $numero => $chapitre) {
+        $pattern1 = '%<(p|li|td).*</(p|li|td)>%isU';
+        $pattern2 = '%\b((' . implode('|', array_keys($result)) . ')s?)\b%';
+        preg_match_all($pattern1, $chapitre, $lines, PREG_SET_ORDER);
+        $replacements = array();
+        $replaced = array();
+        $nodes = array();
+        foreach ($lines as $nl => $line) {
+          $paragraphe = $line[0];
+          $matches = array();
+          $found = preg_match_all($pattern2, $paragraphe, $matches, PREG_SET_ORDER);
+          if ($found > 0) {
+            foreach ($matches as $key => $match) {
+              $found = TRUE;
+              if (!isset($replaced[$match[2]]) && !isset($nodes[$result[$match[2]]->nid])) {
+                $replaced[$match[2]] = $match[1];
+                $nodes[$result[$match[2]]->nid] = $match[1];
+                $replacements[$match[2]] = l($match[1], 'node/' . $result[$match[2]]->nid,
+                    array('attributes' => array('title' => $result[$match[2]]->title)));
+              }
+            }
+          }
+        }
+        foreach ($replacements as $key => $replacement) {
+          $titre = substr($chapitres[$numero], 0, strpos($chapitres[$numero], '</h2>') + 5);
+          $texte = substr($chapitres[$numero], strlen($titre));
+          $replace_me = strpos($texte, $replaced[$key]);
+          $texte = substr($texte, 0, $replace_me) . $replacement
+            . substr($texte, $replace_me + strlen($replaced[$key]));
+          $chapitres[$numero] = $titre . $texte;
+        }
+      }
+      $text = implode('<h2', $chapitres);
+    }
+    $node->content['body'][0]['#markup'] = $text;
   }
 }
 
@@ -476,14 +550,16 @@ function kw_djambi_check_update($nid, $version) {
           (!empty($cookie) && $player['cookie'] == $cookie)) {
         $data = _kw_djambi_update_user_infos($data, $player['djuid']);
       }
-      $ping = _kw_djambi_format_ping_infos($data['ping']);
-      $return['pings'][$player['djuid']] = array(
-        'status' => $ping['status'],
-        'title' => $ping['title'],
-        'class' => $ping['class']
-      );
-      if (isset($data['joined'])) {
-        $return['pings'][$player['djuid']]['joined'] = format_interval(time() - $data['joined']);
+      if (!empty($data['ping'])) {
+        $ping = _kw_djambi_format_ping_infos($data['ping']);
+        $return['pings'][$player['djuid']] = array(
+            'status' => $ping['status'],
+            'title' => $ping['title'],
+            'class' => $ping['class']
+        );
+        if (isset($data['joined'])) {
+          $return['pings'][$player['djuid']]['joined'] = format_interval(time() - $data['joined']);
+        }
       }
     }
   }
@@ -519,14 +595,8 @@ function kw_djambi_refresh_area($callback) {
     ajax_deliver($page);
   }
   else {
-    if (isset($_GET['destination'])) {
-      $destination = $_GET['destination'];
-    }
-    else {
-      $destination = '<front>';
-    }
-    drupal_goto($destination, array(
-      'query' => array('destination' => $destination),
+    drupal_goto('', array(
+      'query' => drupal_get_destination(),
       'fragment' => $fragment
     ));
   }
@@ -1082,9 +1152,9 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
       $txt = t("The !faction1 side rejected the draw proposal.", $args);
       break;
     case("MODE_SANDBOX_DESCRIPTION"):
-      $txt = t('Sandbox game - you control successively all sides of the game. '
-        . 'Useful to discover the Djambi rules, to test alone new strategies, '
-        . ' or to play with other people on the same screen.');
+      $txt = t('Sandbox game - you control successively all sides of the game.
+      Useful to discover the Djambi rules, to test alone new strategies,
+       or to play with other people on the same screen.');
       break;
     case("MODE_FRIENDLY_DESCRIPTION"):
       $txt = t('Friendly game - play online Djambi games with unknown human players, just for fun.');
@@ -1126,25 +1196,25 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
       $txt = t("Throne case interactions rule");
       break;
     case("RULE1_STRICT"):
-      $txt = t('A leader is eliminated if he is not occupying the throne case, '
-                  . 'if he or his controlled adjacent pieces are surrounded by dead peaces (without empty cells) '
-                  . 'even if he is still controlling a living necromobile.');
+      $txt = t('A leader is eliminated if he is not occupying the throne case,
+      if he or his controlled adjacent pieces are surrounded by dead peaces (without empty cells)
+      even if he is still controlling a living necromobile.');
     break;
     case("RULE1_LOOSE"):
-      $txt = t('A leader is eliminated if he is not occupying the throne case, '
-                  . 'if he or his controlled adjacent pieces cannot move due to dead pieces barricade '
-                  . 'and if he is not controlling a living necromobile.');
+      $txt = t('A leader is eliminated if he is not occupying the throne case,
+      if he or his controlled adjacent pieces cannot move due to dead pieces barricade
+      and if he is not controlling a living necromobile.');
     break;
     case("RULE1_THRONE_ACCESS"):
-      $txt = t('A leader is eliminated if the way to throne case is locked by dead pieces (even if he can still move)'
-                  . ' and if he has no living necromobile among his controlled pieces.');
+      $txt = t('A leader is eliminated if the way to throne case is locked by dead pieces (even if he can still move)
+      and if he has no living necromobile among his controlled pieces.');
     break;
     case("RULE3_TEMPORARY"):
       $txt = t('A player who acceeds to power gains control of the withdrawn or surrounded leaders sides just during the time of his reign.');
     break;
     case("RULE3_FULL_CONTROL"):
-      $txt = t('A player who acceeds to power gains full control of the withdrawn or surrounded leaders sides until the end of the game,'
-                  .' even if he leaves the throne case.');
+      $txt = t('A player who acceeds to power gains full control of the withdrawn or surrounded leaders sides until the end of the game,
+      even if he leaves the throne case.');
     break;
     case("RULE2_NEVER"):
       $txt = t('No come-back.');
@@ -1174,12 +1244,12 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
       $txt = t('Your diplomat can manipulate vassalized pieces.');
     break;
     case("RULE6_PRAVDA"):
-      $txt = t('Pradva style reporters : your reporters will never involve your own pieces in their scoops, '
-                  . 'but they can eliminate one ennemy per move.');
+      $txt = t('Pradva style reporters : your reporters will never involve your own pieces in their scoops,
+      but they can eliminate one ennemy per move.');
     break;
     case("RULE6_FOXNEWS"):
-      $txt = t('Fox News style reporters : your reporters can involve several pieces in their moves, '
-                  . 'but some scandals can also concern your own troups.');
+      $txt = t('Fox News style reporters : your reporters can involve several pieces in their moves,
+      but some scandals can also concern your own troups.');
     break;
     case("RULE7_NORMAL"):
       $txt = t("Standard rules");

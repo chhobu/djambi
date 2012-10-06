@@ -5,7 +5,6 @@
 function theme_djambi_grid($variables) {
   global $user;
   $form = $variables["form"];
-  // Détermination de la phase de jeu
   /* @var $grid DjambiBattlefield */
   $grid = $form["#grid"];
   $form_pieces = NULL;
@@ -15,6 +14,9 @@ function theme_djambi_grid($variables) {
   $display_events = TRUE;
   $dispositions = DjambiBattlefield::getDispositions();
   $disposition = $grid->getDisposition();
+  // Construction de l'aide en ligne
+  $helps = _kw_djambi_load_rule_nodes($grid);
+  // Détermination de la phase de jeu
   if (isset($form["pieces"])) {
     $display_changes = FALSE;
     $form_pieces = $form["pieces"];
@@ -136,6 +138,9 @@ function theme_djambi_grid($variables) {
       }
       if (isset($form_pieces[$current_form_action]) && isset($form_pieces[$current_form_action]["#selected_piece_id"]) && $piece->getId() == $form_pieces[$current_form_action]["#selected_piece_id"]) {
         $extra_classes[] = "with-selected-piece";
+        if (isset($helps[$piece->getType()])) {
+          $form["textes"]["phase"]["#markup"] .= ' [' . $helps[$piece->getType()] . ']';
+        }
       }
       $row_inner_html .= "<div class='piece " . (!$piece->isAlive() ? "dead "
       : "alive " . $piece->getType() . " " . ($faction->getControl()->isAlive() ? $faction->getControl()->getClass() . '-control ' : '')
@@ -155,11 +160,17 @@ function theme_djambi_grid($variables) {
         $row_inner_html .= "<img src=\"/" . $piece->getImage() . "\" alt=\"\" />";
       }
       if ($piece->isAlive()) {
-        $row_inner_html .= "<abbr title=\"" . t("!piece, owned by !color team.", array(
+        $row_inner_html .= "<span class='piece-txt'><abbr title=\"" . t("!piece, owned by !color team.", array(
             "!piece" => _kw_djambi_get_full_piece_name($piece), "!color" => $faction->getControl()->getName("t"))) . "\">"
-            . $piece->getId() . "</abbr>";
+            . $piece->getId() . "</abbr></span>";
       }
       $row_inner_html .= "</div>";
+      if ($piece->isAlive() && isset($helps[$piece->getType()])) {
+        $row_inner_html .= ' <span class="help-link">' . $helps[$piece->getType()] . '</span>';
+      }
+      elseif (!$piece->isAlive() && isset($helps['cadavre'])) {
+        $row_inner_html .= ' <span class="help-link">' . $helps['cadavre'] . '</span>';
+      }
     }
     $rows[$cell['y']]['data'][$cell['x']] = array(
         'data' => $row_inner_html,
@@ -288,7 +299,8 @@ function theme_djambi_grid($variables) {
   _kw_djambi_add_info_lines($infos_lines, $form);
   // Affichage du tableau
   $rows[5]["data"][5]["title"] = t("Throne case !");
-  $rows[5]["data"][5]["data"] .= "<div class='element-invisible'>" . t("Throne case !") . "</div>";
+  $rows[5]["data"][5]["data"] .= "<div class='element-invisible'>" . t("Throne case !") . "</div>"
+  . (isset($helps['labyrinthe']) ? "<span class='help-link'>" . $helps['labyrinthe'] . "</span>" : "");
   if ($dispositions[$disposition]['grid'] == 'hexagonal') {
     $markup = theme('hexagonal_grid', array(
       'rows' => $rows,
@@ -483,4 +495,52 @@ function _kw_djambi_waiting_label($now_playing_faction, DjambiBattlefield $grid)
   return '<span class="refresh">' . $label
   . ' (' . t('Last update : !date', array('!date' => '<span class="time-last-update">' . format_date(time(), 'custom', 'H:i:s') . '</span>'))
   . ')</span>';
+}
+
+function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
+  $scheme = $grid->getOption('piece_scheme');
+  $piece_scheme = new DjambiPieceScheme($scheme);
+  $types = array();
+  foreach ($piece_scheme->getPieceScheme() as $key => $data) {
+    $types[] = $data['type'];
+  }
+  $pieces = $types;
+  $types = array_unique($types);
+  $types[] = 'cadavre';
+  $types[] = 'labyrinthe';
+  $raw_result = db_query('SELECT T.name, N.nid
+      FROM {node} N
+      INNER JOIN {field_data_field_game_concept} F on N.vid = F.revision_id
+      INNER JOIN {taxonomy_term_data} T ON T.tid = F.field_game_concept_tid
+      WHERE N.type = :type AND N.status = 1 AND T.name IN (:terms)',
+      array(':type' => 'rule_element', ':terms' => $types));
+  $nodes = array();
+  $with_transliteration = module_exists('transliteration');
+  $with_lightbox = module_exists('colorbox_node');
+  foreach ($raw_result as $result) {
+    if ($with_transliteration) {
+      $type = transliteration_get($result->name);
+    }
+    else {
+      $type = $result->name;
+    }
+    $type = strtolower($type);
+    if (in_array($type, $pieces)) {
+      $options = array(
+          'attributes' => array('title' => t('Show help for !piece piece', array('!piece' => $result->name)))
+      );
+    }
+    elseif ($type == 'cadavre') {
+      $options = array('attributes' => array('title' => t('Show help for dead pieces')));
+    }
+    elseif ($type == 'labyrinthe') {
+      $options = array('attributes' => array('title' => t('Show help for throne case')));
+    }
+    if ($with_lightbox) {
+      $options['attributes']['class'][] = 'colorbox-node';
+      $options['query'] = array('width' => 600, 'height' => 400);
+    }
+    $nodes[$type] = l(t('Help'), 'node/' . $result->nid, $options);
+  }
+  return $nodes;
 }
