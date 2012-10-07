@@ -44,7 +44,6 @@ class DjambiPieceScheme {
             'shortname' => 'M#3',
             'longname' => 'Militant #3',
             'type' => 'militant',
-            'rule_term' => 'Militant',
             'habilities' => $militant_habilities
         ),
         'M4' => array(

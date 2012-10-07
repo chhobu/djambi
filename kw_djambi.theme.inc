@@ -498,6 +498,10 @@ function _kw_djambi_waiting_label($now_playing_faction, DjambiBattlefield $grid)
 }
 
 function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
+  $nodes = array();
+  if (!node_type_load('rule_element')) {
+    return $nodes;
+  }
   $scheme = $grid->getOption('piece_scheme');
   $piece_scheme = new DjambiPieceScheme($scheme);
   $types = array();
@@ -514,7 +518,6 @@ function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
       INNER JOIN {taxonomy_term_data} T ON T.tid = F.field_game_concept_tid
       WHERE N.type = :type AND N.status = 1 AND T.name IN (:terms)',
       array(':type' => 'rule_element', ':terms' => $types));
-  $nodes = array();
   $with_transliteration = module_exists('transliteration');
   $with_lightbox = module_exists('colorbox_node');
   foreach ($raw_result as $result) {
