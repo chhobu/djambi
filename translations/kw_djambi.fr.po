@@ -464,7 +464,7 @@ msgstr "!faction"
 
 #: kw_djambi.form.inc:1281
 msgid "You are now playing the !color team."
-msgstr "Vous contrôler actuellement le parti !color."
+msgstr "Vous contrôlez actuellement le parti !color."
 
 #: kw_djambi.form.inc:1285
 msgid "This faction is used by an other player."
@@ -612,7 +612,7 @@ msgstr "Moi !"
 
 #: kw_djambi.theme.inc:230
 msgid "controlled by !faction"
-msgstr "contrôlé par la parti !faction"
+msgstr "contrôlé par le parti !faction"
 
 #: kw_djambi.theme.inc:239
 msgid "Turn #%turn"
@@ -1247,3 +1247,5 @@ msgstr "Kweb Djambi"
 msgid "Refreshing..."
 msgstr "Actualisation en cours..."
 
+msgid "Table of honours"
+msgstr "Tableau d'honneur"

@@ -147,7 +147,7 @@ function theme_djambi_grid($variables) {
           . $faction->getClass() . '-origin')
       . (isset($form_pieces["movable"]) && $piece->isMovable() ? " movable" : " unmovable") . "' "
       . (isset($form_pieces["movable"]) && $piece->isMovable() ? ' data-moves="' . implode(' ', $moves) . '"' : '')
-      . "title=\"" . ($piece->isAlive() ? (_kw_djambi_get_full_piece_name($piece) . ($piece->isMovable() ? " - "
+      . "title=\"" . ($piece->isAlive() ? (_kw_djambi_get_full_piece_name($piece) . (!$piece->isMovable() ? " - "
           . t("this piece can be moved during this turn") : "")) : t("Here lies a dead piece")) . "\""
           . ">";
       if (!$piece->isAlive()) {
@@ -161,7 +161,9 @@ function theme_djambi_grid($variables) {
       }
       if ($piece->isAlive()) {
         $row_inner_html .= "<span class='piece-txt'><abbr title=\"" . t("!piece, owned by !color team.", array(
-            "!piece" => _kw_djambi_get_full_piece_name($piece), "!color" => $faction->getControl()->getName("t"))) . "\">"
+              "!piece" => _kw_djambi_get_full_piece_name($piece),
+              "!color" => _kw_djambi_get_translatable_messages($faction->getControl()->getName())
+            )) . "\">"
             . $piece->getId() . "</abbr></span>";
       }
       $row_inner_html .= "</div>";
@@ -210,7 +212,8 @@ function theme_djambi_grid($variables) {
     $prows = array();
     foreach ($grid->getFactions() as $faction) {
       $prow = array();
-      $prow[] = array('data' => '<span class="faction ' . $faction->getClass() . '">' . $faction->getName() . '</span>');
+      $prow[] = array('data' => '<span class="faction ' . $faction->getClass() . '">'
+          . _kw_djambi_get_translatable_messages($faction->getName()) . '</span>');
       if (!in_array($faction->getStatus(), array(KW_DJAMBI_USER_VASSALIZED, KW_DJAMBI_USER_EMPTY_SLOT))) {
         $ping = _kw_djambi_format_ping_infos($faction->getUserDataItem('ping'));
         $me = _kw_djambi_check_current_user($faction, FALSE);
@@ -225,7 +228,7 @@ function theme_djambi_grid($variables) {
         $prow[] = array('data' => '-');
         $prow[] = array('data' => '-');
       }
-      $prow[] = array('data' => $faction->getStatus() .
+      $prow[] = array('data' => _kw_djambi_get_translatable_messages($faction->getStatus()) .
           ($faction->getControl()->getId() != $faction->getId() ? ', '
               . t('controlled by !faction', array('!faction' => '<span class="faction ' . $faction->getControl()->getClass() . '">' . $faction->getControl()->getName() . '</span>')) : ''));
       $prows[] = array('data' => $prow, 'data-djuid' => $faction->getUserDataItem('djuid'),
@@ -248,13 +251,17 @@ function theme_djambi_grid($variables) {
     $next_play_order = next($play_order);
     $playing_next_faction3 = $grid->getFactionById($next_play_order["side"]);
     $infos_lines[t("Now playing")] = t("!color side", array("!color" =>
-        "<span class='faction " . $now_playing_faction->getClass() . "'>" . $now_playing_faction->getName("t") . "</span>"
+        "<span class='faction " . $now_playing_faction->getClass() . "'>"
+        . _kw_djambi_get_translatable_messages($now_playing_faction->getName()) . "</span>"
     ));
     if ($grid->getStatus() != KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
       $infos_lines[t("Playing next")] = t("!color1 side, then !color2 side, then !color3 side", array(
-        "!color1" => "<span class='faction " . $playing_next_faction1->getClass() . "'>" . $playing_next_faction1->getName() . "</span>",
-        "!color2" => "<span class='faction " . $playing_next_faction2->getClass() . "'>" . $playing_next_faction2->getName() . "</span>",
-        "!color3" => "<span class='faction " . $playing_next_faction3->getClass() . "'>" . $playing_next_faction3->getName() . "</span>"
+        "!color1" => "<span class='faction " . $playing_next_faction1->getClass() . "'>"
+          . _kw_djambi_get_translatable_messages($playing_next_faction1->getName()) . "</span>",
+        "!color2" => "<span class='faction " . $playing_next_faction2->getClass() . "'>"
+          . _kw_djambi_get_translatable_messages($playing_next_faction2->getName()) . "</span>",
+        "!color3" => "<span class='faction " . $playing_next_faction3->getClass() . "'>"
+          . _kw_djambi_get_translatable_messages($playing_next_faction3->getName()) . "</span>"
       ));
       if (isset($form["textes"]["phase"])) {
         $infos_lines[t("Current phase")] = $form["textes"]["phase"]["#markup"];
@@ -271,7 +278,8 @@ function theme_djambi_grid($variables) {
         if (!$playing_faction->isAlive()) {
           continue;
         }
-        $faction_name = '<span class="faction ' . $playing_faction->getClass() . '">' . $playing_faction->getName() . '</span>';
+        $faction_name = '<span class="faction ' . $playing_faction->getClass() . '">'
+          . _kw_djambi_get_translatable_messages($playing_faction->getName()) . '</span>';
         if ($playing_faction->getDrawStatus() == 1) {
           $peacemonger = $faction_name;
         }
@@ -478,7 +486,7 @@ function _kw_djambi_waiting_label($now_playing_faction, DjambiBattlefield $grid)
   $last_change = $grid->getInfo('changed');
   if (!is_null($now_playing_faction)) {
     $args = array(
-      '!side' => $now_playing_faction->getName(),
+      '!side' => _kw_djambi_get_translatable_messages($now_playing_faction->getName()),
       '!duration' => '<span class="time-elapsed">' . kw_tools_duration(time() - $last_change) . '</span>'
     );
   }

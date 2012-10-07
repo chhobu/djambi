@@ -234,6 +234,8 @@ span.rule-variant, span.game-option {
   display: block;
   width: 18px;
   height: 18px;
+  -webkit-border-radius: 9px;
+  -moz-border-radius: 9px;
   border-radius: 9px;
   overflow: hidden;
   z-index: 10;

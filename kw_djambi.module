@@ -786,7 +786,7 @@ function _kw_djambi_describe_move($move, $grid) {
   if ($move["type"] == "move") {
     $faction = $grid->getFactionById($move["target_faction"]);
     $msg = t("!faction has moved !piece from !origin to !destination.", array(
-        "!faction" => "<span class='faction " . $faction->getClass() . "'>" . $faction->getName("t") . "</span>",
+        "!faction" => "<span class='faction " . $faction->getClass() . "'>" . _kw_djambi_get_translatable_messages($faction->getName()) . "</span>",
         "!piece" =>  "<span class='piece " . $piece->getType() . "'>" . _kw_djambi_get_full_piece_name($piece) . "</span>",
         "!origin" => $move["from"],
         "!destination" => $move["to"]
@@ -993,12 +993,13 @@ function kw_djambi_game_form_validate($form, &$form_state) {
 function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiBattlefield $grid = NULL) {
   if (isset($args['faction1']) && !is_null($grid)) {
     $faction1 = $grid->getFactionById($args['faction1']);
-    $args['!faction1'] = '<span class="faction ' . $faction1->getClass() . '">' . $faction1->getName() . '</span>';
+    // TODO lors de la personnalisation des camps, ne pas faire appel à _kw_djambi_get_translatable_messages
+    $args['!faction1'] = '<span class="faction ' . $faction1->getClass() . '">' . _kw_djambi_get_translatable_messages($faction1->getName()) . '</span>';
     unset($args['faction1']);
   }
   if (isset($args['faction2']) && !is_null($grid)) {
     $faction2 = $grid->getFactionById($args['faction2']);
-    $args['!faction2'] = '<span class="faction ' . $faction2->getClass() . '">' . $faction2->getName() . '</span>';
+    $args['!faction2'] = '<span class="faction ' . $faction2->getClass() . '">' . _kw_djambi_get_translatable_messages($faction2->getName()) . '</span>';
     unset($args['faction2']);
   }
   if (isset($args['piece']) && !is_null($grid)) {
