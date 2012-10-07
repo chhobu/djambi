@@ -110,6 +110,9 @@ span.faction {
   background: url(img/leader16.png) no-repeat 4px 50%;
   padding-left: 22px;
   white-space: nowrap;}
+th.faction {
+  white-space: normal;
+  font-size: 90%;}
 span.faction {
   padding-right: 0.25em;}
 .piece {

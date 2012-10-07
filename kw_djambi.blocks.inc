@@ -194,7 +194,8 @@ function _kw_djambi_list_viewable_games($modes = NULL, $item_id = NULL) {
   $grid->addColumn('status', t('Status'), ':status_label', array(
       'field' => 'dn.status',
       'filtrable' => KW_FILTRABLE_ENUM,
-      'filtrable_options' => array('choices' => $statuses)
+      'filtrable_options' => array('choices' => $statuses),
+      'always_execute' => TRUE
   ));
   $grid->addVariable('status_label', array(
       'callback' => '_kw_djambi_list_build_custom_label',
