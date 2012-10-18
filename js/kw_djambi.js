@@ -58,6 +58,7 @@
       });
     });
     $('.djambi .refresh-button').hide();
+    setTimeout(function() {$('#Messages').hide('slow');}, 10000);
     $('.djambi', context).once('Djambi', function() {
       var gridId = $(this).data('grid');
       if ($(this).data('refresh') == 'yes') {
@@ -69,7 +70,14 @@
           else {
             jQuery.ajax('/djambi/' + gridId + '/check-update/' + $grid.data('version')).done(function(json) {
               result = jQuery.parseJSON(json);
-              if(result.changed == 0) {
+              $block = $('#DjambiActiveGameInfo');
+              if ($block.length > 0 && ($block.data('user-faction') != result['user-faction'] || $block.data('status') != result['status'])) {
+                $('.refresh-my-djambi-panel a').click();
+              }
+              else if ($block.length == 0 && $('.refresh-my-djambi-panel a.do-auto-refresh').length == 0) {
+                $('.refresh-my-djambi-panel a').click();
+              }
+              if (result.changed == 0) {
                 $grid.find('.time-elapsed').html(result['time-elapsed']);
                 $grid.find('.time-last-update').html(result['time-last-update']);
                 if(typeof result['pings'] != 'undefined') {
@@ -174,7 +182,7 @@
       });
     }
     $('.refresh-my-djambi-panel').hide();
-    $('.refresh-my-djambi-panel', context).once('Djambi', function() {
+    $('.refresh-my-djambi-panel a.do-auto-refresh', context).once('Djambi', function() {
       $block = $(this).parents('.block');
       if (!$block.hasClass('refresh-processed')) {
         $block.addClass('refresh-processed');

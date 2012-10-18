@@ -1,22 +1,12 @@
 <?php
 function _kw_djambi_build_game_form($form, &$form_state, DjambiBattlefield $grid) {
+  global $user;
   $form['#grid'] = $grid;
-  $current_user_faction = NULL;
-  if (!$grid->isFinished()) {
-    $playable_factions = array();
-    foreach ($grid->getFactions() as $faction) {
-      if (_kw_djambi_check_current_user($faction, FALSE)) {
-        $current_user_faction = $faction;
-      }
-      if ($faction->getStatus() != KW_DJAMBI_USER_VASSALIZED) {
-        $playable_factions[] = $faction;
-      }
-    }
-    if (!is_null($current_user_faction) && $grid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
-      $user_data = _kw_djambi_update_user_infos($current_user_faction->getUserData(),
-          $current_user_faction->getUserDataItem('djuid'));
-      $current_user_faction->updateUserData($user_data);
-    }
+  $current_user_faction = _kw_djambi_get_user_faction($grid, $user);
+  if (!$grid->isFinished() && !is_null($current_user_faction) && $grid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
+    $user_data = _kw_djambi_update_user_infos($current_user_faction->getUserData(),
+      $current_user_faction->getUserDataItem('djuid'));
+    $current_user_faction->updateUserData($user_data);
   }
   $faction = $grid->getPlayingFaction();
   // Inclusion du Javascript et du CSS
@@ -68,7 +58,9 @@ function _kw_djambi_build_game_form($form, &$form_state, DjambiBattlefield $grid
   }
   $form['#prefix'] = '<div id="DjambiContainer' . $grid->getId() . '" class="djambi" '
   . 'data-grid="' . $grid->getId() . '" data-version="' . $grid->getInfo('changed') . '" '
-  . 'data-refresh="' . $refresh . '" data-turn="' . $grid->getCurrentTurnId() . '">';
+  . 'data-refresh="' . $refresh . '" data-status="' . $grid->getStatus() . '" '
+  .' data-user-faction="' . (!is_null($current_user_faction) ? $current_user_faction->getId() : '0')
+  . '" data-turn="' . $grid->getCurrentTurnId() . '">';
   $form['#suffix'] = '</div>';
   $form['options'] = array(
       '#type' => 'fieldset',
@@ -93,9 +85,9 @@ function _kw_djambi_build_game_form($form, &$form_state, DjambiBattlefield $grid
   );
   // Recrutement des joueurs...
   if ($grid->isNotBegin()) {
-    _kw_djambi_build_part_recruiting($form, $grid, $playable_factions, $current_user_faction, $ajax_settings);
+    _kw_djambi_build_part_recruiting($form, $grid, $current_user_faction, $ajax_settings);
   }
-  // Contrôle de l'affichage des derniers mouvements
+  // Contrôle de l'affichage de l'aide et des derniers mouvements
   _kw_djambi_build_part_move_controls($form, $form_state, $grid, $faction, $ajax_settings);
   // Affichage du récapitulatif des règles
   _kw_djambi_build_part_rules($form, $grid);
@@ -120,11 +112,17 @@ function _kw_djambi_build_game_form($form, &$form_state, DjambiBattlefield $grid
   return $form;
 }
 
-function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $playable_factions, $current_user_faction, $ajax_settings) {
+function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $current_user_faction, $ajax_settings) {
+  global $user;
+  $allow_anonymous = $grid->getOption('allow_anonymous_players');
+  $reject = FALSE;
   $form['grid']['factions'] = array(
       '#type' => 'container'
   );
-  foreach ($playable_factions as $faction) {
+  foreach ($grid->getFactions() as $faction) {
+    if ($faction->getStatus() == KW_DJAMBI_USER_VASSALIZED) {
+      continue;
+    }
     $form['grid']['factions'][$faction->getId()]['label'] = array(
         '#type' => 'item',
         '#title' => '<span class="faction ' . $faction->getClass() . '">'
@@ -152,14 +150,27 @@ function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $play
       );
     }
     elseif ($faction->getStatus() == KW_DJAMBI_USER_EMPTY_SLOT) {
-      $form['grid']['factions'][$faction->getId()]['action'] = array(
+      if ($allow_anonymous || $user->uid > 0) {
+        $form['grid']['factions'][$faction->getId()]['action'] = array(
           '#type' => 'submit',
           '#value' => !is_null($current_user_faction) ? t('Play this side') : t('Join this game'),
           '#submit' => array('kw_djambi_game_form_participate_submit'),
           '#name' => 'use-' . $faction->getId(),
           '#ajax' => $ajax_settings
-      );
+        );
+      }
+      else {
+        $reject = TRUE;
+      }
     }
+  }
+  if ($reject) {
+    $form['grid']['reject'] = array(
+      '#markup' => "<div class='messages warning'>" . t('Only registered players can join this game. Please !login or !register.', array(
+          '!login' => l(t('login to your account'), 'user/login'),
+          '!register' => l(t('create a new account'), 'user/register')
+       )) . "</div>"
+    );
   }
 }
 
@@ -167,6 +178,13 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
   $current_turn_id = $grid->getCurrentTurnId();
   $show_moves = array('show' => FALSE);
   if ($grid->isPending()) {
+    $form['grid']['controls']['show_help_button'] = array(
+        '#type' => 'submit',
+        '#value' => !empty($form_state['show_help']) ? t('Hide help') : t('Show help'),
+        '#limit_validation_errors' => array(),
+        '#submit' => array('kw_djambi_game_form_show_help_submit'),
+        '#ajax' => $ajax_settings
+    );
     $turns = $grid->getTurns();
     if (!empty($form_state['show_turn_move'])) {
       $show_moves = array(
@@ -234,6 +252,10 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
       );
     }
   }
+  $form['show_help'] = array(
+      '#type' => 'value',
+      '#value' => !empty($form_state['show_help']) ? TRUE : FALSE
+  );
   $form['show_moves'] = array(
       '#type' => 'value',
       '#value' => $show_moves
@@ -246,6 +268,9 @@ function _kw_djambi_build_part_rules(&$form, DjambiBattlefield $grid) {
   $nb_rule = $nb_option = 1;
   foreach ($options as $key => $option) {
     if ($option['type'] == 'rule_variant' || $option['type'] == 'game_option') {
+      if (isset($option['modes']) && !in_array($grid->getMode(), $option['modes'])) {
+        continue;
+      }
       $value = $grid->getOption($key);
       if (!empty($option['choices'][$value])) {
         if ($option['type'] == 'rule_variant') {
@@ -876,7 +901,8 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
       continue;
     }
     $header[$faction->getId()] = array(
-        'data' => t('!faction deaths', array('!faction' => $faction->getId())),
+        'data' => '<abbr title="' . t('!faction deaths', array('!faction' => _kw_djambi_get_translatable_messages($faction->getName())))
+          .'">' . $faction->getId() . '†</abbr>',
         'class' => array($faction->getClass(), 'faction', 'stats')
     );
     $row = array();
@@ -982,7 +1008,7 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
   }
   $total['data'][4]['data'] = kw_tools_duration($total['data'][4]['data']);
   $rows[] = $total;
-  $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => 'Table of moves'));
+  $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => t('Table of moves')));
   $form['stats']['items'] = array(
         '#markup' => theme('item_list', array('items' => $items, 'attributes' => array('class' => array('stats'))))
   );
@@ -1231,6 +1257,16 @@ function kw_djambi_game_form_show_next_move_submit($form, &$form_state) {
   $form_state['show_turn_move'] = $form['show_moves']['#value']['next'];
 }
 
+function kw_djambi_game_form_show_help_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  if (isset($form_state['show_help'])) {
+    unset($form_state['show_help']);
+  }
+  else {
+    $form_state['show_help'] = TRUE;
+  }
+}
+
 /**
  * Soumission du bouton "Cacher les derniers mouvements"
  */
@@ -1255,11 +1291,20 @@ function kw_djambi_game_form_refresh_submit($form, &$form_state) {
  * Soumission du bouton "Rejoindre une partie"
  */
 function kw_djambi_game_form_participate_submit($form, &$form_state) {
+  global $user;
   $grid = $form['#grid'];
   if ($grid->getStatus() != KW_DJAMBI_STATUS_RECRUITING) {
     return;
   }
   $form_state['rebuild'] = TRUE;
+  $allow_anonymous = $grid->getOption('allow_anonymous_players');
+  if (!$allow_anonymous && $user->uid == 0) {
+    drupal_set_message(t('Only registered players can join this game. Please !login or !register.', array(
+          '!login' => l(t('login to your account'), 'user/login'),
+          '!register' => l(t('create a new account'), 'user/register')
+    )), 'error');
+    return;
+  }
   $clicked_button = $form_state['clicked_button']['#name'];
   $faction_id = substr($clicked_button, 4);
   $nb_empty_factions = 0;
@@ -1282,7 +1327,6 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
     if ($nb_empty_factions == 0) {
       $grid->setStatus(KW_DJAMBI_STATUS_PENDING);
     }
-    global $user;
     $grid->logEvent('info', 'NEW_TEAM', array('faction1' => $faction->getId(),
         '!user_id' => $user->uid, '!user_ip' => $_SERVER['REMOTE_ADDR']));
     // FIXME changer l'appel lors de la personnalisation des camps

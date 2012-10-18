@@ -7,7 +7,7 @@
 function kw_djambi_menu() {
   $items['djambi/%/check-update/%'] = array(
     'page callback' => 'kw_djambi_check_update',
-    'page arguments' => array(1, 3),
+    'page arguments' => array(1, 3, 4, 5),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK
   );
@@ -93,6 +93,23 @@ function kw_djambi_block_view($delta) {
 }
 
 /**
+ * Implements hook_block_view_alter().
+ */
+function kw_djambi_block_view_alter(&$data, $block) {
+  // On retire l'affichage des blocs de connexion / de déconnexion si l'utilisateur joue une partie
+  if ($block->module == 'user' || $block->delta == 'user-menu') {
+    $current_grid = _kw_djambi_load_game();
+    if ($current_grid && !$current_grid->isFinished()) {
+      global $user;
+      $check = _kw_djambi_get_user_faction($current_grid, $user);
+      if (!is_null($check)) {
+        $data = array();
+      }
+    }
+  }
+}
+
+/**
  * Implements hook_cron().
  */
 function kw_djambi_cron() {
@@ -140,7 +157,8 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         '#type' => 'radios',
         '#title' => t('Number of players'),
         '#default_value' => '4std',
-        '#options' => $nb_players_options
+        '#options' => $nb_players_options,
+        '#required' => TRUE
     );
     $mode_options = DjambiBattlefield::getModes(TRUE);
     global $user;
@@ -167,7 +185,8 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
       '#type' => 'radios',
       '#title' => t('Game mode'),
       '#default_value' => $default_mode,
-      '#options' => $mode_options
+      '#options' => $mode_options,
+      '#required' => TRUE
     );
     $form['advanced'] = array(
         '#type' => 'fieldset',
@@ -191,12 +210,13 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
         }
         if ($data['type'] == 'rule_variant') {
           $nb_rule++;
-          $form['advanced'][$option]['#prefix'] = '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => str_pad($nb_rule, 2, '0', STR_PAD_LEFT))) . '</span>';
+          $form['advanced'][$option]['#title'] .= '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => str_pad($nb_rule, 2, '0', STR_PAD_LEFT))) . '</span>';
         }
         elseif ($data['type'] == 'game_option') {
           $nb_option++;
-          $form['advanced'][$option]['#prefix'] = '<span class="game-option">' . t('Game option #!number', array('!number' => str_pad($nb_option, 2, '0', STR_PAD_LEFT))) . '</span>';
+          $form['advanced'][$option]['#title'] .= '<span class="game-option">' . t('Game option #!number', array('!number' => str_pad($nb_option, 2, '0', STR_PAD_LEFT))) . '</span>';
         }
+        $form['advanced'][$option]['#required'] = TRUE;
         if (in_array($data['widget'], array('radios', 'select'))) {
           $choices = array();
           foreach ($data['choices'] as $choice_key => $description) {
@@ -207,13 +227,20 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
           }
           $form['advanced'][$option]['#options'] = $choices;
         }
+        if (isset($data['modes'])) {
+          foreach ($mode_options as $mode => $desc) {
+            if (!in_array($mode, $data['modes'])) {
+              $form['advanced'][$option]['#states']['invisible'][':input[name="mode"]'] = array('value' => $mode);
+            }
+          }
+        }
       }
     }
     $form['#submit'] = array('kw_djambi_new_game_submit');
   }
   else {
     $node = $form["#node"];
-    $grid = _kw_djambi_load_game($node);
+    $grid = _kw_djambi_load_game($node->nid);
     if (user_access('administer djambi games')) {
       if ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
         $form['djambi_mode'] = array(
@@ -530,16 +557,17 @@ function kw_djambi_node_view($node, $view_mode) {
  */
 function kw_djambi_check_update($nid, $version) {
   $query = db_select('djambi_node', 'dj')
-    ->fields('dj', array('changed'))
+    ->fields('dj', array('changed','status'))
     ->condition('dj.nid', $nid);
-  $result = $query->execute()->fetchColumn();
-  $return['changed'] = ($result > $version) ? 1 : 0;
+  $result = $query->execute()->fetchAssoc();
+  $return['changed'] = ($result['changed'] > $version) ? 1 : 0;
   if (!$return['changed']) {
     global $user;
-    $return['time-elapsed'] = kw_tools_duration(time() - $result);
+    $return['status'] = $result['status'];
+    $return['time-elapsed'] = kw_tools_duration(time() - $result['changed']);
     $return['time-last-update'] = format_date(time(), 'custom', 'H:i:s');
     $query = db_select('djambi_users', 'u')
-      ->fields('u', array('djuid', 'data', 'uid', 'cookie', 'status'))
+      ->fields('u', array('djuid', 'data', 'uid', 'cookie', 'status', 'faction'))
       ->condition('u.nid', $nid)
       ->condition('u.status', array('vassalized', 'empty'), 'NOT IN');
     $players = $query->execute()->fetchAll(PDO::FETCH_ASSOC);
@@ -549,6 +577,7 @@ function kw_djambi_check_update($nid, $version) {
       if (($player['uid'] > 0 && $user->uid == $player['uid']) ||
           (!empty($cookie) && $player['cookie'] == $cookie)) {
         $data = _kw_djambi_update_user_infos($data, $player['djuid']);
+        $return['user-faction'] = $player['faction'];
       }
       if (!empty($data['ping'])) {
         $ping = _kw_djambi_format_ping_infos($data['ping']);
@@ -571,13 +600,14 @@ function kw_djambi_check_update($nid, $version) {
  * Callback : fonction permettant de rafraîchir une zone de l'écran,
  *   générée avec la fonction $callback
  */
-function kw_djambi_refresh_area($callback) {
-  switch ($callback) {
-    case('_kw_djambi_list_user_games'):
+function kw_djambi_refresh_area($id) {
+  switch ($id) {
+    case('my-games-panel'):
       module_load_include('inc', 'kw_djambi', 'kw_djambi.blocks');
+      $callback = '_kw_djambi_list_user_games';
+      $args = array(arg(3));
       $fragment = 'block-kw-djambi-djambi-panel';
       $target = '#' . $fragment . ' .content';
-      $args = array();
     break;
     default:
       drupal_access_denied();
@@ -597,7 +627,7 @@ function kw_djambi_refresh_area($callback) {
   else {
     drupal_goto('', array(
       'query' => drupal_get_destination(),
-      'fragment' => $fragment
+      'fragment' => isset($fragment) ? $fragment : ''
     ));
   }
 }
@@ -629,15 +659,27 @@ function _kw_djambi_format_ping_infos($ping_time) {
  * @param object $node : node de type kw_djambi
  * @return DjambiBattlefield
  */
-function _kw_djambi_load_game($node) {
+function _kw_djambi_load_game($nid = NULL) {
+  $battlefields = &drupal_static(__FUNCTION__, array());
+  if (is_null($nid)) {
+    if (empty($battlefields)) {
+      return FALSE;
+    }
+    else {
+      return current($battlefields);
+    }
+  }
+  if (isset($battlefields[$nid])) {
+    return $battlefields[$nid];
+  }
   $query = db_select('djambi_node', 'dj')
       ->fields('dj', array('nid', 'data', 'status', 'mode', 'compressed',
           'autodelete', 'changed', 'disposition'))
-      ->condition('dj.nid', $node->nid);
+      ->condition('dj.nid', $nid);
   $result = $query->execute()->fetchAssoc();
   $query = db_select('djambi_users', 'dju')
     ->fields('dju', array('djuid', 'uid', 'faction', 'cookie', 'status', 'ranking', 'data'))
-    ->condition("dju.nid", $node->nid);
+    ->condition("dju.nid", $nid);
   $users_result = $query->execute()->fetchAll();
   $users = array();
   foreach($users_result as $key => $user) {
@@ -672,6 +714,7 @@ function _kw_djambi_load_game($node) {
   $battlefield->setInfo('changed', $result['changed']);
   $battlefield->setDisposition($result['disposition']);
   $battlefield->play();
+  $battlefields[$nid] = $battlefield;
   return $battlefield;
 }
 
@@ -878,6 +921,21 @@ function _kw_djambi_check_current_user(DjambiPoliticalFaction $faction, $control
 }
 
 /**
+ * Détermine si un utilisateur courant contrôle une faction
+ */
+function _kw_djambi_get_user_faction(DjambiBattlefield $grid, $user) {
+  $current_user_faction = NULL;
+  if (!$grid->isFinished()) {
+    foreach ($grid->getFactions() as $faction) {
+      if (_kw_djambi_check_current_user($faction, FALSE)) {
+        $current_user_faction = $faction;
+      }
+    }
+  }
+  return $current_user_faction;
+}
+
+/**
  * Formulaire créant une grille de Djambi
 */
 function kw_djambi_game_form($form, &$form_state, $node) {
@@ -887,7 +945,7 @@ function kw_djambi_game_form($form, &$form_state, $node) {
     $grid = $piece->getFaction()->getBattlefield();
   }
   else {
-    $grid = _kw_djambi_load_game($node);
+    $grid = _kw_djambi_load_game($node->nid);
     if (isset($form_state['kw_djambi']['change_turn'])) {
       unset($form_state['kw_djambi']);
     }
@@ -1281,6 +1339,15 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
     break;
     case("OPTION2_XTURN"):
        $txt = format_plural($args['!value'], '!value turn', '!value turns', $args);
+    break;
+    case('OPTION3'):
+      $txt = t("Allow anonymous players to join this game");
+    break;
+    case('OPTION3_YES'):
+      $txt = t("Yes, anyone can join this game");
+    break;
+    case('OPTION3_NO'):
+      $txt = t("No, only registered users can play");
     break;
     case(KW_DJAMBI_USER_PLAYING):
       $txt = t('playing');

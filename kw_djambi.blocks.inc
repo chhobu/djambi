@@ -62,15 +62,8 @@ function _kw_djambi_list_recruiting_games($modes = NULL, $item_id = NULL) {
   $grid->addField('status', 'dn');
   $grid->addColumn('title', t('Game'), ':title_link', array('field' => 'n.title'));
   $grid->addVariable('title_link', array(
-    'callback' => 'l',
+    'callback' => '_kw_djambi_shorten_title_link',
     'args' => array(':title', 'node/:nid')
-  ));
-  $grid->addColumn('created', t('Created'), ':created_date', array(
-    'expression' => 'UNIX_TIMESTAMP() - dn.begin'
-  ));
-  $grid->addVariable('created_date', array(
-      'callback' => 'format_interval',
-      'args' => array(':created')
   ));
   $grid->addColumn('mode', t('Mode'), ':mode_label', array('field' => 'dn.mode'));
   $grid->addVariable('mode_label', array(
@@ -79,7 +72,20 @@ function _kw_djambi_list_recruiting_games($modes = NULL, $item_id = NULL) {
   ));
   $grid->addField('ready_slots', 'du2');
   $grid->addExpression('total_slots', 'du1.empty_slots + du2.ready_slots');
-  $grid->addColumn('playing', t('Slots'), ':ready_slots/:total_slots');
+  $grid->addColumn('playing', t('Slots'), ':ready_slots/:total_slots', array(
+      'header' => theme('image', array(
+          'path' => drupal_get_path('module', 'kw_djambi') . '/img/users.png',
+          'alt' => t('Slots'),
+          'title' => t('Slots')
+      )),
+  ));
+  $grid->addColumn('created', t('Created since'), ':created_date', array(
+      'expression' => 'UNIX_TIMESTAMP() - dn.begin'
+  ));
+  $grid->addVariable('created_date', array(
+      'callback' => 'format_interval',
+      'args' => array(':created')
+  ));
   $grid->addColumn('players', t('Players'), ':players_list');
   $grid->addVariable("players_list", array(
       'subquery_output' => ":name",
@@ -145,7 +151,7 @@ function _kw_djambi_list_viewable_games($modes = NULL, $item_id = NULL) {
       'main' => TRUE
   ));
   $grid->addVariable('title_link', array(
-      'callback' => 'l',
+      'callback' => '_kw_djambi_shorten_title_link',
       'args' => array(':title', 'node/:nid')
   ));
   $grid->addColumn('mode', t('Mode'), ':mode_label', array(
@@ -158,8 +164,13 @@ function _kw_djambi_list_viewable_games($modes = NULL, $item_id = NULL) {
       'args' => array(':mode', $mode_choices)
   ));
   $grid->addColumn('nb_players', t('Players'), '<div class="digit">:nb_players</div>', array(
+      'header' => theme('image', array(
+          'path' => drupal_get_path('module', 'kw_djambi') . '/img/users.png',
+          'alt' => t('Players'),
+          'title' => t('Players')
+      )),
       'field' => 'pl.slots',
-      'filtrable' => KW_FILTRABLE_ENUM,
+      'filtrable' => KW_FILTRABLE_NUM,
       'filtrable_options' => array('choices' => DjambiBattlefield::getDispositions('nb'))
   ));
   $grid->addColumn("players", t('Players list'), ':players_list', array(
@@ -201,7 +212,7 @@ function _kw_djambi_list_viewable_games($modes = NULL, $item_id = NULL) {
       'callback' => '_kw_djambi_list_build_custom_label',
       'args' => array(':status', $statuses)
   ));
-  $grid->addColumn('changed_ts', t('Last update'), ':changed_interval', array(
+  $grid->addColumn('changed_ts', t('Last move'), ':changed_interval', array(
       'expression' => 'UNIX_TIMESTAMP() - dn.changed',
       'sortable' => TRUE
   ));
@@ -304,6 +315,13 @@ function _kw_djambi_list_build_custom_label($value, $labels) {
   return $labels[$value];
 }
 
+function _kw_djambi_shorten_title_link($title, $link) {
+  if (($position = strpos($title, '-')) > 0) {
+    $title = trim(substr($title, $position + 1));
+  }
+  return l($title, $link);
+}
+
 function _kw_djambi_list_build_winnername($name, $uid, $status, $faction) {
   if (empty($faction)) {
     return '?';
@@ -324,11 +342,33 @@ function _kw_djambi_list_build_winnername($name, $uid, $status, $faction) {
   return '<span class="faction ' . $class . '">' . $name . '</span>&nbsp;:' . theme('username', array('account' => $account));
 }
 
-function _kw_djambi_list_user_games() {
+function _kw_djambi_list_user_games($nid = 0) {
   global $user;
-  drupal_add_css(drupal_get_path('module', 'kw_djambi').'/kw_djambi.css', array('every_page' => TRUE));
-  $cookie = _kw_djambi_cookie();
   $elements = array();
+  $cookie = _kw_djambi_cookie();
+  $auto_refresh = FALSE;
+  drupal_add_css(drupal_get_path('module', 'kw_djambi').'/kw_djambi.css', array('every_page' => TRUE));
+  // Détection d'une partie en cours
+  if ($nid > 0) {
+    $grid = _kw_djambi_load_game($nid);
+  }
+  else {
+    /* @var $grid DjambiBattlefield */
+    $grid = _kw_djambi_load_game();
+  }
+  if ($grid) {
+    $nid = $grid->getId();
+    $user_faction = _kw_djambi_get_user_faction($grid, $user);
+    if ($user_faction && $grid->getMode() != KW_DJAMBI_MODE_SANDBOX && !$grid->isFinished()) {
+      $elements['playing'] = array(
+            '#markup' => '<div class="active-game" id="DjambiActiveGameInfo" data-grid="' . $grid->getId() . '" '
+                . 'data-status="'.$grid->getStatus().'" data-user-faction="' . $user_faction->getId() . '">' . t('You are playing the !faction side in this game.', array(
+                '!faction' => '<span class="faction ' . $user_faction->getClass() . '">'
+                . _kw_djambi_get_translatable_messages($user_faction->getName()) . '</span>'
+          )) . '</div>'
+        );
+    }
+  }
   // Liste des parties en cours
   $q = db_select('djambi_node', 'n');
   $q->innerJoin('node', 'node', 'n.nid = node.nid');
@@ -342,6 +382,7 @@ function _kw_djambi_list_user_games() {
         ':uid' => $user->uid
     ));
   }
+  $q->condition('n.nid', $nid, '!=');
   $q->condition('n.status', DjambiBattlefield::getStatuses(FALSE, TRUE, TRUE, FALSE));
   $q->condition('n.autodelete', time(), '>');
   $q->leftJoin('djambi_users', 'up', 'up.nid = n.nid AND up.status = :status',
@@ -374,6 +415,7 @@ function _kw_djambi_list_user_games() {
     }
     $item = l($game->title, 'node/' . $game->nid) . ' (' . _kw_djambi_get_translatable_messages($game->mode) . ')';
     if ($game->mode != KW_DJAMBI_MODE_SANDBOX) {
+      $auto_refresh = TRUE;
       _kw_djambi_update_user_infos(unserialize($game->my_data), $game->my_djuid);
       $item .= ' - ' . t('Status : !status', array('!status' => _kw_djambi_get_translatable_messages($game->status)));
       if (in_array($game->status, DjambiBattlefield::getStatuses(FALSE, FALSE, TRUE, FALSE))) {
@@ -421,18 +463,22 @@ function _kw_djambi_list_user_games() {
   }
   if (!empty($games)) {
     $elements['games'] = array(
-        '#markup' => theme('item_list', array('items' => $games)),
+        '#markup' => '<div class="other-games">'
+          . '<p>' . (!empty($elements['playing']) ? format_plural(count($games), "You are also involved in 1 other pending game :", "You are also involdved in @count other pending games :") :
+              format_plural(count($games), "You are currently involved in 1 pending game :", "You are currently involved in @count pending games :")) . '</p>'
+          . theme('item_list', array('items' => $games))
+          . '</div>',
         '#weight' => 1
     );
   }
-  else {
+  elseif (empty($elements['playing'])) {
     $elements['nogames'] = array(
         '#markup' => '<p>' . t('You are not currently playing any djambi game.') . '</p>',
         '#weight' => 1
     );
   }
   // Lien de création de partie (si autorisé)
-  if (node_access('create', 'kw_djambi')) {
+  if (empty($elements['playing']) && node_access('create', 'kw_djambi')) {
     $allowed_new_games = _kw_djambi_check_user_already_playing($user, DjambiBattlefield::getModes(), $cookie, FALSE);
     $links = array();
     if (!empty($allowed_new_games)) {
@@ -446,11 +492,11 @@ function _kw_djambi_list_user_games() {
   }
   drupal_add_js(drupal_get_path('module', 'kw_djambi') . '/js/kw_djambi.js',
       array('every_page' => TRUE));
-    $links['refresh-my-djambi-panel'] = array(
-      'title' => t('Refresh'),
-      'href' => 'djambi/refresh/' . __FUNCTION__,
-      'query' => array('destination'  => isset($_GET['destination']) ? $_GET['destination'] : $_GET['q']),
-      'attributes' => array('rel' => 'nofollow', 'class' => array('use-ajax'))
+  $links['refresh-my-djambi-panel'] = array(
+    'title' => t('Refresh'),
+    'href' => 'djambi/refresh/my-games-panel/' . ($grid ? $grid->getId() : 0),
+    'query' => array('destination'  => isset($_GET['destination']) ? $_GET['destination'] : $_GET['q']),
+    'attributes' => array('rel' => 'nofollow', 'class' => array('use-ajax', $auto_refresh ? 'do-auto-refresh' : 'no-auto-refresh'))
   );
   if (!empty($links)) {
     $elements['links1'] = array(

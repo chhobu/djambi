@@ -15,6 +15,7 @@ function theme_djambi_grid($variables) {
   $dispositions = DjambiBattlefield::getDispositions();
   $disposition = $grid->getDisposition();
   // Construction de l'aide en ligne
+  $show_help = $form['show_help']['#value'];
   $helps = _kw_djambi_load_rule_nodes($grid);
   // Détermination de la phase de jeu
   if (isset($form["pieces"])) {
@@ -167,10 +168,10 @@ function theme_djambi_grid($variables) {
             . $piece->getId() . "</abbr></span>";
       }
       $row_inner_html .= "</div>";
-      if ($piece->isAlive() && isset($helps[$piece->getType()])) {
+      if ($show_help && $piece->isAlive() && isset($helps[$piece->getType()])) {
         $row_inner_html .= ' <span class="help-link">' . $helps[$piece->getType()] . '</span>';
       }
-      elseif (!$piece->isAlive() && isset($helps['cadavre'])) {
+      elseif ($show_help && !$piece->isAlive() && isset($helps['cadavre'])) {
         $row_inner_html .= ' <span class="help-link">' . $helps['cadavre'] . '</span>';
       }
     }
@@ -308,7 +309,7 @@ function theme_djambi_grid($variables) {
   // Affichage du tableau
   $rows[5]["data"][5]["title"] = t("Throne case !");
   $rows[5]["data"][5]["data"] .= "<div class='element-invisible'>" . t("Throne case !") . "</div>"
-  . (isset($helps['labyrinthe']) ? "<span class='help-link'>" . $helps['labyrinthe'] . "</span>" : "");
+  . ($show_help && isset($helps['labyrinthe']) ? "<span class='help-link'>" . $helps['labyrinthe'] . "</span>" : "");
   if ($dispositions[$disposition]['grid'] == 'hexagonal') {
     $markup = theme('hexagonal_grid', array(
       'rows' => $rows,
@@ -469,7 +470,7 @@ function _kw_djambi_add_info_lines($infos_lines, &$form) {
   if (!empty($infos_lines)) {
     $infos_items = array();
     foreach ($infos_lines as $legend => $line) {
-      $infos_items[] = '<span class="label">' . $legend . ' : </span><span class="value">' . $line . '</span>';
+      $infos_items[] = '<span class="pseudo-label">' . $legend . ' : </span><span class="value">' . $line . '</span>';
     }
     $form['grid']['infos'] = array(
         '#markup' => theme('item_list', array('items' => $infos_items)),
@@ -527,31 +528,44 @@ function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
       WHERE N.type = :type AND N.status = 1 AND T.name IN (:terms)',
       array(':type' => 'rule_element', ':terms' => $types));
   $with_transliteration = module_exists('transliteration');
-  $with_lightbox = module_exists('colorbox_node');
-  foreach ($raw_result as $result) {
-    if ($with_transliteration) {
-      $type = transliteration_get($result->name);
-    }
-    else {
-      $type = $result->name;
-    }
-    $type = strtolower($type);
-    if (in_array($type, $pieces)) {
-      $options = array(
-          'attributes' => array('title' => t('Show help for !piece piece', array('!piece' => $result->name)))
-      );
-    }
-    elseif ($type == 'cadavre') {
-      $options = array('attributes' => array('title' => t('Show help for dead pieces')));
-    }
-    elseif ($type == 'labyrinthe') {
-      $options = array('attributes' => array('title' => t('Show help for throne case')));
-    }
+  $with_lightbox = module_exists('ctools');
+  if ($raw_result->rowCount() > 0) {
     if ($with_lightbox) {
-      $options['attributes']['class'][] = 'colorbox-node';
-      $options['query'] = array('width' => 600, 'height' => 400);
+      kw_tools_add_modal_settings();
     }
-    $nodes[$type] = l(t('Help'), 'node/' . $result->nid, $options);
+    foreach ($raw_result as $result) {
+      if ($with_transliteration) {
+        $type = transliteration_get($result->name);
+      }
+      else {
+        $type = $result->name;
+      }
+      $type = strtolower($type);
+      if (in_array($type, $pieces)) {
+        $options = array(
+          'attributes' => array('title' => t('Show help for !piece piece', array('!piece' => $result->name)))
+        );
+      }
+      elseif ($type == 'cadavre') {
+        $options = array('attributes' => array('title' => t('Show help for dead pieces')));
+      }
+      elseif ($type == 'labyrinthe') {
+        $options = array('attributes' => array('title' => t('Show help for throne case')));
+      }
+      else {
+        $options = array('attributes' => array('title' => $result->name));
+      }
+      if ($with_lightbox) {
+        $nodes[$type] = ctools_modal_text_button(t('Help'),
+            'kw/popup/nojs/' . $result->nid,
+            $options['attributes']['title'],
+            'ctools-modal-kweb-modal'
+        );
+      }
+      else {
+        $nodes[$type] = l(t('Help'), 'node/' . $result->nid, $options);
+      }
+    }
   }
   return $nodes;
 }

@@ -1,4 +1,7 @@
 @CHARSET "UTF-8";
+/*==========================================
+======== GRILLE CLASSIQUE ET PIECES ========
+===========================================*/
 table.djambigrid {
   margin: 0em auto;}
 .sticky-header th.graduation, .djambigrid th.graduation {
@@ -42,38 +45,36 @@ table.djambigrid {
 span.faction {
   border: 1px solid #999;
   border-radius: 5px;}
+/* Jaunes */
 .djambigrid div.piece.jaune-origin {
   border-color: #fc0;}
 .djambigrid div.piece.jaune-control, .faction.jaune, .djambigrid .change.jaune .order {
   background-color: #fc0;
   color: #000;}
-.djambigrid .cell.recent-change.jaune {
-  background-color: #fe9;}
+/* Rouges */
 .djambigrid div.piece.rouge-origin {
   border-color: #f33;}
 .djambigrid div.piece.rouge-control, .faction.rouge, .djambigrid .change.rouge .order {
   background-color: #f33;
   color: #000;}
-.djambigrid .cell.recent-change.rouge {
-  background-color: #f99;}
+/* Bleus */
 .djambigrid div.piece.bleu-origin {
   border-color: #9cf;}
 .djambigrid div.piece.bleu-control, .faction.bleu, .djambigrid .change.bleu .order {
   background-color: #9cf;
   color: #000;}
-.djambigrid .cell.recent-change.bleu {
-  background-color: #cef;}
+/* Verts */
 .djambigrid div.piece.vert-origin {
   border-color: #9d0;}
 .djambigrid div.piece.vert-control, .faction.vert, .djambigrid .change.vert .order {
   background-color: #9d0;
   color: #000;}
-.djambigrid .cell.recent-change.vert {
-  background-color: #cf6;}
+/* Morts */
 .djambigrid div.piece.dead {
   border-color: #333;
   background-color: #333;
   color: #999;}
+/* Interactions sur les cellules */
 .djambigrid .cell.reachable {
   background-color: #ddd;}
 .djambigrid .dragging .cell.reachable, .djambigrid .dragging .cell.with-movable-piece {
@@ -106,20 +107,7 @@ span.faction {
   padding: 0;
   margin: 0;
   border: 0px;}
-.faction {
-  background: url(img/leader16.png) no-repeat 4px 50%;
-  padding-left: 22px;
-  white-space: nowrap;}
-th.faction {
-  white-space: normal;
-  font-size: 90%;}
-span.faction {
-  padding-right: 0.25em;}
-.piece {
-  padding: 0 2px 0 20px;
-  white-space: nowrap;}
-.links li a.add-djambi-game, a.play-djambi-game, a.view-djambi-game {
-  padding-left: 20px;}
+/* Pièces */
 .piece.militant, .links li a.add-djambi-game, a.play-djambi-game {
   background-image: url(img/militant16.png);
   background-repeat: no-repeat;
@@ -134,6 +122,23 @@ span.faction {
   background: url(img/assassin16.png) no-repeat 2px 50%;}
 .piece.reporter, a.view-djambi-game {
   background: url(img/reporter16.png) no-repeat 2px 50%;}
+.piece {
+  padding: 0 2px 0 20px;
+  white-space: nowrap;}
+/*==========================================
+========= AUTRES STYLES SUR LA PAGE ========
+===========================================*/
+.faction {
+  background: url(img/leader16.png) no-repeat 4px 50%;
+  padding-left: 22px;
+  white-space: nowrap;}
+th.faction {
+  white-space: normal;
+  font-size: 90%;}
+span.faction {
+  padding-right: 0.25em;}
+.links li a.add-djambi-game, a.play-djambi-game, a.view-djambi-game {
+  padding-left: 20px;}
 table .number {
   text-align: right;}
 table .total {
@@ -166,44 +171,6 @@ span.rule-variant, span.game-option {
   float: left;
   margin: 0 0.5em 0 0;
   padding: 0 0.5em;}
-.djambigrid .changes {
-  margin-top: -0.5em;
-  position: absolute;}
-.djambigrid .changes .change {
-  left: 50px;
-  margin-left: -1em;
-  position: relative;
-  z-index: 1;}
-.djambigrid .changes .order {
-  background-color: #666;
-  border: 2px solid #000;
-  border-radius: 1em;
-  color: #FFF;
-  float: left;
-  font-size: 80%;
-  font-weight: bold;
-  padding: 0.25em 0.5em;
-  position: relative;
-  cursor: help; 
-  z-index: 99;}
-.djambigrid .changes .description {
-  background-color: #FFF;
-  border: 2px solid #000;
-  box-shadow: 5px 5px 5px #999;
-  font-size: 90%;
-  margin-left: 1em;
-  margin-top: 0.25em;
-  opacity: 0.85;
-  padding: 0.25em;
-  text-align: left;
-  border-radius: 1em;
-  position: absolute;
-  text-indent: 1em;
-  width: 10em;}
-.djambigrid .changes .change + .change {
-  margin-top: 1em;}
-.djambigrid .changes .description .piece {
-  white-space: normal;}
 .djambi .controls {
   font-size: 90%;
   text-align: center;
@@ -229,47 +196,88 @@ span.rule-variant, span.game-option {
 .djambi .players tr.me {
   background-color: #fec;
   font-weight: bold;}
+/*==========================================
+======== AFFICHAGE DES DEPLACEMENTS ========
+===========================================*/
+.djambigrid .changes {
+  margin-top: -0.5em;
+  position: absolute;}
+.djambigrid .changes .change {
+  left: 50px;
+  margin-left: -1em;
+  position: relative;
+  z-index: 1;}
+.djambigrid .changes .order {
+  background-color: #666;
+  border: 2px solid #000;
+  border-radius: 1em;
+  color: #FFF;
+  float: left;
+  font-size: 80%;
+  font-weight: bold;
+  padding: 0.25em 0.5em;
+  position: relative;
+  cursor: help;
+  z-index: 99;}
+.djambigrid .changes .description {
+  background-color: #FFF;
+  border: 2px solid #000;
+  box-shadow: 5px 5px 5px #999;
+  font-size: 90%;
+  margin-left: 1em;
+  margin-top: 0.25em;
+  opacity: 0.85;
+  padding: 0.25em;
+  text-align: left;
+  border-radius: 1em;
+  position: absolute;
+  text-indent: 1em;
+  white-space: normal;
+  width: 10em;}
+.djambigrid .changes .change + .change {
+  margin-top: 1em;}
+.djambigrid .changes .description .piece {
+  white-space: normal;}
+.djambigrid .cell.recent-change.bleu {
+  background-color: #cef;}
+.djambigrid .cell.recent-change.jaune {
+  background-color: #fe9;}
+.djambigrid .cell.recent-change.vert {
+  background-color: #cf6;}
+.djambigrid .cell.recent-change.rouge {
+  background-color: #f99;}
+/*==========================================
+=============== AIDE EN LIGNE ==============
+===========================================*/
 .djambigrid .cell span.help-link, .djambigrid .dragging .cell:hover span.help-link {
   display: none;}
-.djambigrid .cell:hover span.help-link, .djambigrid .cell:focus span.help-link {
-  float: left;
+.djambigrid .cell span.help-link {
   position: absolute;
   display: block;
-  width: 18px;
-  height: 18px;
-  -webkit-border-radius: 9px;
-  -moz-border-radius: 9px;
-  border-radius: 9px;
+  width: 16px;
+  height: 16px;
   overflow: hidden;
   z-index: 10;
-  margin-left: 40px;
-  margin-top: -5px;}
-.djambigrid .cell:hover span.help-link a, .djambigrid .cell:focus span.help-link a {
+  margin-top: -12px;
+  margin-left: -5px;
+  border: 2px solid #000;}
+.djambigrid .cell span.help-link a {
   cursor: help;
   display: block; 
-  padding-left: 18px;
-  height: 18px;
-  background: url(/misc/message-16-help.png) no-repeat 1px 1px #000;}
-.machiavel {
-  border-radius: 0.5em 1em 0.5em 1em;
-  box-shadow: 2px 2px 2px #999;
-  background-color: #EEEEEE;
-  background-image: url("img/machiavel.png");
-  background-position: -6px -6px;
-  background-repeat: no-repeat;
-  border: 3px solid #999;
-  font-variant: small-caps;
-  font-weight: bold;
-  min-height: 25px;
-  padding: 0.5em 1em 0.5em 60px;}
-  
+  padding-left: 16px;
+  height: 16px;
+  background: url(/misc/message-16-help.png) no-repeat 0px 0px #ccc;}
+/*==========================================
+=========== GRILLE HEXAGONALE ==============
+===========================================*/
 .hexagonal-grid-wrapper {
   text-align: center;
   overflow: hidden;}
 .hexagonal-grid {
   margin: 20px 0;}
 .hexagonal-grid .row {
-  margin-top: -2px;}
+  margin-top: -2px;
+  white-space: nowrap;}
 .hexagonal-grid .row.even {
   margin-left: 52px;}
 .hexagonal-grid .cell {
@@ -417,7 +425,7 @@ ul.cases li {
   display: inline-block;
   font-size: 90%;
   list-style-type: none;
-  margin: 0.5em;
+  margin: 0.4em;
   padding: 0.5em;
   text-align: center;
   vertical-align: top;
@@ -432,7 +440,7 @@ ul.cases li a {
   font-weight: normal;}
 ul.cases li.more {
   background-color: transparent;
-  border: none;}
+  border-color: #fff;}
 ul.cases li .big {
   display: block;
   margin: 0.25em 0;}
@@ -466,7 +474,18 @@ ul.cases li:hover img, ul.cases li:hover span.piece, ul.cases li:focus img, ul.c
 /*==========================================
 ================== DECORATION ==============
 ===========================================*/
-#block-views-citation-du-jour-block {
-  border-top: 3px solid #ccc;
-  background: url(img/background.png) scroll no-repeat 0px 0px #fff;
+.sidebar-first #block-views-citation-du-jour-block, .two-sidebars #block-views-citation-du-jour-block {
+  background: url(img/background.png) scroll no-repeat 0px 0px transparent;
   padding-top: 1460px;}
+.machiavel {
+  border-radius: 0.5em 1em 0.5em 1em;
+  box-shadow: 2px 2px 2px #999;
+  background-color: #EEEEEE;
+  background-image: url("img/machiavel.png");
+  background-position: -6px -6px;
+  background-repeat: no-repeat;
+  border: 3px solid #999;
+  font-variant: small-caps;
+  font-weight: bold;
+  min-height: 25px;
+  padding: 0.5em 1em 0.5em 60px;}

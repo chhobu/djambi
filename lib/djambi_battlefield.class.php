@@ -47,10 +47,10 @@ class DjambiBattlefield {
     switch ($this->disposition) {
       case('2std'):
         $players = array(
-        1 => 'human',
-        2 => 'vassal',
-        3 => 'human',
-        4 => 'vassal'
+          1 => 'human',
+          2 => 'vassal',
+          3 => 'human',
+          4 => 'vassal'
         );
         break;
       default:
@@ -253,6 +253,15 @@ class DjambiBattlefield {
 
   public static function getOptionsInfo() {
     return array(
+      'allow_anonymous_players' => array(
+        'default' => 1,
+        'configurable' => TRUE,
+        'title' => 'OPTION3',
+        'widget' => 'radios',
+        'type' => 'game_option',
+        'choices' => array(1 => 'OPTION3_YES', 0 => 'OPTION3_NO'),
+        'modes' => array(KW_DJAMBI_MODE_FRIENDLY)
+      ),
       'allowed_skipped_turns_per_user' => array(
           'default' => -1,
           'configurable' => TRUE,
@@ -297,7 +306,7 @@ class DjambiBattlefield {
          'title' => 'RULE1',
          'type' => 'rule_variant',
          'configurable' => TRUE,
-         'default' => 'loose',
+         'default' => 'throne_access',
          'widget' => 'radios',
          'choices' => array(
            'throne_access' => 'RULE1_THRONE_ACCESS',
@@ -322,7 +331,7 @@ class DjambiBattlefield {
          'type' => 'rule_variant',
          'configurable' => TRUE,
          'widget' => 'radios',
-         'default' => 'temporary',
+         'default' => 'full_control',
          'choices' => array(
            'temporary' => 'RULE3_TEMPORARY',
            'full_control' => 'RULE3_FULL_CONTROL'
@@ -346,7 +355,7 @@ class DjambiBattlefield {
          'type' => 'rule_variant',
          'configurable' => TRUE,
          'widget' => 'radios',
-         'default' => 'vassal',
+         'default' => 'never',
          'choices' => array(
            'never' => 'RULE5_NEVER',
            'vassal' => 'RULE5_VASSAL'
@@ -368,7 +377,7 @@ class DjambiBattlefield {
           'type' => 'rule_variant',
           'configurable' => TRUE,
           'widget' => 'radios',
-          'default' => 'extended',
+          'default' => 'normal',
           'choices' => array(
             'normal' => 'RULE7_NORMAL',
             'extended' => 'RULE7_EXTENDED'
