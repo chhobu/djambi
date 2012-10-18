@@ -58,7 +58,9 @@
       });
     });
     $('.djambi .refresh-button').hide();
-    setTimeout(function() {$('#Messages').hide('slow');}, 10000);
+    if ($('.djambi').length > 0) {
+      setTimeout(function() {$('#Messages').hide('slow');}, 10000);
+    }
     $('.djambi', context).once('Djambi', function() {
       var gridId = $(this).data('grid');
       if ($(this).data('refresh') == 'yes') {
