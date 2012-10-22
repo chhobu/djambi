@@ -239,7 +239,8 @@ function theme_djambi_grid($variables) {
         'attributes' => array('class' => array('players'))));
   }
   $fieldset_title = _kw_djambi_get_translatable_messages($grid->getStatus());
-  $current_turn = end($grid->getTurns());
+  $turns = $grid->getTurns();
+  $current_turn = end($turns);
   $fieldset_title .= ' - <span class="turn">' . t("Turn #%turn", array("%turn" => $current_turn["turn"])) . '</span>';
   if ($grid->isPending()) {
     $play_order = $grid->getPlayOrder();

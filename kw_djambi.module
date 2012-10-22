@@ -7,7 +7,7 @@
 function kw_djambi_menu() {
   $items['djambi/%/check-update/%'] = array(
     'page callback' => 'kw_djambi_check_update',
-    'page arguments' => array(1, 3, 4, 5),
+    'page arguments' => array(1, 3),
     'access callback' => TRUE,
     'type' => MENU_CALLBACK
   );

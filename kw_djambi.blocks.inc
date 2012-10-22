@@ -40,6 +40,7 @@ function _kw_djambi_list_recruiting_games($modes = NULL, $item_id = NULL) {
         'item_id' => $item_id,
         'entity_type' => 'node',
     ),
+    'home' => '<front>'
   );
   $grid = new KwDatagrid('DjambiGameRecrutingList', 'djambi_node', 'dn', __FUNCTION__, array(), $options);
   $grid->setTitle(t('New djambi games'));
@@ -129,6 +130,7 @@ function _kw_djambi_list_viewable_games($modes = NULL, $item_id = NULL) {
         'item_id' => $item_id,
         'entity_type' => 'node',
     ),
+    'home' => '<front>'
   );
   $grid = new KwDatagrid('DjambiGameViewableList', 'djambi_node', 'dn', __FUNCTION__, array(), $options);
   $grid->setTitle(t('Pending and finished djambi games'));

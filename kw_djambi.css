@@ -418,17 +418,20 @@ span.rule-variant, span.game-option {
 ul.cases {
   text-align: center;}
 ul.cases li {
+  display: inline-block;
+  list-style-type: none;
+  margin: 0.33em;
+  text-align: center;
+  vertical-align: top;}
+ul.cases li a {
+  display: block;
+  font-weight: normal;
   background-color: #eee;
   border: 2px solid #999;
   border-radius: 0.5em;
-  color: #666;
   display: inline-block;
   font-size: 90%;
-  list-style-type: none;
-  margin: 0.4em;
   padding: 0.5em;
-  text-align: center;
-  vertical-align: top;
   width: 150px;
   min-height: 80px;
   overflow: hidden;
@@ -436,9 +439,7 @@ ul.cases li {
   -moz-transition: color 500ms ease, background-color 500ms ease;
   -webkit-transition: color 500ms ease, background-color 500ms ease;
   transition: color 500ms ease, background-color 500ms ease;}
-ul.cases li a {
-  font-weight: normal;}
-ul.cases li.more {
+ul.cases li.more a {
   background-color: transparent;
   border-color: #fff;}
 ul.cases li .big {
@@ -462,13 +463,13 @@ ul.cases a span.piece.dead {
   font-size: 500%;
   color: #999;
   padding: 28px 8px 8px;}
-ul.cases li:hover, ul.cases li:focus {
+ul.cases li a:hover, ul.cases li a:focus {
   color: #fff;
   background-color: #666;}
-ul.cases li a:hover, ul.cases li:hover a {
+ul.cases li a:hover, ul.cases li:hover a, ul.cases li:focus a, ul.cases li a:focus {
   color: #fff;
   text-decoration: none;}
-ul.cases li:hover img, ul.cases li:hover span.piece, ul.cases li:focus img, ul.cases li:focus span.piece {
+ul.cases li:hover img, ul.cases li:hover span.piece, ul.cases li a:focus img, ul.cases li a:focus span.piece {
   margin-top: 0px;
   box-shadow: 5px 5px 5px #333;}
 /*==========================================

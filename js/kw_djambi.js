@@ -59,7 +59,7 @@
     });
     $('.djambi .refresh-button').hide();
     if ($('.djambi').length > 0) {
-      setTimeout(function() {$('#Messages').hide('slow');}, 10000);
+      setTimeout(function() {$('#Messages').hide('slow');}, 60000);
     }
     $('.djambi', context).once('Djambi', function() {
       var gridId = $(this).data('grid');
