@@ -43,8 +43,9 @@ class DjambiBattlefield {
 
   private function createNewGame($user_id, $user_cookie) {
     $dispositions = self::getDispositions();
+    $disposition = $dispositions[$this->disposition];
     // Construction des factions
-    switch ($this->disposition) {
+    switch ($disposition) {
       case('2std'):
         $players = array(
           1 => 'human',
@@ -54,7 +55,7 @@ class DjambiBattlefield {
         );
         break;
       default:
-        $players = array_fill(1, $this->disposition['nb'], 'human');
+        $players = array_fill(1, $disposition['nb'], 'human');
     }
     $players_info = array();
     foreach ($players as $key => $player) {
@@ -103,7 +104,7 @@ class DjambiBattlefield {
       $faction = new DjambiPoliticalFaction($players_info[$i], $key, $faction_data);
       $this->factions[$i] = $faction;
     }
-    $this->setOption('directions', $dispositions[$this->disposition]['directions']);
+    $this->setOption('directions', $disposition['directions']);
     if ($nb_factions == 4) {
       $this->buildSquareBattlefieldWith4Factions();
     }
