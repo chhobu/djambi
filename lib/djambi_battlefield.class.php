@@ -45,7 +45,7 @@ class DjambiBattlefield {
     $dispositions = self::getDispositions();
     $disposition = $dispositions[$this->disposition];
     // Construction des factions
-    switch ($disposition) {
+    switch ($this->disposition) {
       case('2std'):
         $players = array(
           1 => 'human',
