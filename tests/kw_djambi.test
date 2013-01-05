@@ -1,0 +1,134 @@
+<?php
+class KwDjambiLiveTestCase extends DrupalWebTestCase {
+  public static function getInfo() {
+    return array(
+        'name' => t('Djambi automated game'),
+        'description' => t('Runs a Djambi sandbox game (using the current database) with random silly moves.'),
+        'group' => 'Djambi'
+    );
+  }
+
+  function setUp() {
+    $test_folder = 'djambi_test_' . date('YmdHis');
+    $this->originalFileDirectory = variable_get('file_public_path', conf_path() . '/files');
+    $this->public_files_directory = $this->originalFileDirectory;
+    $this->setup = TRUE; // Attention, utilisation de la base "réelle"
+  }
+
+  function tearDown() {
+    // TODO nettoyer l'environnement de test
+  }
+
+  function testRandomSandboxGame() {
+    // Création par un joueur anonyme d'une nouvelle partie
+    $disposals = DjambiBattlefield::getDispositions();
+    $edit['nb_players'] = array_rand($disposals);
+    $edit['mode'] = KW_DJAMBI_MODE_SANDBOX;
+    $this->drupalPost('node/add/kw-djambi', $edit, t('Begin game'));
+    $currentUrl = $this->getUrl();
+    $nid = (int) current($this->xpath("//div[starts-with(@id,'DjambiContainer')]/@data-grid"));
+    $node = node_load($nid);
+    if (!$node || $node->type != 'kw_djambi') {
+      $this->fail(t('Game creation failed !'));
+      return;
+    }
+    $this->pass(t('Game creation OK. Current URL is : !url, current node ID is : !nid',
+        array('!url' => $currentUrl, '!nid' => $nid)));
+    $this->assertNoDuplicateIds(t('No duplicate IDs in the game main interface.'));
+    $finished = FALSE;
+    for ($i = 0; $i < 100; $i++) {
+      // Chargement de la datagrid
+      /* @var $grid DjambiBattlefield */
+      $grid = _kw_djambi_load_game($nid, TRUE);
+      if (!$grid) {
+        $this->fail(t("Fail to load Djambi game."));
+        return;
+      }
+      elseif ($grid->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
+        $finished = TRUE;
+        $this->pass(t("Djambi game is finished."));
+        break;
+      }
+      // Vérification de la correspondance concernant le tour de jeu
+      $xml_element = current($this->xpath("//div[starts-with(@id,'DjambiContainer')]"));
+      $xml_element_attributes = $xml_element->attributes();
+      if (isset($xml_element_attributes['data-turn'])) {
+        $current_turn_html = (int) $xml_element_attributes['data-turn'];
+      }
+      if (isset($current_turn_html) && $current_turn_html == $i) {
+        $this->pass(t("Turn ID OK (!turn).", array('!turn' => $current_turn_html)));
+      }
+      else {
+        $this->fail(t("Turn ID mismatch (correct value : !turn_id / test value : !turn_html).",
+            array('!turn_id' => (isset($current_turn_html) ? $current_turn_html : '?'), '!turn_html' => $i)));
+      }
+      // Contrôle des pièces déplaçables
+      /* @var $faction DjambiPoliticalFaction */
+      $faction = $grid->getPlayingFaction();
+      $pieces = $faction->getControlledPieces();
+      /* @var $piece DjambiPiece */
+      $movable_pieces = array();
+      foreach ($pieces as $piece_id => $piece) {
+        if ($piece->isMovable()) {
+          $movable_pieces[] = $piece;
+          $this->assertFieldByName('selection-' . $piece->getId(), NULL, t("The piece !name is selectable.", array('!name' => _kw_djambi_get_full_piece_name($piece)))); // Vérification de la présence des pièces déplaçables
+        }
+      }
+      if (empty($movable_pieces)) {
+        // FIXME en réalité, cette situation est possible.
+        // Dans ce cas, déclencher le clic sur le bouton "Abandonner".
+        $this->fail('No movable piece found !');
+        return;
+      }
+      // Sélection d'une pièce
+      /* @var $selected_piece DjambiPiece */
+      $selected_piece = $movable_pieces[array_rand($movable_pieces)];
+      $this->pass(t('The piece !piece is selected.', array('!piece' => _kw_djambi_get_full_piece_name($selected_piece))));
+      $this->drupalPostAJAX(NULL, NULL, 'selection-' . $selected_piece->getId());
+      // Déplacement d'une pièce
+      $cells = $grid->getCells();
+      $throne = $grid->getSpecialCells('throne');
+      $allowed_moves = $selected_piece->getAllowableMoves();
+      $suggested_moves = array();
+      foreach ($allowed_moves as $key => $cell) {
+        if (!is_null($grid->getCellOccupant($cell))) {
+          $target = $grid->getCellOccupant($cell);
+          if ($target->getHability('must_live')) {
+            $suggested_moves = array($cell);
+            break;
+          }
+          $suggested_moves[] = $cell;
+        }
+        if (in_array($cell, $throne)) {
+          $suggested_moves = array($cell);
+          break;
+        }
+        $this->assertFieldByName('target-' . $cell, NULL, t("The piece !piece can be move to cell !cell", array('!piece' => $selected_piece->getId(), '!cell' => $cell)));
+      }
+      if (empty($allowed_moves)) {
+        $this->fail("Cannot move selected piece.");
+        return;
+      }
+      if (!empty($suggested_moves)) {
+        $selected_move = $suggested_moves[array_rand($suggested_moves)];
+      }
+      else {
+        $selected_move = $allowed_moves[array_rand($allowed_moves)];
+      }
+      $this->pass(t("We have finally decided to move the piece !piece to cell !cell.", array('!piece' => $selected_piece->getId(), '!cell' => $selected_move)));
+      $this->drupalPostAjax(NULL, NULL, 'target-' . $selected_move);
+      // Recherche d'interactions supplémentaires
+      $xpath_request = "//input[@type='image' and @data-grid-button='interaction']/@name";
+      $interactions = $this->xpath($xpath_request);
+      while (is_array($interactions) && !empty($interactions)) {
+        $triggering_element = (string) $interactions[array_rand($interactions)];
+        $this->drupalPostAJAX(NULL, NULL, $triggering_element);
+        $interactions = $this->xpath($xpath_request);
+      }
+    }
+    // TODO si la partie n'est pas finie, faire abandonner successivement chacun des camps
+    if ($finished) {
+      // TODO contrôles supplémentaires sur la fin de jeu
+    }
+  }
+}

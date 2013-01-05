@@ -626,10 +626,17 @@ class DjambiBattlefield {
     $this->cells[$this->locateCell($piece->getPosition())]["occupant"] = $piece;
     if (!is_null($old_position) && $piece->getPosition() != $old_position) {
       $old_cell = $this->locateCell($old_position);
-      if (isset($this->cells[$old_cell]["occupant"]) && $piece == $this->cells[$old_cell]["occupant"]) {
+      if ($this->getCellOccupant($old_cell) == $piece) {
         $this->cells[$old_cell]["occupant"] = NULL;
       }
     }
+  }
+
+  public function getCellOccupant($cell) {
+    if (!empty($this->cells[$cell]['occupant'])) {
+      return $this->cells[$cell]['occupant'];
+    }
+    return NULL;
   }
 
   public function getId() {

@@ -119,6 +119,8 @@ function kw_djambi_cron() {
   $q->condition('dj.autodelete', 0, '!=');
   $nids = $q->execute()->fetchCol('nid');
   if (!empty($nids)) {
+    watchdog('kw_djambi', 'Automatic deletion of Djambi games !nids',
+      array('!nids' => implode(', ', $nids)));
     node_delete_multiple($nids);
   }
 }
@@ -659,7 +661,7 @@ function _kw_djambi_format_ping_infos($ping_time) {
  * @param object $node : node de type kw_djambi
  * @return DjambiBattlefield
  */
-function _kw_djambi_load_game($nid = NULL) {
+function _kw_djambi_load_game($nid = NULL, $reset = FALSE) {
   $battlefields = &drupal_static(__FUNCTION__, array());
   if (is_null($nid)) {
     if (empty($battlefields)) {
@@ -669,7 +671,7 @@ function _kw_djambi_load_game($nid = NULL) {
       return current($battlefields);
     }
   }
-  if (isset($battlefields[$nid])) {
+  if (!$reset && isset($battlefields[$nid])) {
     return $battlefields[$nid];
   }
   $query = db_select('djambi_node', 'dj')
@@ -932,6 +934,9 @@ function _kw_djambi_get_user_faction(DjambiBattlefield $grid, $user) {
       }
     }
   }
+  if (!is_null($current_user_faction) && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+    return $grid->getPlayingFaction();
+  }
   return $current_user_faction;
 }
 
@@ -963,8 +968,10 @@ function kw_djambi_game_form_validate($form, &$form_state) {
   /* @var $grid DjambiBattlefield */
   $grid = $form["#grid"];
   $errors = array();
+  // Détection du bouton cliqué.
   $button = $form_state["triggering_element"];
   $type_button = isset($button["#array_parents"][1]) ? $button["#array_parents"][1] : NULL;
+  // Traitement des différents cas
   if ($type_button == "movable") {
     $piece = kw_djambi_piece_selection_validate($errors, $button["#return_value"], $grid);
     if ($piece && isset($form_state["kw_djambi"]["selected_piece"])) {

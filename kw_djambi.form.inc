@@ -52,15 +52,17 @@ function _kw_djambi_build_game_form($form, &$form_state, DjambiBattlefield $grid
           '#value' => t('Refresh'),
           '#ajax' => $ajax_settings,
           '#weight' => 99,
-          '#submit' => array('kw_djambi_game_form_refresh_submit')
+          '#submit' => array('kw_djambi_game_form_refresh_submit'),
+          '#name' => 'ui'
       );
     }
   }
-  $form['#prefix'] = '<div id="DjambiContainer' . $grid->getId() . '" class="djambi" '
-  . 'data-grid="' . $grid->getId() . '" data-version="' . $grid->getInfo('changed') . '" '
-  . 'data-refresh="' . $refresh . '" data-status="' . $grid->getStatus() . '" '
-  .' data-user-faction="' . (!is_null($current_user_faction) ? $current_user_faction->getId() : '0')
-  . '" data-turn="' . $grid->getCurrentTurnId() . '">';
+  $form['#prefix'] = '<div id="DjambiContainer' . $grid->getId() . '" class="djambi"'
+  . ' data-grid="' . $grid->getId() . '" data-version="' . $grid->getInfo('changed') . '"'
+  . ' data-refresh="' . $refresh . '" data-status="' . $grid->getStatus() . '" '
+  . ' data-user-faction="' . (!is_null($current_user_faction) ? $current_user_faction->getId() : '0') . '"'
+  . ' data-user-status="' . (!is_null($current_user_faction) ? $current_user_faction->getStatus() : '0') . '"'
+  . ' data-turn="' . $grid->getCurrentTurnId() . '">';
   $form['#suffix'] = '</div>';
   $form['options'] = array(
       '#type' => 'fieldset',
@@ -145,6 +147,8 @@ function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $curr
     if (!is_null($current_user_faction) && $faction->getId() == $current_user_faction->getId()) {
       $form['grid']['factions'][$faction->getId()]['action'] = array(
           '#type' => 'submit',
+          '#name' => 'action',
+          '#id' => 'action-leave-game',
           '#value' => t('Leave game'),
           '#submit' => array('kw_djambi_game_form_cancel_participation_submit'),
       );
@@ -153,9 +157,10 @@ function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $curr
       if ($allow_anonymous || $user->uid > 0) {
         $form['grid']['factions'][$faction->getId()]['action'] = array(
           '#type' => 'submit',
+          '#name' => 'action',
+          '#id' => 'action-play-' . $faction->getId(),
           '#value' => !is_null($current_user_faction) ? t('Play this side') : t('Join this game'),
           '#submit' => array('kw_djambi_game_form_participate_submit'),
-          '#name' => 'use-' . $faction->getId(),
           '#ajax' => $ajax_settings
         );
       }
@@ -180,6 +185,8 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
   if ($grid->isPending()) {
     $form['grid']['controls']['show_help_button'] = array(
         '#type' => 'submit',
+        '#name' => 'ui',
+        '#id' => 'ui-show-help',
         '#value' => !empty($form_state['show_help']) ? t('Hide help') : t('Show help'),
         '#limit_validation_errors' => array(),
         '#submit' => array('kw_djambi_game_form_show_help_submit'),
@@ -227,6 +234,8 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
     if (!is_null($prev_turn)) {
       $form['grid']['controls']['show_prev_move_button'] = array(
           '#type' => 'submit',
+          '#name' => 'ui',
+          '#id' => 'ui-show-prev-move',
           '#value' => $current_value == 0 ? t('Show previous move') : t('Show more moves'),
           '#limit_validation_errors' => array(),
           '#submit' => array('kw_djambi_game_form_show_prev_move_submit'),
@@ -236,6 +245,8 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
     if (!is_null($next_turn)) {
       $form['grid']['controls']['show_last_move_button'] = array(
           '#type' => 'submit',
+          '#name' => 'ui',
+          '#id' => 'ui-show-last-move',
           '#value' => t('Show less moves'),
           '#limit_validation_errors' => array(),
           '#submit' => array('kw_djambi_game_form_show_next_move_submit'),
@@ -245,6 +256,8 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
     if ($show_moves['show']) {
       $form['grid']['controls']['hide_moves_button'] = array(
           '#type' => 'submit',
+          '#name' => 'ui',
+          '#id' => 'ui-hide-moves',
           '#value' => t('Hide moves'),
           '#limit_validation_errors' => array(),
           '#submit' => array('kw_djambi_game_form_hide_moves_submit'),
@@ -334,12 +347,16 @@ function _kw_djambi_build_part_draw_proposal(&$form, DjambiBattlefield $grid, Dj
     );
     $form['actions']['accept_peace'] = array(
         '#type' => 'submit',
+        '#name' => 'action',
+        '#id' => 'action-accept-peace',
         '#value' => t("OK, end this game with a draw and stay good friends."),
         '#submit' => array('kw_djambi_game_form_accept_peace_submit'),
         '#ajax' => $ajax_settings
     );
     $form['actions']['reject_peace'] = array(
         '#type' => 'submit',
+        '#name' => 'action',
+        '#id' => 'action-reject-peace',
         '#value' => t("No way, I am sure to win this game."),
         '#submit' => array('kw_djambi_game_form_reject_peace_submit'),
         '#ajax' => $ajax_settings
@@ -362,6 +379,8 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, DjambiBattle
   if (!empty($form_state["kw_djambi"]) && in_array($form_state["kw_djambi"]["phase"], array('move_interactions', 'piece_destination'))) {
     $actions['cancel_selection'] = array(
         '#type' => 'submit',
+        '#name' => 'action',
+        '#id' => 'action-cancel-selection',
         '#value' => t('Cancel piece selection'),
         '#submit' => array('kw_djambi_game_form_cancel_selection_submit'),
         '#ajax' => $ajax_settings
@@ -371,6 +390,8 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, DjambiBattle
   elseif ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX && count($grid->getTurns()) > 1) {
     $actions['cancel_last_turn'] = array(
         '#type' => 'submit',
+        '#name' => 'action',
+        '#id' => 'action-cancel-move',
         '#value' => t('Cancel last move'),
         '#submit' => array('kw_djambi_game_form_cancel_last_turn_submit'),
         '#ajax' => $ajax_settings
@@ -382,6 +403,8 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, DjambiBattle
     if (empty($form_state['kw_djambi']['selected_piece'])) {
       $actions['skip_turn'] = array(
           '#type' => 'submit',
+          '#name' => 'action',
+          '#id' => 'action-skip-turn',
           '#value' => $allowed_skip_turns == -1 ? t('Skip turn') : t('Skip turn (!nb of !max already skipped)', array(
               '!nb' => $faction->getSkippedTurns(), '!max' => $allowed_skip_turns)),
           '#submit' => array('kw_djambi_game_form_skip_turn_submit'),
@@ -402,6 +425,8 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, DjambiBattle
   if ($draw_proposal_delay != -1 && $faction->getLastDrawProposal() + $draw_proposal_delay <= $turns[$grid->getCurrentTurnId()]['turn']) {
     $actions['draw_proposal'] = array(
         '#type' => 'submit',
+        '#name' => 'action',
+        '#id' => 'action-ask-draw',
         '#value' => t('Ask for a draw'),
         '#submit' => array('kw_djambi_game_form_draw_proposal_submit'),
         '#ajax' => $ajax_settings
@@ -421,18 +446,22 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, DjambiBattle
   // Abandonner
   $actions['withdrawal'] = array(
       '#type' => 'submit',
+      '#name' => 'action',
+      '#id' => 'action-withdraw',
       '#value' => t('Withdraw'),
       '#submit' => array('kw_djambi_game_form_withdraw_submit'),
       '#ajax' => $ajax_settings
   );
   // Retour après abandon
   if ($grid->getOption('rule_comeback') == 'allowed' && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
-    foreach ($grid->getFactions() as $playing_faction) {
-      if ($playing_faction->canComeBackAfterWithdraw()) {
-        $actions['comeback']['comeback_' . $playing_faction->getId()] = array(
+    foreach ($grid->getFactions() as $withdrawn_faction) {
+      if ($withdrawn_faction->canComeBackAfterWithdraw()) {
+        $actions['comeback']['comeback_' . $withdrawn_faction->getId()] = array(
             '#type' => 'submit',
+            '#name' => 'action',
+            '#id' => 'action-allow-comeback' . $withdrawn_faction->getId(),
             '#value' => t('Allow !faction side to come back in the game', array(
-                '!faction' => _kw_djambi_get_translatable_messages($playing_faction->getName()))),
+                '!faction' => _kw_djambi_get_translatable_messages($withdrawn_faction->getName()))),
             '#submit' => array('kw_djambi_game_form_comeback_submit'),
             '#ajax' => $ajax_settings,
             '#weight' => 10
@@ -491,7 +520,12 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
               '#type' => 'image_button',
               '#return_value' => $piece->getId(),
               '#src' => $piece->getImage(),
-              '#attributes' => array('alt' => t('Move !piece', array('!piece' => $piece->getShortname('t')))),
+              '#name' => 'selection-' .$piece->getId(),
+              '#id' => 'selection-' .$piece->getId(),
+              '#attributes' => array(
+                  'alt' => t('Move !piece', array('!piece' => $piece->getShortname('t'))),
+                  'data-grid-button' => 'selection'
+              ),
               '#ajax' => $ajax_settings
           );
         }
@@ -513,9 +547,15 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
         ));
         $form['pieces']['destination']['cell-' . $cell_key] = array(
             '#type' => 'image_button',
+            '#name' => 'target-' . $cell_key,
+            '#id' => 'target-' . $cell_key,
             '#return_value' => $cell_key,
             '#src' => base_path() . drupal_get_path('module', 'kw_djambi') . '/img/apply.png',
-            '#attributes' => array('alt' => $alt_text, 'title' => $alt_text),
+            '#attributes' => array(
+                'alt' => $alt_text,
+                'title' => $alt_text,
+                'data-grid-button' => 'destination'
+             ),
             '#ajax' => $ajax_settings
         );
       }
@@ -539,9 +579,15 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
           ));
           $form['pieces']['murder']['cell-' . $cell] = array(
               '#type' => 'image_button',
+              '#name' => 'target-' . $cell,
+              '#id' => 'target-' . $cell,
               '#return_value' => $cell,
               '#src' => base_path() . drupal_get_path('module', 'kw_djambi') . '/img/flag_black.png',
-              '#attributes' => array('alt' => $alt_text, 'title' => $alt_text),
+              '#attributes' => array(
+                  'alt' => $alt_text,
+                  'title' => $alt_text,
+                  'data-grid-button' => 'interaction'
+              ),
               '#ajax' => $ajax_settings
           );
         }
@@ -560,9 +606,15 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
           $alt_text = t("Move the dead piece to case !case.", array("!case" => $cell));
           $form["pieces"]["necromobility"]["cell-" . $cell] = array(
               "#type" => "image_button",
+              '#name' => 'target-' . $cell,
+              '#id' => 'target-' . $cell,
               "#return_value" => $cell,
               "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/flag_black.png",
-              "#attributes" => array("alt" => $alt_text, "title" => $alt_text),
+              '#attributes' => array(
+                  'alt' => $alt_text,
+                  'title' => $alt_text,
+                  'data-grid-button' => 'interaction'
+              ),
               '#ajax' => $ajax_settings
           );
         }
@@ -581,9 +633,15 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
           ));
           $form["pieces"]["manipulation"]["cell-" . $cell] = array(
               "#type" => "image_button",
+              '#name' => 'target-' . $cell,
+              '#id' => 'target-' . $cell,
               "#return_value" => $cell,
               "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/note2.png",
-              "#attributes" => array("alt" => $alt_text, "title" => $alt_text),
+              '#attributes' => array(
+                  'alt' => $alt_text,
+                  'title' => $alt_text,
+                  'data-grid-button' => 'interaction'
+              ),
               '#ajax' => $ajax_settings
           );
         }
@@ -603,9 +661,15 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
           ));
           $form["pieces"]["reportage"]["cell-" . $position] = array(
               "#type" => "image_button",
+              '#name' => 'target-' . $position,
+              '#id' => 'target-' . $position,
               "#return_value" => $position,
               "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/flag_black.png",
-              "#attributes" => array("alt" => $alt_text, "title" => $alt_text),
+              '#attributes' => array(
+                  'alt' => $alt_text,
+                  'title' => $alt_text,
+                  'data-grid-button' => 'interaction'
+              ),
               '#ajax' => $ajax_settings
           );
         }
@@ -623,9 +687,15 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
           ));
           $form["pieces"]["throne_evacuation"]["cell-" . $position] = array(
               "#type" => "image_button",
+              '#name' => 'target-' . $cell,
+              '#id' => 'target-' . $cell,
               "#return_value" => $position,
               "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/apply.png",
-              "#attributes" => array("alt" => $alt_text, "title" => $alt_text),
+              '#attributes' => array(
+                  'alt' => $alt_text,
+                  'title' => $alt_text,
+                  'data-grid-button' => 'interaction'
+              ),
               '#ajax' => $ajax_settings
           );
         }
@@ -697,7 +767,9 @@ function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid
         '#type' => 'submit',
         '#value' => t('Load 20 older logs'),
         '#submit' => array('kw_djambi_load_more_logs'),
-        '#ajax' => $ajax_log_settings
+        '#ajax' => $ajax_log_settings,
+        '#name' => 'ui',
+        '#id' => 'ui-load-logs'
     );
   }
   if ($nb_total_msg > $nb_current_msg) {
@@ -705,7 +777,9 @@ function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid
         '#type' => 'submit',
         '#value' => t('Load all logs'),
         '#submit' => array('kw_djambi_load_all_logs'),
-        '#ajax' => $ajax_log_settings
+        '#ajax' => $ajax_log_settings,
+        '#name' => 'ui',
+        '#id' => 'ui-load-all-logs'
     );
   }
 }

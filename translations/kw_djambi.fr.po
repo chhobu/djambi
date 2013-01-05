@@ -17,8 +17,8 @@
 msgid ""
 msgstr ""
 "Project-Id-Version: PROJECT VERSION\n"
-"POT-Creation-Date: 2012-10-18 00:37+0200\n"
-"PO-Revision-Date: 2012-10-18 00:37+0200\n"
+"POT-Creation-Date: 2013-01-05 19:23+0100\n"
+"PO-Revision-Date: 2013-01-05 19:23+0100\n"
 "Last-Translator: NAME <EMAIL@ADDRESS>\n"
 "Language-Team: French <EMAIL@ADDRESS>\n"
 "MIME-Version: 1.0\n"
@@ -30,141 +30,145 @@ msgstr ""
 msgid "Create a new friendly game"
 msgstr "Créer une nouvelle partie amicale"
 
-#: kw_djambi.blocks.inc:45
+#: kw_djambi.blocks.inc:46
 msgid "New djambi games"
 msgstr "Nouvelles parties de Djambi"
 
-#: kw_djambi.blocks.inc:63;147
+#: kw_djambi.blocks.inc:64;149
 msgid "Game"
 msgstr "Partie"
 
-#: kw_djambi.blocks.inc:68;157 kw_djambi.theme.inc:188;454
+#: kw_djambi.blocks.inc:69;159 kw_djambi.theme.inc:188;455
 msgid "Mode"
 msgstr "Mode"
 
-#: kw_djambi.blocks.inc:75;78;79
+#: kw_djambi.blocks.inc:76;79;80
 msgid "Slots"
 msgstr "Places"
 
-#: kw_djambi.blocks.inc:82
+#: kw_djambi.blocks.inc:83
 msgid "Created since"
 msgstr "Créé depuis"
 
-#: kw_djambi.blocks.inc:89;166;169;170 kw_djambi.theme.inc:208;238
+#: kw_djambi.blocks.inc:90;168;171;172 kw_djambi.theme.inc:208;238
 msgid "Players"
 msgstr "Joueurs"
 
-#: kw_djambi.blocks.inc:99;258 kw_djambi.form.inc:308;452
+#: kw_djambi.blocks.inc:100;260 kw_djambi.form.inc:321;481
 msgid "Actions"
 msgstr "Actions"
 
-#: kw_djambi.blocks.inc:106
+#: kw_djambi.blocks.inc:107
 msgid "There is currently no new games."
 msgstr "Aucune nouvelle partie actuellement."
 
-#: kw_djambi.blocks.inc:134
+#: kw_djambi.blocks.inc:136
 msgid "Pending and finished djambi games"
 msgstr "Liste des parties de Djambi en cours ou terminées"
 
-#: kw_djambi.blocks.inc:176
+#: kw_djambi.blocks.inc:178
 msgid "Players list"
 msgstr "Liste des joueurs"
 
-#: kw_djambi.blocks.inc:197
+#: kw_djambi.blocks.inc:199
 msgid "Player name"
 msgstr "Nom du joueur"
 
-#: kw_djambi.blocks.inc:205 kw_djambi.form.inc:949 kw_djambi.theme.inc:211
+#: kw_djambi.blocks.inc:207 kw_djambi.form.inc:1023 kw_djambi.theme.inc:211
 msgid "Status"
 msgstr "Statut"
 
-#: kw_djambi.blocks.inc:215
+#: kw_djambi.blocks.inc:217
 msgid "Last move"
 msgstr "Dernier coup"
 
-#: kw_djambi.blocks.inc:224
+#: kw_djambi.blocks.inc:226
 msgid "Last update"
 msgstr "Dernière mise à jour"
 
-#: kw_djambi.blocks.inc:233 kw_djambi.form.inc:950
+#: kw_djambi.blocks.inc:235 kw_djambi.form.inc:1024
 msgid "Moves"
 msgstr "Coups"
 
-#: kw_djambi.blocks.inc:243
+#: kw_djambi.blocks.inc:245
 msgid "Winner"
 msgstr "Gagnant"
 
-#: kw_djambi.blocks.inc:265
+#: kw_djambi.blocks.inc:267
 msgid "There is currently no pending or finished games to view."
 msgstr "Aucune partie en cours ou terminée consultable."
 
-#: kw_djambi.blocks.inc:275
+#: kw_djambi.blocks.inc:277
 msgid "me !"
 msgstr "moi !"
 
-#: kw_djambi.blocks.inc:288
+#: kw_djambi.blocks.inc:290
 msgid "Return to this game"
 msgstr "Retourner à cette partie"
 
-#: kw_djambi.blocks.inc:292 kw_djambi.form.inc:156
+#: kw_djambi.blocks.inc:294 kw_djambi.form.inc:162
 msgid "Join this game"
 msgstr "Rejoindre cette partie"
 
-#: kw_djambi.blocks.inc:298
+#: kw_djambi.blocks.inc:300
 msgid "Play this game"
 msgstr "Jouer cette partie"
 
-#: kw_djambi.blocks.inc:302
+#: kw_djambi.blocks.inc:304
 msgid "Watch this game"
 msgstr "Regarder cette partie"
 
-#: kw_djambi.blocks.inc:307
+#: kw_djambi.blocks.inc:309
 msgid "View game result"
 msgstr "Revoir cette partie"
 
-#: kw_djambi.blocks.inc:365
+#: kw_djambi.blocks.inc:367
 msgid "You are playing the !faction side in this game."
-msgstr ""
+msgstr "Vous controllez le parti !faction dans cette partie."
 
-#: kw_djambi.blocks.inc:420
+#: kw_djambi.blocks.inc:422
 msgid "Status : !status"
 msgstr "Statut : !status"
 
-#: kw_djambi.blocks.inc:439
+#: kw_djambi.blocks.inc:441
 msgid "it's your turn !!!"
 msgstr "C'est votre tour de jeu !!!"
 
-#: kw_djambi.blocks.inc:448
+#: kw_djambi.blocks.inc:450
 msgid "Playing !my_faction side (!status)"
 msgstr "Vous contrôlez le camp !my_faction (!status)"
 
-#: kw_djambi.blocks.inc:452
+#: kw_djambi.blocks.inc:454
 msgid "Move #!move"
 msgstr "Déplacement n°!move"
 
-#: kw_djambi.blocks.inc:454
+#: kw_djambi.blocks.inc:456
 msgid "Playing now : !faction (!player), for !duration"
 msgstr "Actuellement en train de jouer : !faction (!player), depuis !duration"
 
-#: kw_djambi.blocks.inc:476
+#: kw_djambi.blocks.inc:478
+msgid "You are only involved in this sandbox djambi game."
+msgstr "Vous disputez uniquement en ce moment cette partie de Djambi en mode bac-à-sable."
+
+#: kw_djambi.blocks.inc:481
 msgid "You are not currently playing any djambi game."
 msgstr "Vous ne disputez pas de partie de Djambi actuellement."
 
-#: kw_djambi.blocks.inc:486
+#: kw_djambi.blocks.inc:494
 msgid "Play a new Djambi game"
 msgstr "Jouer une nouvelle partie de Djambi."
 
-#: kw_djambi.blocks.inc:496 kw_djambi.form.inc:52
+#: kw_djambi.blocks.inc:504 kw_djambi.form.inc:52
 msgid "Refresh"
 msgstr "Actualiser"
 
-#: kw_djambi.blocks.inc:467
+#: kw_djambi.blocks.inc:469
 msgid "You are also involved in 1 other pending game :"
 msgid_plural "You are also involdved in @count other pending games :"
 msgstr[0] "Vous participez également à une autre partie :"
 msgstr[1] "Vous participez également à @count autres parties :"
 
-#: kw_djambi.blocks.inc:468
+#: kw_djambi.blocks.inc:470
 msgid "You are currently involved in 1 pending game :"
 msgid_plural "You are currently involved in @count pending games :"
 msgstr[0] "Vous participez actuellement à une partie :"
@@ -174,439 +178,441 @@ msgstr[1] "Vous participez actuellement à @count parties :"
 msgid "Djambi grid #!number"
 msgstr "Echiquier de Machiavel n°!number"
 
-#: kw_djambi.form.inc:67
+#: kw_djambi.form.inc:69
 msgid "Game configuration"
 msgstr "Configuration de la partie"
 
-#: kw_djambi.form.inc:75
+#: kw_djambi.form.inc:77
 msgid "Stats and awards"
 msgstr "Statistiques et récompenses"
 
-#: kw_djambi.form.inc:75
+#: kw_djambi.form.inc:77
 msgid "Stats"
 msgstr "Statistiques"
 
-#: kw_djambi.form.inc:81
+#: kw_djambi.form.inc:83
 msgid "Treachery log"
 msgstr "Récapitulatif de la partie"
 
-#: kw_djambi.form.inc:131
+#: kw_djambi.form.inc:133
 msgid "Empty"
 msgstr "Vide"
 
-#: kw_djambi.form.inc:148
+#: kw_djambi.form.inc:152
 msgid "Leave game"
 msgstr "Quitter la partie"
 
-#: kw_djambi.form.inc:156
+#: kw_djambi.form.inc:162
 msgid "Play this side"
 msgstr "Jouer ce camp"
 
-#: kw_djambi.form.inc:169;1302
+#: kw_djambi.form.inc:174;1376
 msgid "Only registered players can join this game. Please !login or !register."
-msgstr "L'accès à cette partie est réservé aux utilisateurs disposant d'un compte sur Djambi.net. Merci de vous !login ou !register"
+msgstr ""
+"L'accès à cette partie est réservé aux utilisateurs disposant d'un "
+"compte sur Djambi.net. Merci de vous !login ou !register"
 
-#: kw_djambi.form.inc:170;1303
+#: kw_djambi.form.inc:175;1377
 msgid "login to your account"
 msgstr "connecter à votre comptre"
 
-#: kw_djambi.form.inc:171;1304
+#: kw_djambi.form.inc:176;1378
 msgid "create a new account"
 msgstr "créez un nouveau compte"
 
-#: kw_djambi.form.inc:183
+#: kw_djambi.form.inc:190
 msgid "Hide help"
 msgstr "Cacher l'aide"
 
-#: kw_djambi.form.inc:183
+#: kw_djambi.form.inc:190
 msgid "Show help"
 msgstr "Voir l'aide"
 
-#: kw_djambi.form.inc:230
+#: kw_djambi.form.inc:239
 msgid "Show previous move"
 msgstr "Voir le déplacement précédent"
 
-#: kw_djambi.form.inc:230
+#: kw_djambi.form.inc:239
 msgid "Show more moves"
 msgstr "Voir plus de déplacements"
 
-#: kw_djambi.form.inc:239
+#: kw_djambi.form.inc:250
 msgid "Show less moves"
 msgstr "Voir moins de déplacements"
 
-#: kw_djambi.form.inc:248
+#: kw_djambi.form.inc:261
 msgid "Hide moves"
 msgstr "Cacher les déplacements précédents"
 
-#: kw_djambi.form.inc:277 kw_djambi.module:213
+#: kw_djambi.form.inc:290 kw_djambi.module:215
 msgid "Rule variant #!number"
 msgstr "Variante de règles n°!number"
 
-#: kw_djambi.form.inc:280 kw_djambi.module:217
+#: kw_djambi.form.inc:293 kw_djambi.module:219
 msgid "Game option #!number"
 msgstr "Option de jeu n°!number"
 
-#: kw_djambi.form.inc:321;461 kw_djambi.theme.inc:254
+#: kw_djambi.form.inc:334;490 kw_djambi.theme.inc:255
 msgid "Now playing"
 msgstr "Tour de jeu actuel"
 
-#: kw_djambi.form.inc:324;464
+#: kw_djambi.form.inc:337;493
 msgid "!faction side"
 msgstr "camp !faction"
 
-#: kw_djambi.form.inc:331
+#: kw_djambi.form.inc:344
 msgid "A peace proposal has been made by !faction side. What is your answer ?"
 msgstr ""
 "Le camp !faction vous propose de finir cette partie par une nulle. "
 "Quelle est votre réponse ?"
 
-#: kw_djambi.form.inc:337
+#: kw_djambi.form.inc:352
 msgid "OK, end this game with a draw and stay good friends."
 msgstr ""
 "D'accord, finissons cette partie par un match nul et restons bons "
 "amis."
 
-#: kw_djambi.form.inc:343
+#: kw_djambi.form.inc:360
 msgid "No way, I am sure to win this game."
 msgstr "Jamais, je suis sûr et certain de gagner."
 
-#: kw_djambi.form.inc:351
+#: kw_djambi.form.inc:368
 msgid "A peace proposal has been made by !faction side. Waiting for !current side answer..."
 msgstr ""
 "Le camp !faction a proposé une partie nulle. En attente de la "
 "réponse du camp !current."
 
-#: kw_djambi.form.inc:365
+#: kw_djambi.form.inc:384
 msgid "Cancel piece selection"
 msgstr "Annuler la sélection de la pièce"
 
-#: kw_djambi.form.inc:374
+#: kw_djambi.form.inc:395
 msgid "Cancel last move"
 msgstr "Annuler le dernier mouvement"
 
-#: kw_djambi.form.inc:385
+#: kw_djambi.form.inc:408
 msgid "Skip turn"
 msgstr "Passer son tour"
 
-#: kw_djambi.form.inc:385
+#: kw_djambi.form.inc:408
 msgid "Skip turn (!nb of !max already skipped)"
 msgstr "Passer son tour (nombre de jokers utilisés : !nb sur !max )"
 
-#: kw_djambi.form.inc:392
+#: kw_djambi.form.inc:415
 msgid "There is no limitation concerning turn skippings."
 msgstr "Dans cette partie, il n'y a pas de limites pour passer son tour."
 
-#: kw_djambi.form.inc:405
+#: kw_djambi.form.inc:430
 msgid "Ask for a draw"
 msgstr "Négocier une partie nulle"
 
-#: kw_djambi.form.inc:410
+#: kw_djambi.form.inc:435
 msgid "You can ask for a draw every !nb turns"
 msgstr "Vous pouvez demander une partie nulle tours les !nb tours"
 
-#: kw_djambi.form.inc:412
+#: kw_djambi.form.inc:437
 msgid "Asking for a draw will end your turn without making a piece move."
 msgstr "Attention, demander une partie nulle fera passer votre tour de jeu."
 
-#: kw_djambi.form.inc:415
+#: kw_djambi.form.inc:440
 msgid "No mercy game : draw proposals are forbidden."
 msgstr "Duel sans merci : il n'est pas permis de négocier un match nul."
 
-#: kw_djambi.form.inc:418
+#: kw_djambi.form.inc:443
 msgid "You cannot ask for a draw before turn !turn."
 msgstr "Vous ne pouvez pas proposer un match nul avant le tour !turn."
 
-#: kw_djambi.form.inc:424
+#: kw_djambi.form.inc:451
 msgid "Withdraw"
 msgstr "Abandonner"
 
-#: kw_djambi.form.inc:434
+#: kw_djambi.form.inc:463
 msgid "Allow !faction side to come back in the game"
 msgstr "Autoriser le camp !faction à revenir dans la partie"
 
-#: kw_djambi.form.inc:494
+#: kw_djambi.form.inc:526
 msgid "Move !piece"
 msgstr "Déplacer la pièce !piece"
 
-#: kw_djambi.form.inc:511
+#: kw_djambi.form.inc:545
 msgid "Move the !piece here (!case)."
 msgstr "Déplacer la pièce !piece sur la case !case."
 
-#: kw_djambi.form.inc:523
+#: kw_djambi.form.inc:563
 msgid "The !piece is selected. Choose now its destination case, or select another piece to move."
 msgstr ""
 "La pièce !piece est sélectionnée. Choisissez maintenant sa case de "
 "destination, ou sélectionnez une autre pièce à déplacer."
 
-#: kw_djambi.form.inc:537
+#: kw_djambi.form.inc:577
 msgid "Bury !piece in !case"
 msgstr "Placer le cadavre de la pièce !piece sur la case !case."
 
-#: kw_djambi.form.inc:548
+#: kw_djambi.form.inc:594
 msgid "Your !piece has killed the !victim, select now the case where you victim will rest in peace."
 msgstr ""
 "Votre pièce !piece a tué la pièce !victim, choisissez maintenant la "
 "case où votre victime sera inhumée."
 
-#: kw_djambi.form.inc:560
+#: kw_djambi.form.inc:606
 msgid "Move the dead piece to case !case."
 msgstr "Déplacer le cadavre vers la case !case."
 
-#: kw_djambi.form.inc:569
+#: kw_djambi.form.inc:621
 msgid "Your !piece has exhumed an old dead piece, select now its new burial place."
 msgstr ""
 "Votre pièce !piece a exhumé un cadavre, choisissez maintenant son "
 "nouveau lieu de sépulture."
 
-#: kw_djambi.form.inc:579
+#: kw_djambi.form.inc:631
 msgid "Move manipulated !piece to !case"
 msgstr "Manipuler la pièce !piece vers la case !case"
 
-#: kw_djambi.form.inc:590
+#: kw_djambi.form.inc:648
 msgid "Your !diplomat is manipulating the !piece, select now the destination case for your subjucated victim."
 msgstr ""
 "Votre diplomate est en train de manipuler la pièce !piece, "
 "sélectionnez maintenant la case où placer cette victime subjuguée."
 
-#: kw_djambi.form.inc:601
+#: kw_djambi.form.inc:659
 msgid "Lauch an inquiry on !piece"
 msgstr "Révéler un scandale concernant la pièce !piece"
 
-#: kw_djambi.form.inc:612
+#: kw_djambi.form.inc:676
 msgid "Your !reporter has to choose beetween several victims..."
 msgstr "Votre reporter a le choix entre plusieurs victimes..."
 
-#: kw_djambi.form.inc:620
+#: kw_djambi.form.inc:684
 msgid "Move your !piece to !case"
 msgstr "Déplacer votre pièce !piece vers la case !case."
 
-#: kw_djambi.form.inc:632
+#: kw_djambi.form.inc:702
 msgid "Your !piece is not allowed to stay here. Run away !"
 msgstr ""
 "Votre pièce !piece n'est pas autorisée à rester ici. Evacuez la "
 "position !"
 
-#: kw_djambi.form.inc:638
+#: kw_djambi.form.inc:708
 msgid "It's your turn. Select a movable piece in the grid..."
 msgstr ""
 "C'est votre tour. Sélectionnez une pièce à déplacer sur "
 "l'échiquier..."
 
-#: kw_djambi.form.inc:698
+#: kw_djambi.form.inc:768
 msgid "Load 20 older logs"
 msgstr "Charger 20 entrées précédentes"
 
-#: kw_djambi.form.inc:706
+#: kw_djambi.form.inc:778
 msgid "Load all logs"
 msgstr "Charger toutes les entrées"
 
-#: kw_djambi.form.inc:786
+#: kw_djambi.form.inc:860
 msgid "Award"
 msgstr "Récompense"
 
-#: kw_djambi.form.inc:787
+#: kw_djambi.form.inc:861
 msgid "Awarded to"
 msgstr "Vainqueur"
 
-#: kw_djambi.form.inc:805
+#: kw_djambi.form.inc:879
 msgid "Great Beloved Ruler of Djambi"
 msgstr "Détenteur du Pouvoir Absolu"
 
-#: kw_djambi.form.inc:805
+#: kw_djambi.form.inc:879
 msgid "No winner in this game... Last standing teams :"
 msgstr "Pas de gagnant dans cette partie... Derniers partis survivants :"
 
-#: kw_djambi.form.inc:807
+#: kw_djambi.form.inc:881
 msgid "!pieces"
 msgstr "!pieces"
 
-#: kw_djambi.form.inc:817
+#: kw_djambi.form.inc:891
 msgid "Rank !rank :  !side"
 msgstr "Classé n°!rank: !side"
 
-#: kw_djambi.form.inc:827
+#: kw_djambi.form.inc:901
 msgid "Ashamed loser opponents"
 msgstr "Adversaires vaincus"
 
-#: kw_djambi.form.inc:836
+#: kw_djambi.form.inc:910
 msgid "Forrest Gump Price of mobility"
 msgstr "Prix Forrest Gump de la mobilité"
 
-#: kw_djambi.form.inc:837
+#: kw_djambi.form.inc:911
 msgid "!pieces, with !nb cases crossed"
 msgstr "!pieces, avec !nb cases traversées"
 
-#: kw_djambi.form.inc:846
+#: kw_djambi.form.inc:920
 msgid "Sarah Connor Price of best serial killer"
 msgstr "Prix Sarah Connor du meilleur tueur en série"
 
-#: kw_djambi.form.inc:847
+#: kw_djambi.form.inc:921
 msgid "!pieces, with !nb victims"
 msgstr "!pieces, avec !nb victimes"
 
-#: kw_djambi.form.inc:857
+#: kw_djambi.form.inc:931
 msgid "Pope Formose Price of dead bodies exhumation"
 msgstr "Prix Pape Formose de l'exhumeur le plus actif de cadavres"
 
-#: kw_djambi.form.inc:867
+#: kw_djambi.form.inc:941
 msgid "Machiavelli Price of manipulation"
 msgstr "Prix Machiavel de la manipulation"
 
-#: kw_djambi.form.inc:877
+#: kw_djambi.form.inc:951
 msgid "Nobel Price of peace"
 msgstr "Prix Nobel de la paix"
 
-#: kw_djambi.form.inc:885
+#: kw_djambi.form.inc:959
 msgid "Pulitzer Price"
 msgstr "Prix Pulitzer"
 
-#: kw_djambi.form.inc:889
+#: kw_djambi.form.inc:963
 msgid "Table of honours"
 msgstr "Tableau d'honneur"
 
-#: kw_djambi.form.inc:893;948 kw_djambi.theme.inc:207
+#: kw_djambi.form.inc:967;1022 kw_djambi.theme.inc:207
 msgid "Sides"
 msgstr "Partis"
 
-#: kw_djambi.form.inc:904
+#: kw_djambi.form.inc:978
 msgid "!faction deaths"
 msgstr "Morts du parti !faction "
 
-#: kw_djambi.form.inc:911
+#: kw_djambi.form.inc:985
 msgid "!faction murders"
 msgstr "Meurtres du parti !faction"
 
-#: kw_djambi.form.inc:944
+#: kw_djambi.form.inc:1018
 msgid "Total"
 msgstr "Total"
 
-#: kw_djambi.form.inc:945
+#: kw_djambi.form.inc:1019
 msgid "Table of dead pieces"
 msgstr "Monument aux morts"
 
-#: kw_djambi.form.inc:951
+#: kw_djambi.form.inc:1025
 msgid "Distance"
 msgstr "Distance"
 
-#: kw_djambi.form.inc:952
+#: kw_djambi.form.inc:1026
 msgid "Rule length"
 msgstr "Durée du règne"
 
-#: kw_djambi.form.inc:953
+#: kw_djambi.form.inc:1027
 msgid "Play time"
 msgstr "Temps de jeu"
 
-#: kw_djambi.form.inc:954
+#: kw_djambi.form.inc:1028
 msgid "Average turn duration"
 msgstr "Durée moyenne du tour"
 
-#: kw_djambi.form.inc:954
+#: kw_djambi.form.inc:1028
 msgid "Avg t.d."
 msgstr "Tps moy."
 
-#: kw_djambi.form.inc:975
+#: kw_djambi.form.inc:1049
 msgid "!faction"
 msgstr "!faction"
 
-#: kw_djambi.form.inc:1011
+#: kw_djambi.form.inc:1085
 msgid "Table of moves"
 msgstr "Statistiques de déplacements"
 
-#: kw_djambi.form.inc:1333
+#: kw_djambi.form.inc:1407
 msgid "You are now playing the !color team."
 msgstr "Vous contrôlez actuellement le parti !color."
 
-#: kw_djambi.form.inc:1338
+#: kw_djambi.form.inc:1412
 msgid "This faction is used by an other player."
 msgstr "Ce parti est contrôlé par un autre joueur."
 
-#: kw_djambi.form.inc:1365
+#: kw_djambi.form.inc:1439
 msgid "You just left Djambi game #!nb"
 msgstr "Vous venez de quitter la partie de Djambi n°!nb."
 
-#: kw_djambi.form.inc:1382
+#: kw_djambi.form.inc:1456
 msgid "You do not own the !faction pieces."
 msgstr "Vous ne contrôllez pas les pièces du parti !faction."
 
-#: kw_djambi.form.inc:1391
+#: kw_djambi.form.inc:1465
 msgid "Unrecognized piece."
 msgstr "Pièce inconnue au bataillon."
 
-#: kw_djambi.form.inc:1399
+#: kw_djambi.form.inc:1473
 msgid "The piece !piece cannot move currently."
 msgstr "La pièce !piece ne peut pas être déplacée actuellement."
 
-#: kw_djambi.form.inc:1422
+#: kw_djambi.form.inc:1496
 msgid "You are not allowed to move !piece into !case case."
 msgstr "Vous ne pouvez pas déplacer la pièce !piece vers la case !case."
 
-#: kw_djambi.form.inc:1436
+#: kw_djambi.form.inc:1510
 msgid "Your victim seems to be already dead."
 msgstr "Votre victime semble déjà morte, dommage."
 
-#: kw_djambi.form.inc:1444
+#: kw_djambi.form.inc:1518
 msgid "You are not allowed to kill this piece."
 msgstr "Vous n'êtes pas autorisé à tuer cette pièce."
 
-#: kw_djambi.form.inc:1452
+#: kw_djambi.form.inc:1526
 msgid "You cannot place bury your victim here, case !case is unavailable."
 msgstr "Vous ne pouvez pas enterrer votre victime sur la case !case."
 
-#: kw_djambi.form.inc:1467
+#: kw_djambi.form.inc:1541
 msgid "The reportage location is totally incorrect."
 msgstr "Il n'y a aucun reportage à faire ici."
 
-#: kw_djambi.form.inc:1474
+#: kw_djambi.form.inc:1548
 msgid "There is nobody here (!case)."
 msgstr "Il n'y a personne sur la case !case."
 
-#: kw_djambi.form.inc:1482
+#: kw_djambi.form.inc:1556
 msgid "Already dead, too late for a reportage."
 msgstr "Il n'est pas possible de faire un reportage sur les morts."
 
-#: kw_djambi.form.inc:1490
+#: kw_djambi.form.inc:1564
 msgid "It is not a good idea to make a reportage about your own team evil actions."
 msgstr ""
 "Votre reportage a été censuré par les autorités dirigeantes de "
 "votre Parti."
 
-#: kw_djambi.form.inc:1504
+#: kw_djambi.form.inc:1578
 msgid "You cannot manipulate a dead piece (use a necromobil for this disgusting work)."
 msgstr ""
 "Vous ne pouvez pas manipuler un cadavre (utilisez un nécromobile pour "
 "ce travail répugnant)."
 
-#: kw_djambi.form.inc:1512
+#: kw_djambi.form.inc:1586
 msgid "You cannot manipulate this piece."
 msgstr "Vous ne pouvez pas manipuler cette pièce."
 
-#: kw_djambi.form.inc:1520
+#: kw_djambi.form.inc:1594
 msgid "You cannot place the manipulated piece here, case !case is unavailable."
 msgstr "Vous ne pouvez pas déplacer cette pièce sur la case !case."
 
-#: kw_djambi.form.inc:1534
+#: kw_djambi.form.inc:1608
 msgid "This dead body is still breathing..."
 msgstr "Ce n'est pas un cadavre..."
 
-#: kw_djambi.form.inc:1542
+#: kw_djambi.form.inc:1616
 msgid "You cannot place the dead piece here, case !case is unavailable."
 msgstr "Vous ne pouvez déplacer de cadavre sur la case !case."
 
-#: kw_djambi.form.inc:395
+#: kw_djambi.form.inc:418
 msgid "You can only skip your turn 1 time."
 msgid_plural "You can skip your turn only @count times"
 msgstr[0] ""
 "Vous pouvez passer votre tour uniquement une fois au cours de la "
 "partie."
-msgstr[1] ""
+msgstr[1] "Vous pouvez passer votre tour uniquement @count fois au cours de la partie."
 
-#: kw_djambi.form.inc:858
+#: kw_djambi.form.inc:932
 msgid "!pieces, with !nb exhumation"
 msgid_plural "!pieces, with !nb exhumations"
 msgstr[0] "!pieces, avec !nb exhumation."
 msgstr[1] "!pieces, avec !nb exhumations."
 
-#: kw_djambi.form.inc:868
+#: kw_djambi.form.inc:942
 msgid "!pieces, with !nb manipulated piece"
 msgid_plural "!pieces, with !nb manipulated pieces"
 msgstr[0] "!pieces avec !nb pièce manipulée."
@@ -648,15 +654,15 @@ msgstr "Joueur"
 msgid "!player, controlling all sides."
 msgstr "tous les partis sont contrôlés par le joueur !player"
 
-#: kw_djambi.theme.inc:209;418
+#: kw_djambi.theme.inc:209;419
 msgid "IP address"
 msgstr "Adresse IP"
 
-#: kw_djambi.theme.inc:210;419
+#: kw_djambi.theme.inc:210;420
 msgid "Ping"
 msgstr "Ping"
 
-#: kw_djambi.theme.inc:222;441
+#: kw_djambi.theme.inc:222;442
 msgid "Me !"
 msgstr "Moi !"
 
@@ -664,107 +670,107 @@ msgstr "Moi !"
 msgid "controlled by !faction"
 msgstr "contrôlé par le parti !faction"
 
-#: kw_djambi.theme.inc:243
+#: kw_djambi.theme.inc:244
 msgid "Turn #%turn"
 msgstr "Tour n°%turn"
 
-#: kw_djambi.theme.inc:254
+#: kw_djambi.theme.inc:255
 msgid "!color side"
 msgstr "parti !color"
 
-#: kw_djambi.theme.inc:259
+#: kw_djambi.theme.inc:260
 msgid "Playing next"
 msgstr "Prochains tours de jeu"
 
-#: kw_djambi.theme.inc:259
+#: kw_djambi.theme.inc:260
 msgid "!color1 side, then !color2 side, then !color3 side"
 msgstr "parti !color1, puis !color2, puis !color3"
 
-#: kw_djambi.theme.inc:268;272;294
+#: kw_djambi.theme.inc:269;273;295
 msgid "Current phase"
 msgstr "Phase de jeu actuelle"
 
-#: kw_djambi.theme.inc:294
+#: kw_djambi.theme.inc:295
 msgid "Draw asked by !faction side."
 msgstr "Nulle proposé par le parti !faction."
 
-#: kw_djambi.theme.inc:296
+#: kw_djambi.theme.inc:297
 msgid "Sides having accepted the draw"
 msgstr "Partis ayant accepté la nulle"
 
-#: kw_djambi.theme.inc:299
+#: kw_djambi.theme.inc:300
 msgid "Undecided sides"
 msgstr "Partis ne s'étant pas encore prononcé"
 
-#: kw_djambi.theme.inc:302
+#: kw_djambi.theme.inc:303
 msgid "Pending decision"
 msgstr "Décision en cours"
 
-#: kw_djambi.theme.inc:310;311
+#: kw_djambi.theme.inc:311;312
 msgid "Throne case !"
 msgstr "Labyrinthe"
 
-#: kw_djambi.theme.inc:348
+#: kw_djambi.theme.inc:349
 msgid "Recent events"
 msgstr "Evénements récents"
 
-#: kw_djambi.theme.inc:416
+#: kw_djambi.theme.inc:417
 msgid "Faction"
 msgstr "Parti"
 
-#: kw_djambi.theme.inc:417
+#: kw_djambi.theme.inc:418
 msgid "User"
 msgstr "Utilisateur"
 
-#: kw_djambi.theme.inc:420
+#: kw_djambi.theme.inc:421
 msgid "Waiting time"
 msgstr "En attente depuis"
 
-#: kw_djambi.theme.inc:421
+#: kw_djambi.theme.inc:422
 msgid "Action"
 msgstr "Action"
 
-#: kw_djambi.theme.inc:452
+#: kw_djambi.theme.inc:453
 msgid "Waiting for other players : !remaining"
 msgstr "En attente de nouveaux joueurs : !remaining"
 
-#: kw_djambi.theme.inc:455
+#: kw_djambi.theme.inc:456
 msgid "Unbegun game"
 msgstr "Parti non commencée"
 
-#: kw_djambi.theme.inc:496 kw_djambi.module:1129
+#: kw_djambi.theme.inc:497 kw_djambi.module:1136
 msgid "Waiting for new players..."
 msgstr "En attente de nouveaux joueurs..."
 
-#: kw_djambi.theme.inc:499
+#: kw_djambi.theme.inc:500
 msgid "Waiting for !side decision for !duration..."
 msgstr "En attente de la décision du parti !side depuis !duration..."
 
-#: kw_djambi.theme.inc:502
+#: kw_djambi.theme.inc:503
 msgid "Waiting for !side move for !duration..."
 msgstr "En attente d'un déplacement du parti !side depuis !duration..."
 
-#: kw_djambi.theme.inc:505
+#: kw_djambi.theme.inc:506
 msgid "Last update : !date"
 msgstr "Dernière mise à jour : !date"
 
-#: kw_djambi.theme.inc:546
+#: kw_djambi.theme.inc:547
 msgid "Show help for !piece piece"
 msgstr "Afficher l'aide concernant la pièce !piece"
 
-#: kw_djambi.theme.inc:550
+#: kw_djambi.theme.inc:551
 msgid "Show help for dead pieces"
 msgstr "Afficher l'aide concernant les pièces mortes"
 
-#: kw_djambi.theme.inc:553
+#: kw_djambi.theme.inc:554
 msgid "Show help for throne case"
 msgstr "Afficher l'aide concernant le Labyrinthe"
 
-#: kw_djambi.theme.inc:559;566
+#: kw_djambi.theme.inc:560;567
 msgid "Help"
 msgstr "Aide"
 
-#: kw_djambi.theme.inc:453
+#: kw_djambi.theme.inc:454
 msgid "1 empty slot remaining"
 msgid_plural "!nb empty slots remaining"
 msgstr[0] "@count place restante"
@@ -786,298 +792,298 @@ msgstr "Parties de Djambi"
 msgid "My Djambi games"
 msgstr "Mes parties de Djambi"
 
-#: kw_djambi.module:133
+#: kw_djambi.module:135
 msgid "Djambi game"
 msgstr "Partie de Djambi"
 
-#: kw_djambi.module:135
+#: kw_djambi.module:137
 msgid "Create a new machiavelli chess game."
 msgstr "Créer une nouvelle partie d'échecs de Machiavel."
 
-#: kw_djambi.module:147
+#: kw_djambi.module:149
 msgid "Begin game"
 msgstr "Démarrer la partie"
 
-#: kw_djambi.module:150
+#: kw_djambi.module:152
 msgid "Game presets"
 msgstr "Caractéristiques de la partie"
 
-#: kw_djambi.module:158
+#: kw_djambi.module:160
 msgid "Number of players"
 msgstr "Nombre de joueurs"
 
-#: kw_djambi.module:186
+#: kw_djambi.module:188
 msgid "Game mode"
 msgstr "Mode de jeu"
 
-#: kw_djambi.module:193
+#: kw_djambi.module:195
 msgid "Advanced options"
 msgstr "Options avancées"
 
-#: kw_djambi.module:252
+#: kw_djambi.module:254
 msgid "Do not autodelete this game"
 msgstr "Ne pas supprimer automatiquement cette partie"
 
-#: kw_djambi.module:253
+#: kw_djambi.module:255
 msgid "Finished or inactive games are automatically removed after an amount of time. Check this box to keep this game alive."
 msgstr ""
 "Les parties terminées ou inactives sont automatiquement supprimées "
 "après un certain délai. Cochez cette case pour conserver cette "
 "partie en base sans limite de durée."
 
-#: kw_djambi.module:273
+#: kw_djambi.module:275
 msgid "Machiavelli chess - Game #!i"
 msgstr "Echecs de Machiavel - Partie n°!i"
 
-#: kw_djambi.module:336
+#: kw_djambi.module:338
 msgid "We found a game still recruiting players. You may also !create_link."
 msgstr ""
 "Redirection vers une partie en phase de recrutement. Vous pouvez "
 "également !create_link."
 
-#: kw_djambi.module:337
+#: kw_djambi.module:339
 msgid "create your own new game"
 msgstr "créer une nouvelle partie"
 
-#: kw_djambi.module:417
+#: kw_djambi.module:419
 msgid "You have already begun a !game on !date.\n          This game does not seem to be finished :\n          switching back to the last played move of the game."
 msgstr ""
 "Vous avez déjà commencé une partie de type !game le !data. Cette "
 "partie n'est pas terminée : retour au dernier déplacement validé "
 "sur ce jeu."
 
-#: kw_djambi.module:425
+#: kw_djambi.module:427
 msgid "You are already involved in a !game which is in a recruiting phase : you cannot create a new game."
 msgstr ""
 "Vous avez déjà initié une partie de type !game qui se trouve en "
 "phase de recrutement de nouveaux joueurs : vous ne pouvez donc pas "
 "créer une nouvelle partie en ce moment."
 
-#: kw_djambi.module:639
+#: kw_djambi.module:641
 msgid "Last connection information sent by this player : !time"
 msgstr "Dernières informations concernant la connexion de ce joueur : !time"
 
-#: kw_djambi.module:800
+#: kw_djambi.module:802
 msgid "!color !longname"
 msgstr "!longname !color"
 
-#: kw_djambi.module:831
+#: kw_djambi.module:833
 msgid "!faction has moved !piece from !origin to !destination."
 msgstr ""
 "Le parti !faction a déplacé la pièce !piece de la case !origin vers "
 "la case !destination"
 
-#: kw_djambi.module:841
+#: kw_djambi.module:843
 msgid "!victim has been killed by !piece. The crime took place in !origin, and the victim body was found in !destination."
 msgstr ""
 "La pièce !victim a été tuée par la pièce !piece. Le crime a eu "
 "lieu sur la case !origin, et le cadavre de la victime a été "
 "retrouvée sur la case !destination."
 
-#: kw_djambi.module:850
+#: kw_djambi.module:852
 msgid "!piece has exhumed a dead body from !origin. Its new burial place is located in !destination."
 msgstr ""
 "La pièce !piece a exhumé un cadavre sur la case !origin, et l'a "
 "déplacé sur la case !destination."
 
-#: kw_djambi.module:859
+#: kw_djambi.module:861
 msgid "!victim has been manipulated by !piece from !origin to !destination."
 msgstr ""
 "La pièce !victim a été manipulée par la pièce !piece de la case "
 "!origin vers la case !destination"
 
-#: kw_djambi.module:868
+#: kw_djambi.module:870
 msgid "!victim has been eliminated from the game. The action took place in !origin."
 msgstr ""
 "La pièce !victim, placée sur la case !origin, a été éliminée de "
 "la partie."
 
-#: kw_djambi.module:1078
+#: kw_djambi.module:1085
 msgid "!piece is now the great and beloved ruler of the djambi world."
 msgstr ""
 "Le !piece est désormais le dirigeant suprême bien-aimé de "
 "l'échiquier de Machiavel."
 
-#: kw_djambi.module:1081
+#: kw_djambi.module:1088
 msgid "!piece's reign of despotism and terror is now over."
 msgstr "Le règne de terreur et despotisme du !piece est désormais terminé."
 
-#: kw_djambi.module:1084
+#: kw_djambi.module:1091
 msgid "!piece body has been exhumed from his mausoleum."
 msgstr "Le corps du !piece a été exhumé de son Mausolée."
 
-#: kw_djambi.module:1087
+#: kw_djambi.module:1094
 msgid "!piece has been killed during his reign !"
 msgstr "Le !piece a été tué durant son règne !"
 
-#: kw_djambi.module:1090
+#: kw_djambi.module:1097
 msgid "!piece body has been placed in the throne case mausoleum. Let's worship his memory."
 msgstr ""
 "Le cadavre de la pièce !piece a été placé dans le Mausolée du "
 "Labyrinthe, afin d'honorer sa mémoire."
 
-#: kw_djambi.module:1093
+#: kw_djambi.module:1100
 msgid "!piece has just achieved a diplomat golden move !"
 msgstr "Le !piece a réussi un coup de maître !"
 
-#: kw_djambi.module:1096
+#: kw_djambi.module:1103
 msgid "!piece has just achieved an assassin golden move !"
 msgstr "L'!piece a réussi un coup de maître !"
 
-#: kw_djambi.module:1099
+#: kw_djambi.module:1106
 msgid "New djambi chess game created."
 msgstr "Nouvelle partie de Djambi créée."
 
-#: kw_djambi.module:1102
+#: kw_djambi.module:1109
 msgid "!faction1 leader is surrounded by dead pieces and cannot access to power anymore."
 msgstr ""
 "Le chef du parti !faction1 est entouré de cadavres et ne peut plus "
 "accéder au pouvoir."
 
-#: kw_djambi.module:1105
+#: kw_djambi.module:1112
 msgid "End of the game !"
 msgstr "Fin de la partie !"
 
-#: kw_djambi.module:1108
+#: kw_djambi.module:1115
 msgid "This is a draw."
 msgstr "Match nul."
 
-#: kw_djambi.module:1111
+#: kw_djambi.module:1118
 msgid "!faction1 wins !!!"
 msgstr "Le parti !faction1 l'emporte !!!"
 
-#: kw_djambi.module:1114
+#: kw_djambi.module:1121
 msgid "!faction1 turn begins."
 msgstr "Le tour de jeu du parti !faction1 commence."
 
-#: kw_djambi.module:1117
+#: kw_djambi.module:1124
 msgid "Turn !turn begins."
 msgstr "Le tour !turn commence."
 
-#: kw_djambi.module:1120
+#: kw_djambi.module:1127
 msgid "!faction1 skipps his turn."
 msgstr "Le parti !faction1 a passé son tour."
 
-#: kw_djambi.module:1123
+#: kw_djambi.module:1130
 msgid "Sandbox game"
 msgstr "Partie bac-à-sable"
 
-#: kw_djambi.module:1126
+#: kw_djambi.module:1133
 msgid "Friendly game"
 msgstr "Partie amicale"
 
-#: kw_djambi.module:1132
+#: kw_djambi.module:1139
 msgid "recruiting"
 msgstr "en phase de recrutement"
 
-#: kw_djambi.module:1135
+#: kw_djambi.module:1142
 msgid "Game in progress..."
 msgstr "Partie en cours..."
 
-#: kw_djambi.module:1138
+#: kw_djambi.module:1145
 msgid "pending"
 msgstr "en cours"
 
-#: kw_djambi.module:1141
+#: kw_djambi.module:1148
 msgid "Game over !"
 msgstr "Partie terminée !"
 
-#: kw_djambi.module:1144
+#: kw_djambi.module:1151
 msgid "finished"
 msgstr "terminé"
 
-#: kw_djambi.module:1147
+#: kw_djambi.module:1154
 msgid "Peace negociation..."
 msgstr "Négociations de paix en cours..."
 
-#: kw_djambi.module:1150
+#: kw_djambi.module:1157
 msgid "negociating"
 msgstr "en cours de négociations"
 
-#: kw_djambi.module:1153
+#: kw_djambi.module:1160
 msgid "Sniper"
 msgstr "Assassin"
 
-#: kw_djambi.module:1156;1168
+#: kw_djambi.module:1163;1175
 msgid "Leader"
 msgstr "Chef"
 
-#: kw_djambi.module:1159
+#: kw_djambi.module:1166
 msgid "Necromobil"
 msgstr "Nécromobile"
 
-#: kw_djambi.module:1162
+#: kw_djambi.module:1169
 msgid "Diplomat"
 msgstr "Diplomate"
 
-#: kw_djambi.module:1165
+#: kw_djambi.module:1172
 msgid "Reporter"
 msgstr "Reporter"
 
-#: kw_djambi.module:1171
+#: kw_djambi.module:1178
 msgid "Militant #1"
 msgstr "Militant n°1"
 
-#: kw_djambi.module:1174
+#: kw_djambi.module:1181
 msgid "Militant #2"
 msgstr "Militant n°2"
 
-#: kw_djambi.module:1177
+#: kw_djambi.module:1184
 msgid "Militant #3"
 msgstr "Militant n°3"
 
-#: kw_djambi.module:1180
+#: kw_djambi.module:1187
 msgid "The desperate remaining !faction1 side's partisans are now joining the !faction2 side !"
 msgstr ""
 "Les partisans désespérés de la cause !faction1 ont rejoint la parti "
 "!faction2."
 
-#: kw_djambi.module:1183
+#: kw_djambi.module:1190
 msgid "The desperate remaining !faction1 side's partisans are no longing supporting the !faction2 side."
 msgstr ""
 "Les partisans désespérés e la cause !faction ne soutiennent plus le "
 "parti !faction2."
 
-#: kw_djambi.module:1186
+#: kw_djambi.module:1193
 msgid "Game over for !faction1 side !"
 msgstr "Fin du jeu pour le parti !faction1 !"
 
-#: kw_djambi.module:1189
+#: kw_djambi.module:1196
 msgid "The hopeless !faction1 leader decided to withdraw from the game. Shame on him.\n        His remaining pieces stay neutrally in the board, waiting for a better cause to support."
 msgstr ""
 "Les dirigeants du parti !faction1 ont décidé d'abandonner la parti. "
 "Honte à eux. Leurs pièces restantes restent sur l'échiquier, en "
 "attendant de rejoindre un meilleur parti à supporter."
 
-#: kw_djambi.module:1193
+#: kw_djambi.module:1200
 msgid "Red"
 msgstr "Rouge"
 
-#: kw_djambi.module:1196
+#: kw_djambi.module:1203
 msgid "Blue"
 msgstr "Bleu"
 
-#: kw_djambi.module:1199
+#: kw_djambi.module:1206
 msgid "Yellow"
 msgstr "Jaune"
 
-#: kw_djambi.module:1202
+#: kw_djambi.module:1209
 msgid "Green"
 msgstr "Vert"
 
-#: kw_djambi.module:1205
+#: kw_djambi.module:1212
 msgid "The !faction1 side has called for a draw."
 msgstr "Le parti !faction1 souhaite négocier un match nul."
 
-#: kw_djambi.module:1208
+#: kw_djambi.module:1215
 msgid "The !faction1 side accepted the draw proposal."
 msgstr "Le parti !faction1 a accepté le match nul."
 
-#: kw_djambi.module:1211
+#: kw_djambi.module:1218
 msgid "The !faction1 side rejected the draw proposal."
 msgstr "La parti !faction1 a rejeté le match nul."
 
-#: kw_djambi.module:1214
+#: kw_djambi.module:1221
 msgid "Sandbox game - you control successively all sides of the game.\n      Useful to discover the Djambi rules, to test alone new strategies,\n       or to play with other people on the same screen."
 msgstr ""
 "Parti de type bac-à-sable - vous contrôlez tous les partis du jeu à "
@@ -1085,67 +1091,67 @@ msgstr ""
 "Djambi, tester de nouvelles stratégies, ou jouer à plusieurs sur le "
 "même écran."
 
-#: kw_djambi.module:1219
+#: kw_djambi.module:1226
 msgid "Friendly game - play online Djambi games with unknown human players, just for fun."
 msgstr ""
 "Parti amicale - jouer en ligne au Djambi, avec des adversaires humains "
 "inconnus à trahir."
 
-#: kw_djambi.module:1222
+#: kw_djambi.module:1229
 msgid "4 players, on a standard (9x9) square grid"
 msgstr "4 joueurs, sur un échiquier standard (9x9 cases)"
 
-#: kw_djambi.module:1225
+#: kw_djambi.module:1232
 msgid "2 players, on a standard (9x9) square grid. Each side controls an additional vassalized faction."
 msgstr ""
 "2 joueurs, sur un échiquier standard (9x9 cases) - chaque camp "
 "contrôle un parti vassalisé additionnel"
 
-#: kw_djambi.module:1228
+#: kw_djambi.module:1235
 msgid "3 players, on a hexagonal grid"
 msgstr "3 joueurs, sur un échiquier hexagonal"
 
-#: kw_djambi.module:1231
+#: kw_djambi.module:1238
 msgid "The !faction1 leader is not surrounded anymore by dead pieces. It's a come back for !faction1 side !"
 msgstr ""
 "Le Chef du parti !faction1 n'est plus entouré par des cadavres. C'est "
 "un retour en jeu pour le camp !faction1 !"
 
-#: kw_djambi.module:1234
+#: kw_djambi.module:1241
 msgid "The !faction1 side got some new hope and is back in the game."
 msgstr ""
 "Regain d'espoir pour les partisans du camp !faction1, qui revient dans "
 "la partie."
 
-#: kw_djambi.module:1237
+#: kw_djambi.module:1244
 msgid "Leader surrounding rule"
 msgstr "Règle d'encerclement du Chef"
 
-#: kw_djambi.module:1240
+#: kw_djambi.module:1247
 msgid "Team vassalization rule"
 msgstr "Règle de satellisation des partis"
 
-#: kw_djambi.module:1243
+#: kw_djambi.module:1250
 msgid "Come-back possibilities rule"
 msgstr "Possibilités de retour dans la partie"
 
-#: kw_djambi.module:1246
+#: kw_djambi.module:1253
 msgid "Canibalism rule"
 msgstr "Autorisation de cannibalisation de son propre parti"
 
-#: kw_djambi.module:1249
+#: kw_djambi.module:1256
 msgid "Self manipulation rule"
 msgstr "Autorisation de manipulation de son propre parti"
 
-#: kw_djambi.module:1252
+#: kw_djambi.module:1259
 msgid "Press liberty rule"
 msgstr "Niveau de liberté de la presse"
 
-#: kw_djambi.module:1255
+#: kw_djambi.module:1262
 msgid "Throne case interactions rule"
 msgstr "Interactions étendues sur le Labyrinthe"
 
-#: kw_djambi.module:1258
+#: kw_djambi.module:1265
 msgid "A leader is eliminated if he is not occupying the throne case,\n      if he or his controlled adjacent pieces are surrounded by dead peaces (without empty cells)\n      even if he is still controlling a living necromobile."
 msgstr ""
 "Un Chef est éliminé s'il n'occupe pas le Labyrinthe, si lui ou les "
@@ -1153,7 +1159,7 @@ msgstr ""
 "aucune case libre restante), et ce même s'il possède encoure un "
 "Nécromobile en vie."
 
-#: kw_djambi.module:1263
+#: kw_djambi.module:1270
 msgid "A leader is eliminated if he is not occupying the throne case,\n      if he or his controlled adjacent pieces cannot move due to dead pieces barricade\n      and if he is not controlling a living necromobile."
 msgstr ""
 "Un Chef est éliminé s'il n'occupe pas le Labyrinthe, si lui ou les "
@@ -1161,7 +1167,7 @@ msgstr ""
 "de cadavres les entourant, et s'il ne possède plus de Nécromobile en "
 "vie."
 
-#: kw_djambi.module:1268
+#: kw_djambi.module:1275
 msgid "A leader is eliminated if the way to throne case is locked by dead pieces (even if he can still move)\n      and if he has no living necromobile among his controlled pieces."
 msgstr ""
 "Un chef est éliminé s'il ne peut plus atteindre le Labyrinthe à "
@@ -1169,184 +1175,192 @@ msgstr ""
 "déplacer), et s'il n'a plus de Nécromobile parmi ses pièces encore "
 "en vie."
 
-#: kw_djambi.module:1272
+#: kw_djambi.module:1279
 msgid "A player who acceeds to power gains control of the withdrawn or surrounded leaders sides just during the time of his reign."
 msgstr ""
 "Un joueur dont le chef accède au pouvoir gagne provisoirement le "
 "contrôle des pièces des joueurs ayant abandonné ou ayant un chef "
 "encerclé juste pendant le temps de l'occupation du Labyrinthe."
 
-#: kw_djambi.module:1275
+#: kw_djambi.module:1282
 msgid "A player who acceeds to power gains full control of the withdrawn or surrounded leaders sides until the end of the game,\n      even if he leaves the throne case."
 msgstr ""
 "Un joueur dont le chef accède au pouvoir gagne définitivement le "
 "contrôle des pièces des joueurs ayant abandonné ou ayant un chef "
 "encerclé, et ce même lorsqu'il quitte la Labyrinthe."
 
-#: kw_djambi.module:1279
+#: kw_djambi.module:1286
 msgid "No come-back."
 msgstr "Aucun retour possible."
 
-#: kw_djambi.module:1282
+#: kw_djambi.module:1289
 msgid "A player who had a surrounded leader can play again if his leader is not surrounded anymore, even if he is controlled by another team."
 msgstr ""
 "Un joueur ayant un chef encerclé peut rejouer si la barricade de "
 "cadavres l'empêchant de se déplacer vient à s'ébrêcher, et ce "
 "même si un autre joueur contrôle ses pièces."
 
-#: kw_djambi.module:1285
+#: kw_djambi.module:1292
 msgid "A player who had withdrawn or had a surrounded leader can play again if his leader is still alive, not surrounded and not controlled by an another team."
 msgstr ""
 "Un joueur ayant un chef encerclé peut rejouer si la barricade de "
 "cadavres l'empêchant de se déplacer vient à s'ébrêcher et si ses "
 "pièces n'ont pas encore été récupérées par un autre joueur."
 
-#: kw_djambi.module:1288
+#: kw_djambi.module:1295
 msgid "The end justifies the means. If needed, there will be sacrifices. They will remain in our memories."
 msgstr "La fin justifie les moyens. Si besoin, il y aura des sacrifices."
 
-#: kw_djambi.module:1291
+#: kw_djambi.module:1298
 msgid "No way, killing your own pieces is forbidden."
 msgstr "Pas question, tuer ses propres pièces est interdit."
 
-#: kw_djambi.module:1294
+#: kw_djambi.module:1301
 msgid "Responsible game : you cannot kill your own pieces and neutral pieces."
 msgstr ""
 "Partie moralement responsable : vous ne pouvez pas tuer vos propres "
 "pièces et les pièces neutres."
 
-#: kw_djambi.module:1297
+#: kw_djambi.module:1304
 msgid "Killing vassalized pieces may be possible."
 msgstr "Tuer les pièces de partis satellisés est possible."
 
-#: kw_djambi.module:1300
+#: kw_djambi.module:1307
 msgid "Your diplomats are never allowed to manipulate pieces that you are controlling."
 msgstr ""
 "Vos diplomates ne peuvent pas manipuler les pièces que vous "
 "contrôlez."
 
-#: kw_djambi.module:1303
+#: kw_djambi.module:1310
 msgid "Your diplomat can manipulate vassalized pieces."
 msgstr ""
 "Vos diplomates peuvent manipuler des pièces provenant de partis "
 "satellisés."
 
-#: kw_djambi.module:1306
+#: kw_djambi.module:1313
 msgid "Pradva style reporters : your reporters will never involve your own pieces in their scoops,\n      but they can eliminate one ennemy per move."
 msgstr ""
 "Reporters de la Pravda : ils ne peuvent pas impliquer des pièces "
 "amies dans leurs scandales, et sont limités à une seule victime par "
 "déplacement."
 
-#: kw_djambi.module:1310
+#: kw_djambi.module:1317
 msgid "Fox News style reporters : your reporters can involve several pieces in their moves,\n      but some scandals can also concern your own troups."
 msgstr ""
 "Reporters Fox News : ils peuvent impliquer plusieurs vicitimes par "
 "tour dans leurs scandales, mais ces derniers peuvent également "
 "concerner des pièces amies."
 
-#: kw_djambi.module:1314
+#: kw_djambi.module:1321
 msgid "Standard rules"
 msgstr "Règles normales"
 
-#: kw_djambi.module:1317
+#: kw_djambi.module:1324
 msgid "Extended rules : dead leaders can access to power posthumously, allow assassins and diplomats master moves."
 msgstr ""
 "Règles étendues : les cadavres de Chefs peuvent accéder au pouvoir "
 "de manière posthume, les assassins et les diplomates peuvent réussir "
 "des coups de maître."
 
-#: kw_djambi.module:1320
+#: kw_djambi.module:1327
 msgid "Turns before each draw proposal availability"
 msgstr "Tours avant la possibilité de proposer un match nul"
 
-#: kw_djambi.module:1323
+#: kw_djambi.module:1330
 msgid "No draw !"
 msgstr "Pas de match nul !"
 
-#: kw_djambi.module:1326
+#: kw_djambi.module:1333
 msgid "Unlimited draw proposal"
 msgstr "Pas de limitation"
 
-#: kw_djambi.module:1332
+#: kw_djambi.module:1339
 msgid "Allowed skipped turns per user before elimination"
 msgstr "Nombre de sauts de tours autorisés par joueurs avant élimination"
 
-#: kw_djambi.module:1335
+#: kw_djambi.module:1342
 msgid "Skipping turns is forbidden !"
 msgstr "Passer son tour est interdit !"
 
-#: kw_djambi.module:1338
+#: kw_djambi.module:1345
 msgid "No limits, you can always skip your turn."
 msgstr "Pas de limites, vous pouvez toujours passer votre tour."
 
-#: kw_djambi.module:1344
+#: kw_djambi.module:1351
 msgid "Allow anonymous players to join this game"
 msgstr "Autoriser des joueurs anonymes à rejoindre cette partie"
 
-#: kw_djambi.module:1347
+#: kw_djambi.module:1354
 msgid "Yes, anyone can join this game"
 msgstr "Oui, tout le monde peut participer à ce jeu."
 
-#: kw_djambi.module:1350
+#: kw_djambi.module:1357
 msgid "No, only registered users can play"
 msgstr "Non, seuls les utilisateurs disposant d'un compte peuvent jouer."
 
-#: kw_djambi.module:1353
+#: kw_djambi.module:1360
 msgid "playing"
 msgstr "tour de jeu en cours"
 
-#: kw_djambi.module:1356
+#: kw_djambi.module:1363
 msgid "winner"
 msgstr "vainqueur"
 
-#: kw_djambi.module:1359
+#: kw_djambi.module:1366
 msgid "draw"
 msgstr "égalité"
 
-#: kw_djambi.module:1362
+#: kw_djambi.module:1369
 msgid "killed"
 msgstr "tué"
 
-#: kw_djambi.module:1365
+#: kw_djambi.module:1372
 msgid "withdrawn"
 msgstr "abandon"
 
-#: kw_djambi.module:1368
+#: kw_djambi.module:1375
 msgid "surrounded"
 msgstr "encerclé"
 
-#: kw_djambi.module:1371
+#: kw_djambi.module:1378
 msgid "defect"
 msgstr "éliminé"
 
-#: kw_djambi.module:1374
+#: kw_djambi.module:1381
 msgid "empty"
 msgstr "vide"
 
-#: kw_djambi.module:1377
+#: kw_djambi.module:1384
 msgid "ready"
 msgstr "prêt à jouer"
 
-#: kw_djambi.module:1380
+#: kw_djambi.module:1387
 msgid "vassalized"
 msgstr "satellisé"
 
-#: kw_djambi.module:1383
+#: kw_djambi.module:1390
 msgid "!faction1 side is now controlled by !user"
 msgstr "Le parti !faction1 est désormais contrôlé par le joueur !user"
 
-#: kw_djambi.module:1386
+#: kw_djambi.module:1393
 msgid "!user left the game."
 msgstr "Le joueur !user a quitté la partie."
 
-#: kw_djambi.module:1329
+#: kw_djambi.module:122
+msgid "kw_djambi"
+msgstr "kw_djambi"
+
+#: kw_djambi.module:122
+msgid "Automatic deletion of Djambi games !nids"
+msgstr "Suppression automatique des parties de Djambi ayant les identifiants suivants : !nids"
+
+#: kw_djambi.module:1336
 msgid "!value time"
 msgid_plural "!value times"
 msgstr[0] "!value fois"
 msgstr[1] "!value fois"
 
-#: kw_djambi.module:1341
+#: kw_djambi.module:1348
 msgid "!value turn"
 msgid_plural "!value turns"
 msgstr[0] "!value tour"

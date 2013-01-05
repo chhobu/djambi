@@ -388,7 +388,7 @@ function _kw_djambi_list_user_games($nid = 0) {
   $q->condition('n.status', DjambiBattlefield::getStatuses(FALSE, TRUE, TRUE, FALSE));
   $q->condition('n.autodelete', time(), '>');
   $q->leftJoin('djambi_users', 'up', 'up.nid = n.nid AND up.status = :status',
-      array(':status' =>KW_DJAMBI_USER_PLAYING));
+      array(':status' => KW_DJAMBI_USER_PLAYING));
   $q->leftJoin('users', 'upu', 'upu.uid = up.uid');
   $q->fields('n', array('nid', 'status', 'mode', 'nb_moves', 'changed'));
   $q->addField('upu', 'name', 'playing_name');
@@ -474,8 +474,14 @@ function _kw_djambi_list_user_games($nid = 0) {
     );
   }
   elseif (empty($elements['playing'])) {
+    if ($grid && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+      $message = t('You are only involved in this sandbox djambi game.');
+    }
+    else {
+      $message = t('You are not currently playing any djambi game.');
+    }
     $elements['nogames'] = array(
-        '#markup' => '<p>' . t('You are not currently playing any djambi game.') . '</p>',
+        '#markup' => '<p>' . $message . '</p>',
         '#weight' => 1
     );
   }
