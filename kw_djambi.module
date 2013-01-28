@@ -895,8 +895,10 @@ function _kw_djambi_describe_event($event, DjambiBattlefield $grid) {
 /**
  * Vérifie si la faction passée en argument est contrôlée par l'utilisateur courant.
  */
-function _kw_djambi_check_current_user(DjambiPoliticalFaction $faction, $control = TRUE) {
-  global $user;
+function _kw_djambi_check_current_user(DjambiPoliticalFaction $faction, $control = TRUE, $user = NULL) {
+  if (is_null($user)) {
+    global $user;
+  }
   if ($control) {
     $user_data = $faction->getControl()->getUserData();
   }
@@ -925,11 +927,11 @@ function _kw_djambi_check_current_user(DjambiPoliticalFaction $faction, $control
 /**
  * Détermine si un utilisateur courant contrôle une faction
  */
-function _kw_djambi_get_user_faction(DjambiBattlefield $grid, $user) {
+function _kw_djambi_get_user_faction(DjambiBattlefield $grid, $user = NULL) {
   $current_user_faction = NULL;
   if (!$grid->isFinished()) {
     foreach ($grid->getFactions() as $faction) {
-      if (_kw_djambi_check_current_user($faction, FALSE)) {
+      if (_kw_djambi_check_current_user($faction, FALSE, $user)) {
         $current_user_faction = $faction;
       }
     }
@@ -950,10 +952,14 @@ function kw_djambi_game_form($form, &$form_state, $node) {
     $grid = $piece->getFaction()->getBattlefield();
   }
   else {
-    $grid = _kw_djambi_load_game($node->nid);
     if (isset($form_state['kw_djambi']['change_turn'])) {
+      $grid = _kw_djambi_load_game($node->nid, TRUE);
       unset($form_state['kw_djambi']);
     }
+    else {
+      $grid = _kw_djambi_load_game($node->nid);
+    }
+
   }
   module_load_include('inc', 'kw_djambi', 'kw_djambi.form');
   $form = _kw_djambi_build_game_form($form, $form_state, $grid);

@@ -120,7 +120,7 @@ span.faction {
   background: url(img/diplomat16.png) no-repeat 2px 50%;}
 .piece.assassin {
   background: url(img/assassin16.png) no-repeat 2px 50%;}
-.piece.reporter, a.view-djambi-game {
+.piece.reporter {
   background: url(img/reporter16.png) no-repeat 2px 50%;}
 .piece {
   padding: 0 2px 0 20px;

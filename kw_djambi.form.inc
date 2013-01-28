@@ -46,14 +46,14 @@ function _kw_djambi_build_game_form($form, &$form_state, DjambiBattlefield $grid
     );
     if ($grid->getMode() != KW_DJAMBI_MODE_SANDBOX || is_null($current_user_faction)) {
       $refresh = 'yes';
-      $form['grid']['controls']['resfresh'] = array(
+      $form['grid']['controls']['refresh'] = array(
           '#type' => 'submit',
           '#attributes' => array('class' => array('refresh-button')),
           '#value' => t('Refresh'),
           '#ajax' => $ajax_settings,
           '#weight' => 99,
           '#submit' => array('kw_djambi_game_form_refresh_submit'),
-          '#name' => 'ui'
+          '#name' => 'refresh'
       );
     }
   }
@@ -157,7 +157,7 @@ function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $curr
       if ($allow_anonymous || $user->uid > 0) {
         $form['grid']['factions'][$faction->getId()]['action'] = array(
           '#type' => 'submit',
-          '#name' => 'action',
+          '#name' => 'action-play-' . $faction->getId(),
           '#id' => 'action-play-' . $faction->getId(),
           '#value' => !is_null($current_user_faction) ? t('Play this side') : t('Join this game'),
           '#submit' => array('kw_djambi_game_form_participate_submit'),
@@ -1367,6 +1367,8 @@ function kw_djambi_game_form_refresh_submit($form, &$form_state) {
 function kw_djambi_game_form_participate_submit($form, &$form_state) {
   global $user;
   $grid = $form['#grid'];
+  $form_state['kw_djambi']['change_turn'] = TRUE;
+  $grid = _kw_djambi_load_game($grid->getId(), TRUE);
   if ($grid->getStatus() != KW_DJAMBI_STATUS_RECRUITING) {
     return;
   }
@@ -1379,8 +1381,8 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
     )), 'error');
     return;
   }
-  $clicked_button = $form_state['clicked_button']['#name'];
-  $faction_id = substr($clicked_button, 4);
+  $clicked_button = $form_state['clicked_button'];
+  $faction_id = $clicked_button['#array_parents'][2];
   $nb_empty_factions = 0;
   foreach ($grid->getFactions() as $faction) {
     if ($faction->getId() != $faction_id) {

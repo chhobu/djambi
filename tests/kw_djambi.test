@@ -1,45 +1,156 @@
 <?php
 class KwDjambiLiveTestCase extends DrupalWebTestCase {
-  public static function getInfo() {
-    return array(
-        'name' => t('Djambi automated game'),
-        'description' => t('Runs a Djambi sandbox game (using the current database) with random silly moves.'),
-        'group' => 'Djambi'
-    );
-  }
 
-  function setUp() {
+  protected function setUp() {
     $test_folder = 'djambi_test_' . date('YmdHis');
     $this->originalFileDirectory = variable_get('file_public_path', conf_path() . '/files');
     $this->public_files_directory = $this->originalFileDirectory;
     $this->setup = TRUE; // Attention, utilisation de la base "réelle"
   }
 
-  function tearDown() {
+  protected function tearDown() {
     // TODO nettoyer l'environnement de test
   }
 
-  function testRandomSandboxGame() {
-    // Création par un joueur anonyme d'une nouvelle partie
-    $disposals = DjambiBattlefield::getDispositions();
-    $edit['nb_players'] = array_rand($disposals);
-    $edit['mode'] = KW_DJAMBI_MODE_SANDBOX;
+  protected function djambiCreateGame($mode, $disposal, $options = array()) {
+    if (!empty($options)) {
+      foreach ($options as $key => $option) {
+        $edit[$key] = $option;
+      }
+    }
+    $edit['mode'] = $mode;
+    $edit['nb_players'] = $disposal;
     $this->drupalPost('node/add/kw-djambi', $edit, t('Begin game'));
-    $currentUrl = $this->getUrl();
     $nid = (int) current($this->xpath("//div[starts-with(@id,'DjambiContainer')]/@data-grid"));
     $node = node_load($nid);
     if (!$node || $node->type != 'kw_djambi') {
       $this->fail(t('Game creation failed !'));
-      return;
+      return FALSE;
     }
     $this->pass(t('Game creation OK. Current URL is : !url, current node ID is : !nid',
-        array('!url' => $currentUrl, '!nid' => $nid)));
+        array('!url' => $this->getUrl(), '!nid' => $nid)));
     $this->assertNoDuplicateIds(t('No duplicate IDs in the game main interface.'));
+    return $node;
+  }
+
+  protected function djambiLoadUser($name, $permissions = array()) {
+    $account = user_load_by_name($name);
+    if (!$account) {
+      // Create a role with the given permission set, if any.
+      $rid = FALSE;
+      if ($permissions) {
+        $rid = $this->drupalCreateRole($permissions);
+        if (!$rid) {
+          return FALSE;
+        }
+      }
+      // Create a user assigned to that role.
+      $edit = array();
+      $edit['name']   = $name;
+      $edit['mail']   = $edit['name'] . '@djambi.net';
+      $edit['pass']   = user_password();
+      $edit['status'] = 1;
+      if ($rid) {
+        $edit['roles'] = array($rid => $rid);
+      }
+      $account = user_save(drupal_anonymous_user(), $edit);
+      $this->assertTrue(!empty($account->uid), t('User created with name %name and pass %pass', array('%name' => $edit['name'], '%pass' => $edit['pass'])), t('User login'));
+      if (empty($account->uid)) {
+        return FALSE;
+      }
+      // Add the raw password so that we can log in as this user.
+      $account->pass_raw = $edit['pass'];
+    }
+    else {
+      $edit['pass'] = user_password();
+      $account = user_save($account, $edit);
+      $account->pass_raw = $edit['pass'];
+    }
+    return $account;
+  }
+
+  protected function djambiLogin($user) {
+    if ($this->loggedInUser && isset($this->loggedInUser->session)) {
+      $this->loggedInUser->session->url = $this->url;
+      $this->loggedInUser->session->content = $this->content;
+      $this->loggedInUser->session->drupalSettings = $this->drupalSettings;
+      $this->loggedInUser->session->curlHandle = $this->curlHandle;
+    }
+    if (!empty($this->curlHandle)) {
+      unset($this->curlHandle);
+      $this->loggedInUser = FALSE;
+    }
+     $this->drupalLogin($user);
+     // Save the user's session on the account itself.
+     if (!isset($user->session)) {
+        $user->session = new stdClass;
+     }
+     $user->session->curlHandle = $this->curlHandle;
+     // Switch the currently logged in user.
+     $this->loggedInUser = $user;
+  }
+
+  protected function djambiSwitchUser($account) {
+    if ($this->loggedInUser->uid == $account->uid) {
+      return TRUE;
+    }
+    if (isset($this->loggedInUser->session)) {
+      $this->loggedInUser->session->url = $this->url;
+      $this->loggedInUser->session->content = $this->content;
+      $this->loggedInUser->session->drupalSettings = $this->drupalSettings;
+      $this->loggedInUser->session->curlHandle = $this->curlHandle;
+    }
+    if (isset($account->session)) {
+      // Switch to the user session.
+      $this->loggedInUser = $account;
+      $this->curlHandle = $account->session->curlHandle;
+      $this->drupalSetContent($account->session->content, $account->session->url);
+      return TRUE;
+    }
+    return FALSE;
+  }
+
+  protected function djambiLogout() {
+    $account = $this->loggedInUser;
+    if (isset($account->session->curlHandle)) {
+      curl_close($account->session->curlHandle);
+      unset($account->session);
+    }
+    $this->drupalLogout();
+  }
+
+  protected function assertDjambiGameInformations($testing_element, $testing_value) {
+    $xml_element = current($this->xpath("//div[starts-with(@id,'DjambiContainer')]"));
+    if (!is_object($xml_element)) {
+      $this->fail(t("Djambi container not found."));
+      return FALSE;
+    }
+    $xml_element_attributes = $xml_element->attributes();
+    if (isset($xml_element_attributes['data-' . $testing_element])) {
+      if (is_numeric($testing_value)) {
+        $html_value = (int) $xml_element_attributes['data-' . $testing_element];
+      }
+      else {
+        $html_value = (String) $xml_element_attributes['data-' . $testing_element];
+      }
+    }
+    if (isset($html_value) && $html_value == $testing_value) {
+      $this->pass(t("Variable %element OK (!turn).", array('%element' => $testing_element, '!turn' => $html_value)));
+      return TRUE;
+    }
+    else {
+      $this->fail(t("Variable %element mismatch (correct value : !turn_id / test value : !turn_html).",
+          array('%element' => $testing_element, '!turn_id' => (isset($html_value) ? $html_value : '?'), '!turn_html' => $testing_value)));
+      return FALSE;
+    }
+  }
+
+  private function simulateGame($node, $factions_map = array(), $turns = 100) {
     $finished = FALSE;
-    for ($i = 0; $i < 100; $i++) {
+    for ($i = 0; $i < $turns; $i++) {
       // Chargement de la datagrid
       /* @var $grid DjambiBattlefield */
-      $grid = _kw_djambi_load_game($nid, TRUE);
+      $grid = _kw_djambi_load_game($node->nid, TRUE);
       if (!$grid) {
         $this->fail(t("Fail to load Djambi game."));
         return;
@@ -50,28 +161,26 @@ class KwDjambiLiveTestCase extends DrupalWebTestCase {
         break;
       }
       // Vérification de la correspondance concernant le tour de jeu
-      $xml_element = current($this->xpath("//div[starts-with(@id,'DjambiContainer')]"));
-      $xml_element_attributes = $xml_element->attributes();
-      if (isset($xml_element_attributes['data-turn'])) {
-        $current_turn_html = (int) $xml_element_attributes['data-turn'];
-      }
-      if (isset($current_turn_html) && $current_turn_html == $i) {
-        $this->pass(t("Turn ID OK (!turn).", array('!turn' => $current_turn_html)));
-      }
-      else {
-        $this->fail(t("Turn ID mismatch (correct value : !turn_id / test value : !turn_html).",
-            array('!turn_id' => (isset($current_turn_html) ? $current_turn_html : '?'), '!turn_html' => $i)));
-      }
+      $this->assertDjambiGameInformations('turn', $i);
       // Contrôle des pièces déplaçables
       /* @var $faction DjambiPoliticalFaction */
       $faction = $grid->getPlayingFaction();
+      if (!empty($factions_map)) {
+        $this->djambiSwitchUser($factions_map[$faction->getId()]);
+        $this->drupalGet('node/' . $node->nid);
+      }
+      else {
+        $this->verbose($this->drupalGetContent());
+      }
       $pieces = $faction->getControlledPieces();
       /* @var $piece DjambiPiece */
       $movable_pieces = array();
       foreach ($pieces as $piece_id => $piece) {
         if ($piece->isMovable()) {
-          $movable_pieces[] = $piece;
-          $this->assertFieldByName('selection-' . $piece->getId(), NULL, t("The piece !name is selectable.", array('!name' => _kw_djambi_get_full_piece_name($piece)))); // Vérification de la présence des pièces déplaçables
+          $test = $this->assertFieldByName('selection-' . $piece->getId(), NULL, t("The piece !name is selectable.", array('!name' => _kw_djambi_get_full_piece_name($piece)))); // Vérification de la présence des pièces déplaçables
+          if ($test) {
+            $movable_pieces[] = $piece;
+          }
         }
       }
       if (empty($movable_pieces)) {
@@ -130,5 +239,109 @@ class KwDjambiLiveTestCase extends DrupalWebTestCase {
     if ($finished) {
       // TODO contrôles supplémentaires sur la fin de jeu
     }
+  }
+
+  protected function djambiPlaySandboxGame($disposal, $options = array()) {
+    // Création par un joueur anonyme d'une nouvelle partie
+    $node = $this->djambiCreateGame(KW_DJAMBI_MODE_SANDBOX, $disposal, $options);
+    if (!$node) {
+      return;
+    }
+    $this->simulateGame($node);
+  }
+
+  protected function djambiPlayFriendlyGame($disposal, $options = array()) {
+    $test_users = array('sun-tzu', 'von-klausewitz', 'kissinger', 'nash', 'gracian', 'mazarin', 'richelieu', 'gwbush');
+    shuffle($test_users);
+    $disposals = DjambiBattlefield::getDispositions();
+    $players = $disposals[$disposal]['nb'];
+    $users = array();
+    for ($i = 0; $i < $players; $i++) {
+      $users[] = $this->djambiLoadUser($test_users[$i]);
+    }
+    $factions_map = array();
+    foreach ($users as $key => $user) {
+      $this->djambiLogin($user);
+      if ($key == 0) {
+        $node = $this->djambiCreateGame(KW_DJAMBI_MODE_FRIENDLY, $disposal, $options);
+        if (!$node) {
+          return;
+        }
+        $current_url = $this->getUrl();
+        $alias = drupal_lookup_path('alias', 'node/' . $node->nid);
+        $grid = _kw_djambi_load_game($node->nid);
+        $factions = $grid->getFactions();
+        $this->assertDjambiGameInformations('status', KW_DJAMBI_STATUS_RECRUITING);
+        $empty_factions = array();
+        $default_faction = _kw_djambi_get_user_faction($grid, $user);
+        if (is_null($default_faction)) {
+          $this->fail(t("The current user doesn't control any faction."));
+          return;
+        }
+        foreach ($factions as $faction) {
+          if ($faction->getStatus() == KW_DJAMBI_USER_EMPTY_SLOT) {
+            $empty_factions[] = $faction->getId();
+          }
+        }
+        $new_faction = array_rand($empty_factions);
+        $this->drupalPostAJAX(NULL, array(), 'action-play-' . $empty_factions[$new_faction]);
+        $this->assertDjambiGameInformations('user-faction', $empty_factions[$new_faction]);
+        $factions_map[$empty_factions[$new_faction]] = $user;
+        unset($empty_factions[$new_faction]);
+        $empty_factions[] = $default_faction->getId();
+      }
+      else {
+        if ($key == 1) {
+          $this->drupalGet('<front>');
+          $this->assertLinkByHref($alias, 0, t("A link to current testing djambi game is shown in front page."));
+          $shortcut = 'jeu';
+          $this->drupalGet($shortcut);
+          $this->assertUrl($current_url, array(), t("Shortcurt @shortcut leads to the latest recruiting game.", array("@shortcut" => $shortcut)));
+        }
+        else {
+          $this->drupalGet($current_url);
+        }
+        $new_faction = array_rand($empty_factions);
+        $this->drupalPostAJAX(NULL, array(), 'action-play-' . $empty_factions[$new_faction]);
+        $this->assertDjambiGameInformations('user-faction', $empty_factions[$new_faction]);
+        $factions_map[$empty_factions[$new_faction]] = $user;
+        unset($empty_factions[$new_faction]);
+      }
+    }
+    // Vérification du changement de statut de la partie...
+    $this->assertDjambiGameInformations('status', KW_DJAMBI_STATUS_PENDING);
+    $this->simulateGame($node, $factions_map);
+  }
+}
+
+class KwDjambiTestSandboxGame extends KwDjambiLiveTestCase {
+  public static function getInfo() {
+    return array(
+        'name' => t('Djambi automated sandbox game'),
+        'description' => t('Runs a Djambi sandbox game (using the current database) with random silly moves.'),
+        'group' => 'Djambi'
+    );
+  }
+
+  public function testRandomSandboxGame() {
+    $disposals = DjambiBattlefield::getDispositions();
+    $disposal = array_rand($disposals);
+    $this->djambiPlaySandboxGame($disposal);
+  }
+}
+
+class KwDjambiTestFriendlyGame extends KwDjambiLiveTestCase {
+  public static function getInfo() {
+    return array(
+        'name' => t('Djambi automated friendly game'),
+        'description' => t('Runs a Djambi friendly game (using the current database and auto-generated testing users) with random silly moves.'),
+        'group' => 'Djambi'
+    );
+  }
+
+  public function testRandomFriendlyGame() {
+    $disposals = DjambiBattlefield::getDispositions();
+    $disposal = array_rand($disposals);
+    $this->djambiPlayFriendlyGame($disposal);
   }
 }

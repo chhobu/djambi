@@ -13,7 +13,7 @@ function _kw_djambi_list_games() {
           'title' => t('Create a new friendly game'),
           'href' => 'node/add/kw-djambi',
           'query' => array('mode' => KW_DJAMBI_MODE_FRIENDLY),
-          'attributes' => array('class' => array('add-djambi-game'))
+          'attributes' => array('class' => array('icon militant'))
       );
     }
   }
@@ -74,11 +74,7 @@ function _kw_djambi_list_recruiting_games($modes = NULL, $item_id = NULL) {
   $grid->addField('ready_slots', 'du2');
   $grid->addExpression('total_slots', 'du1.empty_slots + du2.ready_slots');
   $grid->addColumn('playing', t('Slots'), ':ready_slots/:total_slots', array(
-      'header' => theme('image', array(
-          'path' => drupal_get_path('module', 'kw_djambi') . '/img/users.png',
-          'alt' => t('Slots'),
-          'title' => t('Slots')
-      )),
+      'header' => '<abbr title="Number of human players" class="icon users"></abbr>'
   ));
   $grid->addColumn('created', t('Created since'), ':created_date', array(
       'expression' => 'UNIX_TIMESTAMP() - dn.begin'
@@ -166,11 +162,7 @@ function _kw_djambi_list_viewable_games($modes = NULL, $item_id = NULL) {
       'args' => array(':mode', $mode_choices)
   ));
   $grid->addColumn('nb_players', t('Players'), '<div class="digit">:nb_players</div>', array(
-      'header' => theme('image', array(
-          'path' => drupal_get_path('module', 'kw_djambi') . '/img/users.png',
-          'alt' => t('Players'),
-          'title' => t('Players')
-      )),
+      'header' => '<abbr title="Number of human players" class="icon users"></abbr>',
       'field' => 'pl.slots',
       'filtrable' => KW_FILTRABLE_NUM,
       'filtrable_options' => array('choices' => DjambiBattlefield::getDispositions('nb'))
@@ -233,6 +225,7 @@ function _kw_djambi_list_viewable_games($modes = NULL, $item_id = NULL) {
       )
   ));
   $grid->addColumn('moves', t('Moves'), '<div class="digit">:moves</div>', array(
+      'header' => "<abbr title='". t("Number of played moves") . "' class='icon bars'></abbr>",
       'field' => 'dn.nb_moves',
       'sortable' => TRUE
   ));
@@ -288,26 +281,26 @@ function _kw_djambi_list_build_actions_link($row) {
   if ($row->status == KW_DJAMBI_STATUS_RECRUITING) {
     if (isset($row->with_me) && $row->with_me) {
       $label = t('Return to this game');
-      $classes = array('play-djambi-game');
+      $classes = array('icon enter');
     }
     else {
       $label = t('Join this game');
-      $classes = array('play-djambi-game');
+      $classes = array('icon signup');
     }
   }
   elseif ($row->status != KW_DJAMBI_STATUS_FINISHED) {
     if (isset($row->with_me) && $row->with_me) {
       $label = t('Play this game');
-      $classes = array('play-djambi-game');
+      $classes = array('icon signup');
     }
     else {
       $label = t('Watch this game');
-      $classes = array('view-djambi-game');
+      $classes = array('icon eye-open');
     }
   }
   else {
     $label = t('View game result');
-    $classes = array('view-djambi-game');
+    $classes = array('icon play');
   }
   $output = l($label, 'node/' . $row->nid, array('attributes' => array('class' => $classes)));
   return $output;
@@ -474,7 +467,7 @@ function _kw_djambi_list_user_games($nid = 0) {
     );
   }
   elseif (empty($elements['playing'])) {
-    if ($grid && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+    if ($grid && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX && !$grid->isFinished() && $user_faction) {
       $message = t('You are only involved in this sandbox djambi game.');
     }
     else {
@@ -494,7 +487,7 @@ function _kw_djambi_list_user_games($nid = 0) {
         'title' => t('Play a new Djambi game'),
         'href' => 'djambi',
         'rel' => 'nofollow',
-        'attributes' => array('class' => array('add-djambi-game'))
+        'attributes' => array('class' => array('icon militant'))
       );
     }
   }
