@@ -92,7 +92,7 @@ msgstr "Coups"
 
 #: kw_djambi.blocks.inc:228
 msgid "Number of played moves"
-msgstr "Nombre de coups joués"
+msgstr ""
 
 #: kw_djambi.blocks.inc:238
 msgid "Winner"
@@ -128,7 +128,7 @@ msgstr "Revoir cette partie"
 
 #: kw_djambi.blocks.inc:360
 msgid "You are playing the !faction side in this game."
-msgstr "Vous contrôllez le parti !faction dans ce jeu."
+msgstr ""
 
 #: kw_djambi.blocks.inc:415
 msgid "Status : !status"
@@ -152,7 +152,7 @@ msgstr "Actuellement en train de jouer : !faction (!player), depuis !duration"
 
 #: kw_djambi.blocks.inc:471
 msgid "You are only involved in this sandbox djambi game."
-msgstr "Vous disputez actuellement une seule partie de Djambi."
+msgstr ""
 
 #: kw_djambi.blocks.inc:474
 msgid "You are not currently playing any djambi game."
