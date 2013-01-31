@@ -2,6 +2,7 @@
 class KwDjambiLiveTestCase extends DrupalWebTestCase {
 
   protected function setUp() {
+    drupal_set_time_limit($this->timeLimit);
     $test_folder = 'djambi_test_' . date('YmdHis');
     $this->originalFileDirectory = variable_get('file_public_path', conf_path() . '/files');
     $this->public_files_directory = $this->originalFileDirectory;
@@ -10,6 +11,10 @@ class KwDjambiLiveTestCase extends DrupalWebTestCase {
 
   protected function tearDown() {
     // TODO nettoyer l'environnement de test
+  }
+
+  protected function drupalGetContent() {
+    return mb_convert_encoding($this->content, 'HTML-ENTITIES', "UTF-8");;
   }
 
   protected function djambiCreateGame($mode, $disposal, $options = array()) {
