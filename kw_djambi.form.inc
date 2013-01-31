@@ -687,8 +687,8 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
           ));
           $form["pieces"]["throne_evacuation"]["cell-" . $position] = array(
               "#type" => "image_button",
-              '#name' => 'target-' . $cell,
-              '#id' => 'target-' . $cell,
+              '#name' => 'target-' . $position,
+              '#id' => 'target-' . $position,
               "#return_value" => $position,
               "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/apply.png",
               '#attributes' => array(
