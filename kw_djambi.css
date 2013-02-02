@@ -480,13 +480,10 @@ ul.cases li:hover img, ul.cases li:hover span.piece, ul.cases li a:focus img, ul
   padding-top: 1460px;}
 .machiavel {
   border-radius: 0.5em 1em 0.5em 1em;
-  box-shadow: 2px 2px 2px #999;
   background-color: #EEEEEE;
   background-image: url("img/machiavel.png");
   background-position: -6px -6px;
   background-repeat: no-repeat;
-  border: 3px solid #999;
-  font-variant: small-caps;
   font-weight: bold;
   min-height: 25px;
   padding: 0.5em 1em 0.5em 60px;}
