@@ -158,7 +158,7 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
     $form['basics']['nb_players'] = array(
         '#type' => 'radios',
         '#title' => t('Number of players'),
-        '#default_value' => '4std',
+        '#default_value' => isset($nb_players_options['4std']) ? '4std' : key($nb_players_options),
         '#options' => $nb_players_options,
         '#required' => TRUE
     );
@@ -186,7 +186,7 @@ function kw_djambi_form_kw_djambi_node_form_alter(&$form, &$form_state) {
     $form['basics']['mode'] = array(
       '#type' => 'radios',
       '#title' => t('Game mode'),
-      '#default_value' => $default_mode,
+      '#default_value' => isset($mode_options[$default_mode]) ? $default_mode : key($mode_options),
       '#options' => $mode_options,
       '#required' => TRUE
     );
@@ -895,7 +895,10 @@ function _kw_djambi_describe_event($event, DjambiBattlefield $grid) {
 /**
  * Vérifie si la faction passée en argument est contrôlée par l'utilisateur courant.
  */
-function _kw_djambi_check_current_user(DjambiPoliticalFaction $faction, $control = TRUE, $user = NULL) {
+function _kw_djambi_check_current_user($faction, $control = TRUE, $user = NULL) {
+  if (!$faction) {
+    return FALSE;
+  }
   if (is_null($user)) {
     global $user;
   }

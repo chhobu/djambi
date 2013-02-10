@@ -9,6 +9,7 @@ function theme_djambi_grid($variables) {
   $grid = $form["#grid"];
   $form_pieces = NULL;
   $current_form_action = NULL;
+  $selected_piece = NULL;
   $has_destination_layer = FALSE;
   $display_changes = TRUE;
   $display_events = TRUE;
@@ -137,20 +138,43 @@ function theme_djambi_grid($variables) {
         $extra_classes[] = "with-movable-piece";
         $moves = $piece->getAllowableMoves();
       }
-      if (isset($form_pieces[$current_form_action]) && isset($form_pieces[$current_form_action]["#selected_piece_id"]) && $piece->getId() == $form_pieces[$current_form_action]["#selected_piece_id"]) {
+      $is_selected = isset($form_pieces[$current_form_action]) && isset($form_pieces[$current_form_action]["#selected_piece_id"])
+        && $piece->getId() == $form_pieces[$current_form_action]["#selected_piece_id"];
+      if ($is_selected) {
         $extra_classes[] = "with-selected-piece";
-        if (isset($helps[$piece->getType()])) {
+        if ($current_form_action == 'murder') {
+          $form["textes"]["phase"]["#markup"] .= ' [' . $helps['cadavre'] . ']';
+        }
+        elseif (isset($helps[$piece->getType()])) {
           $form["textes"]["phase"]["#markup"] .= ' [' . $helps[$piece->getType()] . ']';
         }
       }
-      $row_inner_html .= "<div class='piece " . (!$piece->isAlive() ? "dead "
-      : "alive " . $piece->getType() . " " . ($faction->getControl()->isAlive() ? $faction->getControl()->getClass() . '-control ' : '')
-          . $faction->getClass() . '-origin')
-      . (isset($form_pieces["movable"]) && $piece->isMovable() ? " movable" : " unmovable") . "' "
-      . (isset($form_pieces["movable"]) && $piece->isMovable() ? ' data-moves="' . implode(' ', $moves) . '"' : '')
-      . "title=\"" . ($piece->isAlive() ? (_kw_djambi_get_full_piece_name($piece) . (!$piece->isMovable() ? " - "
-          . t("this piece can be moved during this turn") : "")) : t("Here lies a dead piece")) . "\""
-          . ">";
+      $classes = array('piece');
+      $data_moves = NULL;
+      if (!$piece->isAlive()) {
+        $classes[] = 'dead';
+        $piece_name =  t("Here lies a dead piece");
+      }
+      else {
+        $piece_name = _kw_djambi_get_full_piece_name($piece);
+        $classes[] = 'alive';
+        $classes[] = $piece->getType();
+        $classes[] = $faction->getClass() . '-origin';
+        if ($faction->getControl()->isAlive()) {
+          $classes[] = $faction->getControl()->getClass() . '-control';
+        }
+        if (isset($form_pieces["movable"]) && $piece->isMovable()) {
+          $classes[] = 'movable';
+          $piece_name .= " - " . t("this piece can be moved during this turn");
+          $data_moves = 'data-moves="' . implode(' ', $moves) . '" ';
+        }
+        else {
+          $classes[] = 'unmovable';
+        }
+      }
+      $row_inner_html .= "<div class='" . implode(' ', $classes) . "' "
+      . (!is_null($data_moves) ? $data_moves : '')
+      . "title=\"" . $piece_name  . "\">";
       if (!$piece->isAlive()) {
         $row_inner_html .= "<abbr title=\"" . t("Dead") . "\">†</abbr>";
       }
@@ -168,6 +192,28 @@ function theme_djambi_grid($variables) {
             . $piece->getId() . "</abbr></span>";
       }
       $row_inner_html .= "</div>";
+      if ($is_selected) {
+        if (in_array($current_form_action, array('murder', 'necromobility'))) {
+          $row_inner_html .= "<div class='piece dead positionable' title=\""
+            . t("Dead piece, waiting for you to bury somewhere.") . "\"><abbr title=\""
+            . t("Dead") . "\">†</abbr></div>";
+        }
+        elseif ($current_form_action == 'manipulation') {
+          $manipulated_piece = $grid->getPieceById($form["pieces"]["manipulation"]["#target_piece_id"]);
+          $classes = array('piece', 'alive', 'positionable');
+          $piece_name = _kw_djambi_get_full_piece_name($manipulated_piece);
+          $classes[] = 'alive';
+          $classes[] = $manipulated_piece->getType();
+          $classes[] = $manipulated_piece->getFaction()->getClass() . '-origin';
+          if ($manipulated_piece->getFaction()->getControl()->isAlive()) {
+            $classes[] = $manipulated_piece->getFaction()->getControl()->getClass() . '-control';
+          }
+          $title = t("Move the manipulated !piece_name in an empty cell", array('!piece' => $piece_name));
+          $row_inner_html .= "<div class='" . implode(' ', $classes) . "' title=\"" . $title . "\">"
+              . "<img src=\"/" . $manipulated_piece->getImage() . "\" alt=\"" . $piece_name . "\" />"
+              . "</div>";
+        }
+      }
       if ($show_help && $piece->isAlive() && isset($helps[$piece->getType()])) {
         $row_inner_html .= ' <span class="help-link">' . $helps[$piece->getType()] . '</span>';
       }

@@ -38,13 +38,7 @@ function _kw_djambi_build_game_form($form, &$form_state, DjambiBattlefield $grid
       '#title' => t('Djambi grid #!number', array('!number' => $grid->getInfo('sequence'))),
       '#weight' => 0,
   );
-  if (!$grid->isFinished()) {
-    $form['grid']['controls'] = array(
-        '#type' => 'container',
-        '#attributes' => array('class' => array('controls')),
-        '#weight' => 10
-    );
-    if ($grid->getMode() != KW_DJAMBI_MODE_SANDBOX || is_null($current_user_faction)) {
+  if (!$grid->isFinished() && $grid->getMode() != KW_DJAMBI_MODE_SANDBOX || is_null($current_user_faction)) {
       $refresh = 'yes';
       $form['grid']['controls']['refresh'] = array(
           '#type' => 'submit',
@@ -55,7 +49,6 @@ function _kw_djambi_build_game_form($form, &$form_state, DjambiBattlefield $grid
           '#submit' => array('kw_djambi_game_form_refresh_submit'),
           '#name' => 'refresh'
       );
-    }
   }
   $form['#prefix'] = '<div id="DjambiContainer' . $grid->getId() . '" class="djambi"'
   . ' data-grid="' . $grid->getId() . '" data-version="' . $grid->getInfo('changed') . '"'
@@ -108,6 +101,12 @@ function _kw_djambi_build_game_form($form, &$form_state, DjambiBattlefield $grid
   // Afichage des stats
   if (!empty($form['stats'])) {
     _kw_djambi_build_part_stats($form, $grid);
+  }
+  // Ajout des conteneurs si besoin
+  if (isset($form['grid']['controls'])) {
+    $form['grid']['controls']['#type'] = 'container';
+    $form['grid']['controls']['#attributes'] = array('class' => array('controls'));
+    $form['grid']['controls']['#weight'] = 10;
   }
   // Redirection
   $form["#action"] = "#DjambiGrid" . $grid->getId();
@@ -182,7 +181,39 @@ function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $curr
 function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlefield $grid, $faction, $ajax_settings) {
   $current_turn_id = $grid->getCurrentTurnId();
   $show_moves = array('show' => FALSE);
-  if ($grid->isPending()) {
+  $ui_buttons = array(
+    '#type' => 'submit',
+    '#name' => 'ui',
+    '#limit_validation_errors' => array(),
+    '#ajax' => $ajax_settings
+  );
+  // FIXME à supprimer lors de la mise en place du "ralenti"
+  $show_history = FALSE;
+  if ($show_history && $grid->isFinished()) {
+    if (!isset($form_state['replay'])) {
+      $form['grid']['controls']['replay'] = array_merge($ui_buttons, array(
+        '#id' => 'ui-replay',
+        '#value' => t('Watch all moves'),
+        '#submit' => array('kw_djambi_game_form_replay_submit'),
+      ));
+    }
+    else {
+      if ($form_state['replay'] > 0) {
+        $form['grid']['controls']['previous_turn'] = array_merge($ui_buttons, array(
+            '#id' => 'ui-replay',
+            '#value' => t('Show previous turn'),
+            '#submit' => array('kw_djambi_game_form_replay_submit'),
+        ));
+      }
+      // TODO ajouter condition si fin de la partie
+      $form['grid']['controls']['next_turn'] = array_merge($ui_buttons, array(
+        '#id' => 'ui-replay',
+        '#value' => t('Show next turn'),
+        '#submit' => array('kw_djambi_game_form_replay_submit'),
+      ));
+    }
+  }
+  elseif ($grid->isPending()) {
     $form['grid']['controls']['show_help_button'] = array(
         '#type' => 'submit',
         '#name' => 'ui',
@@ -624,8 +655,9 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
       }
       // Cas 3 : placement d'une pièce manipulée
       elseif ($current_interaction["type"] == "manipulation") {
-        $form["pieces"]["manipulation"]["#selected_piece_id"] = $selected_piece->getId();
         $manipulated_piece = $current_interaction["target"];
+        $form["pieces"]["manipulation"]["#selected_piece_id"] = $selected_piece->getId();
+        $form["pieces"]["manipulation"]["#target_piece_id"] = $manipulated_piece->getId();
         $free_cells = $grid->getFreeCells($manipulated_piece);
         foreach ($free_cells as $cell) {
           $alt_text = t("Move manipulated !piece to !case", array(
@@ -1349,6 +1381,19 @@ function kw_djambi_game_form_hide_moves_submit($form, &$form_state) {
   $form_state['do_not_show_moves'] = TRUE;
   if (isset($form_state['show_turn_move'])) {
     unset($form_state['show_turn_move']);
+  }
+}
+
+/**
+ * Soumission du bouton "Revoir la partie"
+ */
+function kw_djambi_game_form_replay_submit($form, &$form_state) {
+  $form_state['rebuild'] = TRUE;
+  if (!isset($form_state['replay'])) {
+    $form_state['replay'] = 0;
+  }
+  else {
+    $form_state['replay']++;
   }
 }
 

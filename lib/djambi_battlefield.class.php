@@ -41,6 +41,10 @@ class DjambiBattlefield {
     }
   }
 
+  public function __toString() {
+    return $this->id;
+  }
+
   private function createNewGame($user_id, $user_cookie) {
     $dispositions = self::getDispositions();
     $disposition = $dispositions[$this->disposition];
@@ -521,9 +525,9 @@ class DjambiBattlefield {
         case(3) :
           $start_scheme = array(
             'L'  => array('x' => 7, 'y' => 1),
-            'R'  => array('x' => 6, 'y' => 1),
+            'A'  => array('x' => 6, 'y' => 1),
             'M1' => array('x' => 5, 'y' => 1),
-            'A'  => array('x' => 7, 'y' => 2),
+            'R'  => array('x' => 7, 'y' => 2),
             'D'  => array('x' => 6, 'y' => 2),
             'M2' => array('x' => 5, 'y' => 2),
             'M3' => array('x' => 8, 'y' => 3),
@@ -1297,6 +1301,29 @@ class DjambiBattlefield {
       }
     }
     $this->summary[$event['turn']] = $infos;
+  }
+
+  // TODO fonction à compléter avec changement de contrôle / éliminations de partis / changements d'état des pièces
+  public function viewTurnHistory($turn) {
+    $positions = array();
+    foreach ($this->getCells() as $key => $cell) {
+      if ($cell['type'] != 'disabled') {
+        $positions[$key] = isset($cell['occupant']) ? $cell['occupant']->getId() : '-';
+      }
+    }
+    $reverse_turns = $this->getTurns();
+    krsort($reverse_turns);
+    foreach ($reverse_turns as $turn => $data) {
+      foreach ($this->getMoves() as $move) {
+        if ($move['turn'] == $turn) {
+          $positions[$move['to']] = '-';
+          $positions[$move['from']] = $move['target'];
+        }
+        if ($form_state['replay'] == $turn) {
+          break;
+        }
+      }
+    }
   }
 
   private function buildFinalRanking($begin) {

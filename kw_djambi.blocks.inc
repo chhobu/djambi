@@ -224,7 +224,7 @@ function _kw_djambi_list_viewable_games($modes = NULL, $item_id = NULL) {
           'yearRange' => '2012:+0'
       )
   ));
-  $grid->addColumn('moves', t('Moves'), '<div class="digit">:moves</div>', array(
+  $grid->addColumn('moves', t("Number of played moves"), '<div class="digit">:moves</div>', array(
       'header' => "<abbr title='". t("Number of played moves") . "' class='icon bars'></abbr>",
       'field' => 'dn.nb_moves',
       'sortable' => TRUE

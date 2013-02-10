@@ -74,6 +74,10 @@ span.faction {
   border-color: #333;
   background-color: #333;
   color: #999;}
+/* Positionnables */
+.djambigrid div.piece.positionable {
+  position: absolute;
+  top: -50px;}
 /* Interactions sur les cellules */
 .djambigrid .cell.reachable {
   background-color: #ddd;}

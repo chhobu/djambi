@@ -124,6 +124,23 @@
         $(this).css("border-top-color", "");
       });
     });
+    $positionable = $(".djambigrid .piece.positionable");
+    if ($positionable.length == 1) {
+      var pos_height = $positionable.height();
+      var pos_width = $positionable.width();
+      var orig_offset = $positionable.offset();
+      $(".djambigrid").mouseenter(function() {
+        $(this).bind('mousemove', function(e){
+          $positionable.offset({
+            left:  e.pageX - pos_width / 2,
+            top:   e.pageY - pos_height / 2
+          });
+        });
+      }).mouseleave(function() {
+        $(this).unbind('mousemove');
+        $positionable.offset(orig_offset);
+      });
+    }
     var $pieces = $(".piece.movable");
     if ($pieces.length > 0 && $(".djambigrid .cell.with-selected-piece").length == 0) {
       $pieces.draggable({
