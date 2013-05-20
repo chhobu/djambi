@@ -594,6 +594,49 @@ function kw_djambi_check_update($nid, $version) {
       }
     }
   }
+  else {
+    // Récupération des données concernant le dernier mouvement
+    $grid = _kw_djambi_load_game($nid);
+    $moves = $grid->getMoves();
+    $new_moves = array();
+    $changing_cells = array();
+    global $user;
+    if ($user->uid > 0 && isset($user->data['djambi_show_moves'])) {
+      $show_moves = $user->data['djambi_show_moves'];
+    }
+    elseif (isset($_SESSION['djambi']['show_moves'])) {
+      $show_moves = $_SESSION['djambi']['show_moves'];
+    }
+    else {
+      $show_moves = TRUE;
+    }
+    if (!empty($moves)) {
+      foreach ($moves as $key => $move) {
+        if ($move['time'] > $version) {
+          if ($move['type'] == 'move') {
+            $faction_id = $move['target_faction'];
+          }
+          else {
+            $faction_id = $move['acting_faction'];
+          }
+          $acting_faction = $grid->getFactionById($faction_id);
+          $changing_cells[$move['from']] = $acting_faction->getClass();
+          $changing_cells[$move['to']] = $acting_faction->getClass();
+          $new_moves[] = array(
+              'description' => _kw_djambi_describe_move($move, $grid),
+              'location' => $move['to'],
+              'origin' => $move['from'],
+              'order' => $move['turn'] + 1,
+              'faction' => $acting_faction->getClass(),
+              'animation' => $move['type'] . ':' . $move['to'],
+          );
+        }
+      }
+    }
+    $return['show_moves'] = $show_moves;
+    $return['changing_cells'] = $changing_cells;
+    $return['moves'] = $new_moves;
+  }
   echo drupal_json_encode($return);
   die();
 }
@@ -932,7 +975,7 @@ function _kw_djambi_check_current_user($faction, $control = TRUE, $user = NULL) 
  */
 function _kw_djambi_get_user_faction(DjambiBattlefield $grid, $user = NULL) {
   $current_user_faction = NULL;
-  if (!$grid->isFinished()) {
+  if (!$grid->isFinished() && is_array($grid->getFactions())) {
     foreach ($grid->getFactions() as $faction) {
       if (_kw_djambi_check_current_user($faction, FALSE, $user)) {
         $current_user_faction = $faction;
@@ -964,101 +1007,11 @@ function kw_djambi_game_form($form, &$form_state, $node) {
     }
 
   }
-  module_load_include('inc', 'kw_djambi', 'kw_djambi.form');
-  $form = _kw_djambi_build_game_form($form, $form_state, $grid);
+  if (!is_null($grid)) {
+    form_load_include($form_state, 'inc', 'kw_djambi', 'kw_djambi.form');
+    _kw_djambi_build_game_form($form, $form_state, $grid);
+  }
   return $form;
-}
-
-/**
- * Validation des actions sur la grille de jeu
- */
-function kw_djambi_game_form_validate($form, &$form_state) {
-  module_load_include('inc', 'kw_djambi', 'kw_djambi.form');
-  /* @var $grid DjambiBattlefield */
-  $grid = $form["#grid"];
-  $errors = array();
-  // Détection du bouton cliqué.
-  $button = $form_state["triggering_element"];
-  $type_button = isset($button["#array_parents"][1]) ? $button["#array_parents"][1] : NULL;
-  // Traitement des différents cas
-  if ($type_button == "movable") {
-    $piece = kw_djambi_piece_selection_validate($errors, $button["#return_value"], $grid);
-    if ($piece && isset($form_state["kw_djambi"]["selected_piece"])) {
-      $selected_piece = $form_state["kw_djambi"]["selected_piece"];
-      if ($piece->getId() == $selected_piece->getId()) {
-        $piece = FALSE;
-        unset($form_state["kw_djambi"]["selected_piece"]);
-        $form_state["kw_djambi"]["phase"] = "piece_selection";
-      }
-    }
-    if ($piece) {
-      $form_state["kw_djambi"]["phase"] = "piece_destination";
-      $form_state["kw_djambi"]["selected_piece"] = $piece;
-      if (!empty($form_state["input"]["piece_destination"])) {
-        $destination = kw_djambi_piece_destination_validate($errors, $piece, $form_state["input"]["piece_destination"], NULL);
-        if ($destination) {
-          $form_state["kw_djambi"]["phase"] = "move_result";
-          $form_state["kw_djambi"]["selected_destination"] = $form_state["input"]["piece_destination"];
-        }
-      }
-    }
-  }
-  elseif ($type_button == "destination" && isset($form_state["kw_djambi"]["selected_piece"])) {
-    $piece = $form_state["kw_djambi"]["selected_piece"];
-    $destination = kw_djambi_piece_destination_validate($errors, $piece, $button["#return_value"], $button["#name"]);
-    if ($destination) {
-      $form_state["kw_djambi"]["phase"] = "move_result";
-      $form_state["kw_djambi"]["selected_destination"] = $button["#return_value"];
-    }
-  }
-  elseif (isset($form_state["kw_djambi"]["interactions"])) {
-    $current_interaction = current($form_state["kw_djambi"]["interactions"]);
-    $selected_piece = $form_state["kw_djambi"]["selected_piece"];
-    if ($current_interaction["type"] == "murder" && $type_button == $current_interaction["type"]) {
-      $victim_piece = $current_interaction["target"];
-      $death = kw_djambi_piece_murder_validate($errors, $grid, $selected_piece, $victim_piece, $button["#return_value"], $button["#name"]);
-      if ($death) {
-        $form_state["kw_djambi"]["phase"] = "interaction_result";
-        $form_state["kw_djambi"]["selected_interaction"] = $button["#return_value"];
-      }
-    }
-    elseif ($current_interaction["type"] == "necromobility" && $type_button == $current_interaction["type"]) {
-      $manipulated_piece = $current_interaction["target"];
-      $manipulation = kw_djambi_piece_necromobility_validate($errors, $grid, $manipulated_piece, $button["#return_value"], $button["#name"]);
-      if ($manipulation) {
-        $form_state["kw_djambi"]["phase"] = "interaction_result";
-        $form_state["kw_djambi"]["selected_interaction"] = $button["#return_value"];
-      }
-    }
-    elseif ($current_interaction["type"] == "manipulation" && $type_button == $current_interaction["type"]) {
-      $manipulated_piece = $current_interaction["target"];
-      $manipulation = kw_djambi_piece_manipulation_validate($errors, $grid, $selected_piece, $manipulated_piece, $button["#return_value"], $button["#name"]);
-      if ($manipulation) {
-        $form_state["kw_djambi"]["phase"] = "interaction_result";
-        $form_state["kw_djambi"]["selected_interaction"] = $button["#return_value"];
-      }
-    }
-    elseif ($current_interaction["type"] == "reportage" && $type_button == $current_interaction["type"]) {
-      $reporter = $form_state["kw_djambi"]["selected_piece"];
-      $reportage = kw_djambi_piece_reportage_validate($errors, $grid, $reporter, $button["#return_value"], $button["#name"]);
-      if ($reportage) {
-        $form_state["kw_djambi"]["phase"] = "interaction_result";
-        $form_state["kw_djambi"]["selected_interaction"] = $button["#return_value"];
-      }
-    }
-    elseif ($current_interaction["type"] == "throne_evacuation" && $type_button == $current_interaction["type"]) {
-      $evacuation = kw_djambi_piece_evacuation_validate($errors, $grid, $selected_piece, $button["#return_value"], $button["#name"]);
-      if ($evacuation) {
-        $form_state["kw_djambi"]["phase"] = "interaction_result";
-        $form_state["kw_djambi"]["selected_interaction"] = $button["#return_value"];
-      }
-    }
-  }
-  if (!empty($errors)) {
-    foreach ($errors as $error) {
-      form_set_error($error["location"], $error["msg"]);
-    }
-  }
 }
 
 /**

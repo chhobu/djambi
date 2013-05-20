@@ -12,7 +12,8 @@ define('KW_DJAMBI_USER_WINNER', 'winner'); // Fin du jeu, vainqueur
 define('KW_DJAMBI_USER_DRAW', 'draw'); // Fin du jeu, nul
 define('KW_DJAMBI_USER_KILLED', 'killed'); // Fin du jeu, perdant
 define('KW_DJAMBI_USER_WITHDRAW', 'withdraw'); // Fin du jeu, abandon
-define('KW_DJAMBI_USER_VASSALIZED', 'vassalized'); // Fin du jeu, abandon
+define('KW_DJAMBI_USER_VASSALIZED', 'vassalized'); // Camp vassalisé
+define('KW_DJAMBI_USER_FANTOCHE', 'fantoche'); // Camp fantôche
 define('KW_DJAMBI_USER_SURROUNDED', 'surrounded'); // Fin du jeu, encerclement
 define('KW_DJAMBI_USER_DEFECT', 'defect'); // Fin du jeu, disqualification
 define('KW_DJAMBI_USER_EMPTY_SLOT', 'empty'); // Création de partie, place libre
@@ -22,7 +23,8 @@ define('KW_DJAMBI_USER_READY', 'ready'); // Création de partie, prêt à jouer
 class DjambiBattlefield {
   private $id, $rows, $cols, $cells, $factions, $directions,
     $moves, $mode, $status, $turns, $play_order, $events, $options,
-    $infos, $rules, $living_factions_at_turn_begin, $summary, $disposition;
+    $infos, $rules, $living_factions_at_turn_begin, $summary, $disposition,
+    $displayed_turn_id;
 
   public function __construct($id, $data) {
     $this->id = $id;
@@ -33,11 +35,14 @@ class DjambiBattlefield {
     if ($id > 0) {
       return $this->loadBattlefield($data);
     }
-    else {
+    elseif (is_array($data) && isset($data['mode'])) {
       $this->setInfo('sequence', $data['sequence']);
       $this->setDisposition($data['disposition']);
       $this->setMode($data['mode']);
       return $this->createNewGame($data['user_id'], $data['user_cookie']);
+    }
+    else {
+      return NULL;
     }
   }
 
@@ -773,37 +778,45 @@ class DjambiBattlefield {
     $last_turn_key = $this->getCurrentTurnId();
     $last_turn['end'] = NULL;
     $this->turns[$last_turn_key] = $last_turn;
+    $this->viewTurnHistory($last_turn_key, TRUE);
+  }
+
+  public function viewTurnHistory($turn, $unset = FALSE) {
     $cells = $this->getCells();
     $inverted_moves = $this->moves;
     krsort($inverted_moves);
     foreach ($inverted_moves as $key => $move) {
-      if ($move['turn'] == $last_turn_key || $move['turn'] == $current_turn_key) {
+      if ($move['turn'] >= $turn) {
         $piece = $this->getPieceById($move['target']);
         $position = $cells[$move['from']];
         $piece->setPosition($position['x'], $position['y']);
         if ($move['type'] == 'murder' || $move['type'] == 'elimination') {
           $piece->setAlive(TRUE);
         }
-        if ($move['turn'] == $current_turn_key && $move['type'] == 'type' && !empty($move['acting'])) {
+        if ($move['turn'] > $turn && $move['type'] == 'type' && !empty($move['acting'])) {
           $piece2 = $this->getPieceById($move['acting']);
           $position = self::locateCell($move['to']);
           $piece2->setPosition($position['x'], $position['y']);
         }
-        unset($this->moves[$key]);
+        if ($unset) {
+          unset($this->moves[$key]);
+        }
       }
     }
     foreach ($this->events as $key => $event) {
-      if ($event['turn'] == $last_turn_key || $event['turn'] == $current_turn_key) {
-        if ($event['turn'] == $last_turn_key && in_array($event['event'], array('NEW_DJAMBI_GAME', 'NEW_TURN', 'TURN_BEGIN'))) {
+      if ($event['turn'] >= $turn) {
+        if ($event['turn'] == $turn && in_array($event['event'], array('NEW_DJAMBI_GAME', 'NEW_TURN', 'TURN_BEGIN'))) {
           continue;
         }
-        unset($this->events[$key]);
+        if ($unset) {
+          unset($this->events[$key]);
+        }
       }
     }
     ksort($this->summary);
-    foreach ($this->summary as $turn => $data) {
-      if ($turn >= $last_turn_key) {
-        unset($this->summary[$turn]);
+    foreach ($this->summary as $key => $data) {
+      if ($key >= $turn && $key != 0) {
+        unset($this->summary[$key]);
       }
       else {
         $summary = $data;
@@ -811,6 +824,9 @@ class DjambiBattlefield {
     }
     if (!empty($summary)) {
       $this->rebuildFactionsControls($summary);
+    }
+    if (!$unset) {
+      $this->displayed_turn_id = $turn;
     }
   }
 
@@ -893,9 +909,11 @@ class DjambiBattlefield {
         if (!$control_leader) {
           $this->logEvent("event", "SURROUNDED", array('faction1' => $faction->getId()));
           if ($this->getOption('rule_comeback') == 'never' && $this->getOption('rule_vassalization') == 'full_control') {
-            foreach ($leaders as $leader) {
-              $this->logMove($leader, $leader->getPosition(), 'elimination');
-              $leader->setAlive(FALSE);
+            foreach ($faction->getPieces() as $piece) {
+              if ($piece->isAlive() && $piece->getHability('must_live') && $piece->getFaction()->getId() == $faction->getId()) {
+                $this->logMove($piece, $piece->getPosition(), 'elimination');
+                $piece->setAlive(FALSE);
+              }
             }
           }
           $faction->dieDieDie(KW_DJAMBI_USER_SURROUNDED);
@@ -1303,34 +1321,12 @@ class DjambiBattlefield {
     $this->summary[$event['turn']] = $infos;
   }
 
-  // TODO fonction à compléter avec changement de contrôle / éliminations de partis / changements d'état des pièces
-  public function viewTurnHistory($turn) {
-    $positions = array();
-    foreach ($this->getCells() as $key => $cell) {
-      if ($cell['type'] != 'disabled') {
-        $positions[$key] = isset($cell['occupant']) ? $cell['occupant']->getId() : '-';
-      }
-    }
-    $reverse_turns = $this->getTurns();
-    krsort($reverse_turns);
-    foreach ($reverse_turns as $turn => $data) {
-      foreach ($this->getMoves() as $move) {
-        if ($move['turn'] == $turn) {
-          $positions[$move['to']] = '-';
-          $positions[$move['from']] = $move['target'];
-        }
-        if ($form_state['replay'] == $turn) {
-          break;
-        }
-      }
-    }
-  }
-
   private function buildFinalRanking($begin) {
     $last_summary = $this->summary[max(array_keys($this->summary))];
     arsort($last_summary['eliminations']);
     $last_turn = NULL;
     $i = 0;
+    $rank = 0;
     foreach ($last_summary['eliminations'] as $faction_key => $turn) {
       $i++;
       if ($last_turn != $turn) {
@@ -1354,6 +1350,15 @@ class DjambiBattlefield {
 
   public function getCurrentTurnId() {
     return empty($this->turns) ? 0 : max(array_keys($this->turns));
+  }
+
+  public function getDisplayedTurnId() {
+    if (!is_null($this->displayed_turn_id)) {
+      return $this->displayed_turn_id;
+    }
+    else {
+      return $this->getCurrentTurnId() + 1;
+    }
   }
 
   public function logMove(DjambiPiece $target_piece, $destination, $type = "move", DjambiPiece $acting_piece = NULL) {

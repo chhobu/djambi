@@ -242,13 +242,13 @@ span.rule-variant, span.game-option {
   margin-top: 1em;}
 .djambigrid .changes .description .piece {
   white-space: normal;}
-.djambigrid .cell.recent-change.bleu {
+.djambigrid .cell.past-move.bleu {
   background-color: #cef;}
-.djambigrid .cell.recent-change.jaune {
+.djambigrid .cell.past-move.jaune {
   background-color: #fe9;}
-.djambigrid .cell.recent-change.vert {
+.djambigrid .cell.past-move.vert {
   background-color: #cf6;}
-.djambigrid .cell.recent-change.rouge {
+.djambigrid .cell.past-move.rouge {
   background-color: #f99;}
 /*==========================================
 =============== AIDE EN LIGNE ==============
@@ -391,21 +391,21 @@ span.rule-variant, span.game-option {
   border-bottom-color: #fff;}
 .hexagonal-grid .cell.throne .cell-bottom-inside {
   border-top-color: #fff;}
-.hexagonal-grid .cell.recent-change.jaune .cell-top-inside {
+.hexagonal-grid .cell.past-move.jaune .cell-top-inside {
   border-bottom-color: #fe9;}
-.hexagonal-grid .cell.recent-change.jaune .cell-bottom-inside {
+.hexagonal-grid .cell.past-move.jaune .cell-bottom-inside {
   border-top-color: #fe9;}
-.hexagonal-grid .cell.recent-change.rouge .cell-top-inside {
+.hexagonal-grid .cell.past-move.rouge .cell-top-inside {
   border-bottom-color: #f99;}
-.hexagonal-grid .cell.recent-change.rouge .cell-bottom-inside {
+.hexagonal-grid .cell.past-move.rouge .cell-bottom-inside {
   border-top-color: #f99;}
-.hexagonal-grid .cell.recent-change.bleu .cell-top-inside {
+.hexagonal-grid .cell.past-move.bleu .cell-top-inside {
   border-bottom-color: #cef;}
-.hexagonal-grid .cell.recent-change.bleu .cell-bottom-inside {
+.hexagonal-grid .cell.past-move.bleu .cell-bottom-inside {
   border-top-color: #cef;}
-.hexagonal-grid .cell.recent-change.vert .cell-top-inside {
+.hexagonal-grid .cell.past-move.vert .cell-top-inside {
   border-bottom-color: #cf6;}
-.hexagonal-grid .cell.recent-change.vert .cell-bottom-inside {
+.hexagonal-grid .cell.past-move.vert .cell-bottom-inside {
   border-top-color: #cf6;}
 .hexagonal-grid.dragging .cell.reachable.selectable, .hexagonal-grid.dragging .cell.reachable.selectable.with-piece .piece {
   background: #ddd url(img/apply.png) no-repeat center center;}
