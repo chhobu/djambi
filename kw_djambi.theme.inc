@@ -367,7 +367,7 @@ function theme_djambi_grid($variables) {
     if (!empty($animated_moves)) {
       $playing_faction = $grid->getFactionById($displayed_turn['side']);
       $caption_title .= "<br /><span class='recap'>" . t("!faction side move, began at %begin, duration : %duration", array(
-        '!faction' => '<span class="faction ' . $playing_faction->getClass() . '">' . $playing_faction->getName() . '</span>',
+        '!faction' => '<span class="faction ' . $playing_faction->getClass() . '">' . _kw_djambi_get_translatable_messages($playing_faction->getName()) . '</span>',
         '%begin' => format_date($displayed_turn['begin'], 'short'),
         '%duration' => format_interval($displayed_turn['end'] - $displayed_turn['begin'])
       )) . "</span>";
