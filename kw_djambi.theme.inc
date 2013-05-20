@@ -364,7 +364,7 @@ function theme_djambi_grid($variables) {
     }
     $caption_title .= ' - <span class="turn">' . t("Turn #%displayed_turn out of #%max_turn",
         array("%displayed_turn" => $displayed_turn["turn"], '%max_turn' => $max_turn["turn"])) . '</span>';
-    if (!empty($show_moves)) {
+    if (!empty($animated_moves)) {
       $playing_faction = $grid->getFactionById($displayed_turn['side']);
       $caption_title .= "<br /><span class='recap'>" . t("!faction side move, began at %begin, duration : %duration", array(
         '!faction' => '<span class="faction ' . $playing_faction->getClass() . '">' . $playing_faction->getName() . '</span>',
