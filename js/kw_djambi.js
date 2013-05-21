@@ -139,24 +139,18 @@
               i++;
               $piece = $djambigrid.find('.piece[data-animation-'+i+']');
             }
-            if (ends == 0) {
-              ends = i * 2000 + 500;
-            }
-            if (autoplay) {
-              autoReplayTimeout = setTimeout(function() {
-                $next = $('#ui-replay-forward');
-                $parent = $next.parents('.djambi');
-                clearTimeout(autoReplayTimeout);
-                if ($parent.hasClass('autoplay')) {
-                  if ($next.is(':enabled')) {
-                    $next.mousedown();
-                  }
-                  else {
-                    $('#ui-replay-end').mousedown();
-                  }
-                }
-              }, ends + 500);
-            }
+            if (ends == 0) {ends = i * 2000 + 500;}
+          }
+          if (autoplay) {
+            autoReplayTimeout = setTimeout(function() {
+              $next = $('#ui-replay-forward');
+              $parent = $next.parents('.djambi');
+              clearTimeout(autoReplayTimeout);
+              if ($parent.hasClass('autoplay')) {
+                if ($next.is(':enabled')) {$next.mousedown();}
+                else {$('#ui-replay-end').mousedown();}
+              }
+            }, Math.max(ends + 500, 2000));
           }
         }
         return ends;
@@ -224,7 +218,6 @@
                 }
                 new_html += "</div>";
                 $cell.find('.changes').prepend(new_html);
-                // FIXME : problème sur l'origine de la pièce...
                 $origin = $djambigrid.find('.cell[data-coord="'+move.origin+'"]');
                 if ($origin.attr('data-piece-relocated')) {
                   $origin = $djambigrid.find('.cell[data-piece-relocated="'+move.origin+'"]');

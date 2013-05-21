@@ -372,6 +372,13 @@ function theme_djambi_grid($variables) {
         '%duration' => format_interval($displayed_turn['end'] - $displayed_turn['begin'])
       )) . "</span>";
     }
+    else {
+      foreach ($grid->getEvents() as $event) {
+        if ($event['turn'] == $displayed_turn_id && $event['type'] == 'event') {
+          $caption_title .= "<br /><span class='recap'><em>" . format_date($event['time'], 'short') ."</em> : " . _kw_djambi_get_translatable_messages($event['event'], $event['args'], $grid) . "</span>";
+        }
+      }
+    }
     if ($grid->isFinished()) {
       $final_time = isset($max_turn['end']) ? $max_turn['end'] : $max_turn['begin'];
       $caption_title .= "<br /><span class='recap'>" . t("Finished on %date, game total duration : %duration", array(
@@ -453,7 +460,7 @@ function theme_djambi_grid($variables) {
         . ($show_help && isset($helps['labyrinthe']) ? "<span class='help-link'>" . $helps['labyrinthe'] . "</span>" : "");
     }
   }
-  $grid_classes = array('djambigrid', empty($animated_moves) ? 'static' : 'animated');
+  $grid_classes = array('djambigrid', !$show_changes ? 'static' : 'animated');
   $grid_id = 'DjambiGrid' . $grid->getId();
   if ($dispositions[$disposition]['grid'] == 'hexagonal') {
     $markup = theme('hexagonal_grid', array(

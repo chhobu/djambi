@@ -249,7 +249,7 @@ class DjambiPiece {
             $key = DjambiBattlefield::locateCell($cell);
             if (!empty($cells[$key]["occupant"])) {
               $occupant = $cells[$key]["occupant"];
-              if ($occupant->isAlive()) {
+              if ($occupant->isAlive() && $occupant->getId() != $this->getId()) {
                 if ($grid->getOption('rule_press_liberty') == 'foxnews' ||
                     $occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) {
                   $canibalism = $grid->getOption('rule_canibalism');
