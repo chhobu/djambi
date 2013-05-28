@@ -1129,9 +1129,11 @@ class DjambiBattlefield {
       return FALSE;
     }
     $current_order = current($this->play_order);
+    $corrections = FALSE;
     // Un camp ne peut pas jouer deux fois de suite après avoir tué un chef ennemi
     if ($new_turn && $nb_factions > 2 && !empty($this->turns) && $this->turns[$this->getCurrentTurnId()]['side'] == $current_order['side']) {
       unset($this->play_order[key($this->play_order)]);
+      $corrections = TRUE;
     }
     // Un camp ne peut pas jouer immédiatement après avoir accédé au pouvoir ou s'être retiré du pouvoir
     elseif ($new_turn && $nb_factions == 2) {
@@ -1141,9 +1143,14 @@ class DjambiBattlefield {
             && in_array($move['special_event'], array('THRONE_ACCESS', 'THRONE_RETREAT'))
             && $this->turns[$last_turn_id]['side'] == $current_order['side']) {
           unset($this->play_order[key($this->play_order)]);
+          $corrections = TRUE;
           break;
         }
       }
+    }
+    if ($corrections && empty($this->play_order)) {
+      $current_phase++;
+      $new_phase = TRUE;
     }
     $displayed_next_turns = 4;
     if (count($this->play_order) < $displayed_next_turns) {
@@ -1176,6 +1183,9 @@ class DjambiBattlefield {
       $this->logEvent("notice", "TURN_BEGIN", array('faction1' => $selected_faction->getId()), $begin);
     }
     if ($new_phase) {
+      if ($current_phase == 1) {
+        $this->logEvent("event", "GAME_START");
+      }
       $this->logEvent("notice", "NEW_TURN", array("!turn" => $current_phase), $begin);
     }
     return TRUE;

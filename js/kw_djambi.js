@@ -1,4 +1,9 @@
 (function ($) {
+  $.fn.scrollTo = function() {
+    $('body,html').animate({
+      'scrollTop' : $(this).offset().top
+    }, 'slow');
+  };
   Drupal.behaviors.Djambi = {attach: function(context, settings) {
     // Rafraichissement du tableau récapitulatif des camps en jeu
     $('.refresh-my-djambi-panel').once('DjambiPanel', function() {
@@ -25,10 +30,10 @@
         autoplay = true;
       }
       if (autoplay) {
-        $djambi.find('#ui-replay-pause').show();
+        $djambi.find('input[name="ui-replay-pause"]').show();
       }
       else {
-        $djambi.find('#ui-replay-autoplay').show();
+        $djambi.find('input[name="ui-replay-autoplay"]').show();
       }
       var $djambigrid = $djambi.find('.djambigrid');
       var timeouts = {'desc': [], 'move': []};
@@ -143,12 +148,12 @@
           }
           if (autoplay) {
             autoReplayTimeout = setTimeout(function() {
-              $next = $('#ui-replay-forward');
+              $next = $('input[name="ui-replay-forward"]');
               $parent = $next.parents('.djambi');
               clearTimeout(autoReplayTimeout);
               if ($parent.hasClass('autoplay')) {
                 if ($next.is(':enabled')) {$next.mousedown();}
-                else {$('#ui-replay-end').mousedown();}
+                else {$('input[name="ui-replay-end"]').mousedown();}
               }
             }, Math.max(ends + 500, 2000));
           }
@@ -156,7 +161,7 @@
         return ends;
       };
       $djambi.find('.controls input').mousedown(function() {
-        buttonId = $(this).attr('id');
+        buttonId = $(this).attr('name');
         if (buttonId == 'ui-replay-autoplay') {
           $djambi.addClass('autoplay'); 
         }
@@ -166,7 +171,7 @@
       });
       launchAnimations(true);
       // Suppression de l'affichage des messages après une minute
-      if ($('#Messages').length > 0) {
+      if ($('#Messages').length > 0 && $djambi.data('status') != 'finished') {
         setTimeout(function() {$('#Messages').hide('slow');}, 60000);
       }
       // Rafraichissement automatique des données
@@ -176,7 +181,7 @@
           clearInterval(DjambiRefreshInterval);
         }
         DjambiRefreshInterval = setInterval(function() {
-          $grid = $('#DjambiContainer' + gridId);
+          $grid = $('#DjambiGridFieldset' + gridId);
           if ($grid.data('refresh') == 'no') {
             clearInterval(DjambiRefreshInterval);
             return;
@@ -222,7 +227,6 @@
                 if ($origin.attr('data-piece-relocated')) {
                   $origin = $djambigrid.find('.cell[data-piece-relocated="'+move.origin+'"]');
                 }
-                console.log($origin);
                 $origin.attr('data-piece-relocated', move.location).find('div.piece').attr('data-animation-' + i, move.animation);
               }
               for(cell in result.changing_cells) {

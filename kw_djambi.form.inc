@@ -1,7 +1,6 @@
 <?php
 function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $grid) {
   global $user;
-  $form['#grid'] = $grid;
   $current_user_faction = _kw_djambi_get_user_faction($grid, $user);
   if (!$grid->isFinished() && !is_null($current_user_faction) && $grid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
     $user_data = _kw_djambi_update_user_infos($current_user_faction->getUserData(),
@@ -34,20 +33,39 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
       'method' => 'replace',
   );
   // Création de l'ossature du formulaire
-  if (!$grid->isNotBegin()) {
-    $form['#theme'] = 'djambi_grid';
+  if (!$grid->isFinished() && !$replay && ($grid->getMode() != KW_DJAMBI_MODE_SANDBOX || is_null($current_user_faction))) {
+    $do_refresh = TRUE;
   }
   else {
-    $form['#theme'] = 'djambi_recruiting_phase';
+    $do_refresh = FALSE;
   }
-  $do_refresh = 'no';
+  $grid_id = 'DjambiContainer' . $grid->getId();
+  $attributes = array(
+      'id' => 'DjambiGridFieldset' . $grid->getId(),
+      'class' => array('djambi'),
+      'data-grid' => $grid->getId(),
+      'data-version' => $grid->getInfo('changed'),
+      'data-status' => $grid->getStatus(),
+      'data-refresh' => $do_refresh ? 'yes' : 'no',
+      'data-user-faction' => (!is_null($current_user_faction) ? $current_user_faction->getId() : '0'),
+      'data-user-status' => (!is_null($current_user_faction) ? $current_user_faction->getStatus() : '0'),
+      'data-turn' => $grid->getCurrentTurnId()
+  );
+  if (isset($form_state['autoplay']) && $form_state['autoplay']) {
+    $attributes['class'][] = 'autoplay';
+  }
+  $form['#prefix'] = '<div id="' . $grid_id . '">';
+  $form['#suffix'] = '</div>';
   $form['grid'] = array(
       '#type' => 'fieldset',
       '#title' => t('Djambi grid #!number', array('!number' => $grid->getInfo('sequence'))),
       '#weight' => 0,
+      '#prefix' => '<div ' . drupal_attributes($attributes) . '>',
+      '#suffix' => '</div>',
+      '#grid' => $grid,
+      '#theme' => $grid->isNotBegin() ? 'djambi_recruiting_phase' : 'djambi_grid'
   );
-  if (!$grid->isFinished() && !$replay && ($grid->getMode() != KW_DJAMBI_MODE_SANDBOX || is_null($current_user_faction))) {
-      $do_refresh = 'yes';
+  if ($do_refresh) {
       $form['grid']['controls']['refresh'] = array(
           '#type' => 'submit',
           '#attributes' => array('class' => array('refresh-button')),
@@ -58,22 +76,6 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
           '#name' => 'refresh'
       );
   }
-  $attributes = array(
-    'id' => 'DjambiContainer' . $grid->getId(),
-    'class' => array('djambi'),
-    'data-grid' => $grid->getId(),
-    'data-version' => $grid->getInfo('changed'),
-    'data-status' => $grid->getStatus(),
-    'data-refresh' => $do_refresh,
-    'data-user-faction' => (!is_null($current_user_faction) ? $current_user_faction->getId() : '0'),
-    'data-user-status' => (!is_null($current_user_faction) ? $current_user_faction->getStatus() : '0'),
-    'data-turn' => $grid->getCurrentTurnId()
-  );
-  if (isset($form_state['autoplay']) && $form_state['autoplay']) {
-    $attributes['class'][] = 'autoplay';
-  }
-  $form['#prefix'] = '<div ' . drupal_attributes($attributes) . '>';
-  $form['#suffix'] = '</div>';
   $form['options'] = array(
       '#type' => 'fieldset',
       '#title' => t('Game configuration'),
@@ -90,17 +92,19 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
   }
   $form['log'] = array(
       '#type' => 'fieldset',
-      '#title' => t('Treachery log'),
+      '#title' => $grid->isNotBegin() ? t('Recruitment log') : t('Treachery log'),
       '#weight' => 10,
-      '#collapsible' => !$grid->isPending(),
-      '#collapsed' => !$grid->isNotBegin()
+      '#collapsible' => TRUE,
+      '#collapsed' => FALSE
   );
   // Recrutement des joueurs...
   if ($grid->isNotBegin()) {
     _kw_djambi_build_part_recruiting($form, $grid, $current_user_faction, $ajax_settings);
   }
-  // Contrôle de l'affichage de l'aide et des derniers mouvements
-  _kw_djambi_build_part_move_controls($form, $form_state, $grid, $faction, $ajax_settings);
+  else {
+    // Contrôle de l'affichage de l'aide et des derniers mouvements
+    _kw_djambi_build_part_move_controls($form, $form_state, $grid, $faction);
+  }
   // Affichage du récapitulatif des règles
   _kw_djambi_build_part_rules($form, $grid);
   if (!isset($form_state['show_replay'])) {
@@ -110,7 +114,7 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
     }
     elseif ($faction && $grid->getStatus() == KW_DJAMBI_STATUS_PENDING && _kw_djambi_check_current_user($faction)) {
       _kw_djambi_build_part_player_actions($form, $form_state, $grid, $faction, $ajax_settings);
-      _kw_djambi_build_part_pieces_controls($form, $form_state, $grid, $faction, $ajax_settings);
+      _kw_djambi_build_part_pieces_controls($form['grid'], $form_state, $grid, $faction, $ajax_settings);
     }
   }
   // Log des événements
@@ -196,7 +200,7 @@ function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $curr
   }
 }
 
-function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlefield $grid, $faction, $ajax_settings) {
+function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlefield $grid, $faction) {
   global $user;
   $current_turn_id = $grid->getCurrentTurnId();
   $show_moves = $grid->isPending();
@@ -231,27 +235,26 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
       asort($showable_turns);
       $last_move = min($showable_turns);
     }
-    $form['showable_turns'] = array(
+    $form['grid']['showable_turns'] = array(
         '#type' => 'value',
         '#value' => $showable_turns
     );
   }
   $ui_buttons = array(
       '#type' => 'submit',
-      '#name' => 'ui',
       '#limit_validation_errors' => array(array('showable_turns')),
-      '#ajax' => $ajax_settings
+      '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback')
   );
   if (!isset($form_state['show_replay'])) {
     if ($grid->isFinished()) {
       $form['grid']['controls']['replay'] = array_merge($ui_buttons, array(
-          '#id' => 'ui-replay',
+          '#name' => 'ui-replay',
           '#value' => '<< ' . t('Review this game'),
           '#submit' => array('kw_djambi_game_form_replay_submit'),
       ));
     }
     $form['grid']['controls']['previous_turn'] = array_merge($ui_buttons, array(
-       '#id' => 'ui-replay-backward',
+       '#name' => 'ui-replay-backward',
        '#value' => '< ' . ($grid->isFinished() ? t('Show previous move') : t('Show previous moves')),
        '#submit' => array('kw_djambi_game_form_replay_submit'),
        '#disabled' => $current_turn_id > 0 ? FALSE : TRUE
@@ -260,39 +263,39 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
   else {
     if ($grid->isFinished()) {
       $form['grid']['controls']['first_turn'] = array_merge($ui_buttons, array(
-        '#id' => 'ui-replay-begin',
+        '#name' => 'ui-replay-begin',
         '#value' => '<< ' . t('Go back to the first move'),
         '#submit' => array('kw_djambi_game_form_replay_submit'),
         '#disabled' => $form_state['show_replay'] > 0 ? FALSE : TRUE
       ));
     }
     $form['grid']['controls']['previous_turn'] = array_merge($ui_buttons, array(
-        '#id' => 'ui-replay-backward',
+        '#name' => 'ui-replay-backward',
         '#value' => '< ' . t('Show previous move'),
         '#submit' => array('kw_djambi_game_form_replay_submit'),
         '#disabled' => $form_state['show_replay'] > $last_move ? FALSE : TRUE
     ));
     $form['grid']['controls']['pause'] = array_merge($ui_buttons, array(
-        '#id' => 'ui-replay-pause',
+        '#name' => 'ui-replay-pause',
         '#value' =>  '|| ' . t('Pause'),
         '#submit' => array('kw_djambi_game_form_replay_submit'),
         '#attributes' => array('style' => 'display:none')
     ));
     $form['grid']['controls']['autoplay'] = array_merge($ui_buttons, array(
-        '#id' => 'ui-replay-autoplay',
+        '#name' => 'ui-replay-autoplay',
         '#value' => '|> ' . t('Auto-play'),
         '#submit' => array('kw_djambi_game_form_replay_submit'),
         '#attributes' => array('style' => 'display:none')
     ));
     $form['grid']['controls']['next_turn'] = array_merge($ui_buttons, array(
-        '#id' => 'ui-replay-forward',
+        '#name' => 'ui-replay-forward',
         '#value' => t('Show next move') . ' >',
         '#submit' => array('kw_djambi_game_form_replay_submit'),
         '#disabled' => (($grid->isPending() && $current_turn_id - 1 <= $form_state['show_replay']) ||
             ($grid->isFinished() && $current_turn_id <= $form_state['show_replay']) ? TRUE : FALSE)
     ));
     $form['grid']['controls']['last_turn'] = array_merge($ui_buttons, array(
-        '#id' => 'ui-replay-end',
+        '#name' => 'ui-replay-end',
         '#value' => $grid->isPending() ? t('Go back to current turn') . ' >>' : t('Go back to final positions') . ' >>',
         '#submit' => array('kw_djambi_game_form_replay_submit'),
     ));
@@ -300,34 +303,32 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
   if ($grid->isPending() || isset($form_state['show_replay'])) {
     $form['grid']['controls']['show_moves_button'] = array(
         '#type' => 'submit',
-        '#name' => 'ui',
-        '#id' => 'ui-show-move',
+        '#name' => 'ui-show-move',
         '#value' => $show_moves ? '- ' . t('Hide last moves descriptions') : '+ ' . t('Show last moves descriptions'),
         '#limit_validation_errors' => array(array('show_moves')),
         '#submit' => array('kw_djambi_game_form_show_moves_submit'),
-        '#ajax' => $ajax_settings
+        '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback')
     );
   }
   if ($grid->isPending() && !isset($form_state['show_replay'])) {
     $form['grid']['controls']['show_help_button'] = array(
         '#type' => 'submit',
-        '#name' => 'ui',
-        '#id' => 'ui-show-help',
+        '#name' => 'ui-show-help',
         '#value' => '(?) ' . (!empty($form_state['show_help']) ? t('Hide help') : t('Show help')),
         '#limit_validation_errors' => array(),
         '#submit' => array('kw_djambi_game_form_show_help_submit'),
-        '#ajax' => $ajax_settings
+        '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback')
     );
   }
-  $form['show_help'] = array(
+  $form['grid']['show_help'] = array(
       '#type' => 'value',
       '#value' => !empty($form_state['show_help']) ? TRUE : FALSE
   );
-  $form['show_replay'] = array(
+  $form['grid']['show_replay'] = array(
       '#type' => 'value',
       '#value' => !empty($form_state['show_replay']) ? $form_state['show_replay'] : FALSE
   );
-  $form['show_moves'] = array(
+  $form['grid']['show_moves'] = array(
       '#type' => 'value',
       '#value' => !empty($form_state['show_moves']) ? $form_state['show_moves'] : $show_moves
   );
@@ -780,66 +781,229 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
  * @param DjambiBattlefield $grid
  */
 function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid) {
-  // Construction des logs
-  $default_value = 20;
-  $nb_current_msg = !isset($form_state['kw_logs']['end']) ? $default_value : $form_state['kw_logs']['end'];
-  $log = array('time' => array(), 'msg' => array());
-  foreach ($grid->getEvents() as $key => $event) {
-    $msg = _kw_djambi_describe_event($event, $grid);
-    $log["time"][] = $event["time"];
-    $log["msg"][] = "<div class='event ". $event["type"] . "'><span class=''>" . format_date($event["time"], "short") . " :</span> " . $msg . "</div>";
-  }
-  foreach ($grid->getMoves() as $key => $move) {
-    $msg = _kw_djambi_describe_move($move, $grid);
-    if (!empty($msg)) {
-      $log["time"][] = $move["time"];
-      $log["msg"][] = "<div class='" . $move["type"] . "'><span class=''>" . format_date($move["time"], "short") . " :</span>  " . $msg . "</div>";
+  $html = '';
+  $detailed_log = FALSE;
+  $live_logs = FALSE;
+  $show_logs = array();
+  $turns = $grid->getTurns();
+  if ($grid->isPending() || $grid->isNotBegin()) {
+    $current_turn_id = isset($turns[$grid->getCurrentTurnId()]) ? $turns[$grid->getCurrentTurnId()]['turn'] : 0;
+    $detailed_log = TRUE;
+    if (empty($form_state['djambi_logs'])) {
+      $show_logs = array($current_turn_id - 1, $current_turn_id);
+      $live_logs = TRUE;
+    }
+    else {
+      $show_logs = range(1, $current_turn_id);
     }
   }
-  array_multisort($log["time"], SORT_DESC, $log["msg"]);
-  // Affichage
-  $nb_total_msg = count($log['msg']);
-  $ajax_log_settings = array(
-        'callback' => 'kw_djambi_ajax_log_callback',
-        'wrapper' => 'GridLog' . $grid->getId(),
-        'effect' => 'fade',
-        'method' => 'replace',
-  );
-  if ($nb_current_msg == -1) {
-    $nb_current_msg = $nb_total_msg;
-    $offset_length = $nb_total_msg;
+  elseif (!empty($form_state['djambi_logs'])) {
+    $detailed_log = TRUE;
+    $show_logs = $form_state['djambi_logs'];
+  }
+  if ($detailed_log) {
+    $header = array(
+      'num' => array('data' => t("#"), 'scope' => 'col'),
+      'time' => array('data' => t('Time'), 'scope' => 'col'),
+      'type' => array('data' => t('Type'), 'scope' => 'col'),
+      'event' => array('data' => t('Event'), 'scope' => 'col')
+    );
   }
   else {
-    $offset_length = $default_value;
+    $header = array(
+        'num' => array('data' => t("Turn"), 'scope' => 'col'),
+        'time' => array('data' => t('Time'), 'scope' => 'col'),
+        'event' => array('data' => t('Event'), 'scope' => 'col')
+    );
   }
-  $msg = array_slice($log['msg'], isset($form_state['kw_logs']['begin']) ? $form_state['kw_logs']['begin'] : 0, $offset_length, TRUE);
-  $form['log']['container'] = array(
-        'history' => array(
-            '#markup' => theme('item_list', array('items' => $msg))),
-        'more' => array(
-            '#type' => 'container',
-            '#attributes' => array('id' => 'GridLog' . $grid->getId())
-        )
+  if ($grid->isFinished()) {
+    $header['view'] = array('data' => t('Actions'));
+  }
+  $buttons = array(
+      '#type' => 'submit',
+      '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback'),
+      '#value' => t('Watch'),
+      '#submit' => array('kw_djambi_game_form_replay_submit')
   );
-  if ($nb_total_msg > ($nb_current_msg + 20)) {
-    $form['log']['container']['more']['load_more_logs'] = array(
-        '#type' => 'submit',
-        '#value' => t('Load 20 older logs'),
-        '#submit' => array('kw_djambi_load_more_logs'),
-        '#ajax' => $ajax_log_settings,
-        '#name' => 'ui',
-        '#id' => 'ui-load-logs'
-    );
+  $log_id = 'DjambiLog' . $grid->getId();
+  $form['log']['container'] = array(
+      '#type' => 'container',
+      '#prefix' => '<div id="' . $log_id . '">',
+      '#suffix' => '</div>',
+      '#theme' => 'djambi_log'
+  );
+  $form['log']['container']['buttons'] = array(
+      '#type' => 'actions'
+  );
+  $logs = array();
+  $times = array();
+  $factions = array();
+  if ($detailed_log) {
+    foreach ($grid->getMoves() as $key => $move) {
+      if (!in_array($turns[$move['turn']]['turn'], $show_logs)) {
+        continue;
+      }
+      $msg = _kw_djambi_describe_move($move, $grid);
+      if (!empty($msg)) {
+        $log = array();
+        $log['num'] = array('data' => ($move['turn'] + 1), 'class' => array('txtright', 'faction', 'num'));
+        $log['time'] = array('data' => format_date($move['time'], 'short'));
+        $log['type'] = _kw_djambi_get_translatable_messages($move['type']);
+        $faction = $grid->getFactionById($log['type'] == 'move' || empty($move['acting_faction']) ? $move['target_faction'] : $move['acting_faction']);
+        if ($faction) {
+          $log['num']['class'][] = $faction->getClass();
+          $log['num']['title'] = t("Move made by !side side", array('!side' => _kw_djambi_get_translatable_messages($faction->getName())));
+        }
+        $log['event'] = $msg;
+        if (isset($header['view'])) {
+          if (!isset($form['log']['container']['buttons']['move-view-' . $move['turn']])) {
+            $form['log']['container']['buttons']['move-view-' . $move['turn']] = array_merge($buttons, array(
+              '#name' => 'ui-move-view-' .$move['turn']
+            ));
+            $log['view'] = '[move-view-' . $move['turn'] . ']';
+          }
+          else {
+            $log['view'] = '-';
+          }
+        }
+        $logs[$turns[$move['turn']]['turn']][] = $log;
+        $times[$turns[$move['turn']]['turn']][] = $move['time'];
+      }
+    }
   }
-  if ($nb_total_msg > $nb_current_msg) {
-    $form['log']['container']['more']['load_all_logs'] = array(
+  foreach ($grid->getEvents() as $key => $event) {
+    if ((!$detailed_log && $event['type'] != 'event') || ($detailed_log && !empty($turns) && !in_array($turns[$event['turn']]['turn'], $show_logs))) {
+      continue;
+    }
+    $log = array();
+    if ($detailed_log) {
+      $log['num'] = array('data' => $event['turn'] + 1, 'class' => array('txtright', 'num'));
+    }
+    else {
+      $log['num'] = array('data' => t('Turn #!turn', array('!turn' => $turns[$event['turn']]['turn'])), 'class' => array('txtright', 'num'));
+    }
+    $log['time'] = array('data' => format_date($event['time'], 'short'));
+    if ($detailed_log) {
+      $log['type'] = _kw_djambi_get_translatable_messages($event['type']);
+    }
+    if (!empty($event['args'])) {
+      $faction = NULL;
+      if (isset($event['args']['faction1'])) {
+        $faction = $grid->getFactionById($event['args']['faction1']);
+      }
+      elseif (isset($event['args']['piece'])) {
+        $faction = $grid->getPieceById($event['args']['piece'])->getFaction();
+      }
+      if (!is_null($faction)) {
+        $log['num']['class'][] = 'faction';
+        $log['num']['class'][] = $faction->getClass();
+        $log['num']['title'] = t("Event dealing with !side side", array('!side' => _kw_djambi_get_translatable_messages($faction->getName())));
+      }
+    }
+    $log['event'] = _kw_djambi_describe_event($event, $grid);
+    if (isset($header['view'])) {
+      if ($event['type'] == 'event' && !isset($form['log']['container']['buttons']['move-view-' . $event['turn']])) {
+        $form['log']['container']['buttons']['move-view-' . $event['turn']] = array_merge($buttons, array(
+            '#name' => 'ui-move-view-' .$event['turn']
+        ));
+        $log['view'] = '[move-view-' .$event['turn'] . ']';
+      }
+      else {
+        $log['view'] = '-';
+      }
+    }
+    $correction = 0;
+    if ($event['event'] == 'END') {
+      $correction = 5;
+    }
+    elseif ($event['event'] == 'THE_WINNER_IS') {
+      $correction = 2;
+    }
+    elseif ($event['event'] == 'NEW_TURN') {
+      $correction = -1;
+    }
+    elseif ($event['type'] == 'event') {
+      $correction = 1;
+    }
+    if ($detailed_log) {
+      $turn_id = !empty($turns) ? $turns[$event['turn']]['turn'] : 0;
+      $logs[$turn_id][] = $log;
+      $times[$turn_id][] = $event['time'] + $correction;
+    }
+    else {
+      $logs[] = $log;
+    }
+  }
+  if ($detailed_log) {
+    if ($live_logs) {
+      krsort($times);
+    }
+    foreach ($times as $turn => $time) {
+      array_multisort($time, $logs[$turn]);
+      if ($live_logs) {
+        krsort($logs[$turn]);
+      }
+      $html .= theme('table', array('header' => $header, 'rows' => $logs[$turn],
+        'attributes' => array('class' => array('djambilog')),
+        'caption' => $turn > 0 ? t('Turn #!turn events log', array('!turn' => $turn)) : t("Early game events log")
+      ));
+    }
+  }
+  else {
+    $html .= theme('table', array('header' => $header, 'rows' => $logs,
+        'attributes' => array('class' => array('djambilog')),
+        'caption' => t("List of major events that marred this game")
+    ));
+  }
+  $form['log']['container']['history'] = array(
+      '#type' => 'markup',
+      '#markup' => $html
+  );
+  $form['log']['container']['actions'] = array(
+      '#type' => 'actions'
+  );
+  $ajax_log_settings = array(
+      'callback' => 'kw_djambi_ajax_log_callback'
+  );
+  if ($grid->isPending()) {
+    if ($live_logs) {
+      $form['log']['container']['actions']['view_full'] = array(
+          '#name' => 'ui-log-full',
+          '#type' => 'submit',
+          '#value' => t("View all turns log"),
+          '#submit' => array('kw_djambi_game_form_log_submit'),
+          '#ajax' => $ajax_log_settings
+      );
+    }
+    elseif ($current_turn_id > 2) {
+      $form['log']['container']['actions']['view_less'] = array(
+          '#name' => 'ui-log-less',
+          '#type' => 'submit',
+          '#value' => t("View last turns log"),
+          '#submit' => array('kw_djambi_game_form_log_submit'),
+          '#ajax' => $ajax_log_settings
+      );
+    }
+  }
+  else {
+    if (!$detailed_log) {
+      $form['log']['container']['actions']['view_full'] = array(
+        '#name' => 'ui-log-full',
         '#type' => 'submit',
-        '#value' => t('Load all logs'),
-        '#submit' => array('kw_djambi_load_all_logs'),
-        '#ajax' => $ajax_log_settings,
-        '#name' => 'ui',
-        '#id' => 'ui-load-all-logs'
-    );
+        '#value' => t("View detailed log"),
+        '#submit' => array('kw_djambi_game_form_log_submit'),
+        '#ajax' => $ajax_log_settings
+      );
+    }
+    elseif (!$grid->isNotBegin()) {
+      $form['log']['container']['actions']['view_less'] = array(
+        '#name' => 'ui-log-less',
+        '#type' => 'submit',
+        '#value' => t("View major events log"),
+        '#submit' => array('kw_djambi_game_form_log_submit'),
+        '#ajax' => $ajax_log_settings
+      );
+    }
   }
 }
 
@@ -1172,24 +1336,18 @@ function _kw_djambi_stats_get_winners($grid, $price, $stats, $type = 'piece', $o
 }
 
 /**
-* Soumission de formulaire : chargement de logs supplémentaires
+* Soumission de formulaire : chargement des logs complets
 */
-function kw_djambi_load_more_logs($form, &$form_state) {
+function kw_djambi_game_form_log_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
-  if (!isset($form_state['kw_logs']) || $form_state['kw_logs']['end'] == -1) {
-    $form_state['kw_logs']['end'] = 20;
+  $clicked_button = $form_state['clicked_button'];
+  $grid = $form['grid']['#grid'];
+  $form_state['djambi_logs'] = array();
+  if ($clicked_button['#name'] == 'ui-log-full') {
+    foreach ($grid->getTurns() as $turn) {
+      $form_state['djambi_logs'][] = $turn['turn'];
+    }
   }
-  $form_state['kw_logs']['begin'] = $form_state['kw_logs']['end'];
-  $form_state['kw_logs']['end'] += 20;
-}
-
-/**
- * Soumission de formulaire : chargement de tous les logs
- */
-function kw_djambi_load_all_logs($form, &$form_state) {
-  $form_state['rebuild'] = TRUE;
-  $form_state['kw_logs']['begin'] = isset($form_state['kw_logs']['end']) ? $form_state['kw_logs']['end'] : 20;
-  $form_state['kw_logs']['end'] = -1;
 }
 
 /**
@@ -1200,10 +1358,27 @@ function kw_djambi_ajax_callback($form, $form_state) {
 }
 
 /**
+ * Fonction appelée après une requête Ajax : rechargement uniquement de la grille
+ */
+function kw_djambi_ajax_grid_callback($form, $form_state) {
+  $grid = $form['grid']['#grid'];
+  $selector = '#DjambiGridFieldset' . $grid->getId();
+  $commands = array();
+  $commands[] = ajax_command_replace($selector, drupal_render($form['grid']));
+  $commands[] = ajax_command_invoke($selector, 'scrollTo');
+  return array('#type' => 'ajax', '#commands' => $commands);
+}
+
+/**
  * Fonction appelée après une requête Ajax : chargement des logs
  */
 function kw_djambi_ajax_log_callback($form, $form_state) {
-  return $form['log']['container'];
+  $grid = $form['grid']['#grid'];
+  $selector = '#DjambiLog' . $grid->getId();
+  $commands = array();
+  $commands[] = ajax_command_replace($selector, drupal_render($form['log']['container']));
+  $commands[] = ajax_command_invoke($selector, 'scrollTo');
+  return array('#type' => 'ajax', '#commands' => $commands);
 }
 
 /**
@@ -1211,7 +1386,7 @@ function kw_djambi_ajax_log_callback($form, $form_state) {
  */
 function kw_djambi_game_form_submit($form, &$form_state) {
   $change_turn = FALSE;
-  $grid = $form['#grid'];
+  $grid = $form['grid']['#grid'];
   $form_state['rebuild'] = TRUE;
   switch ($form_state['kw_djambi']['phase']) {
     case('interaction_result') :
@@ -1292,7 +1467,7 @@ function kw_djambi_game_form_cancel_selection_submit($form, &$form_state) {
 function kw_djambi_game_form_cancel_last_turn_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
   $form_state['kw_djambi']['change_turn'] = TRUE;
-  $grid = $form['#grid'];
+  $grid = $form['grid']['#grid'];
   $grid->cancelLastTurn();
   _kw_djambi_save_game($grid);
 }
@@ -1302,7 +1477,7 @@ function kw_djambi_game_form_cancel_last_turn_submit($form, &$form_state) {
  */
 function kw_djambi_game_form_skip_turn_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
-  $grid = $form['#grid'];
+  $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->skipTurn();
   $grid = $faction->getBattlefield();
@@ -1314,7 +1489,7 @@ function kw_djambi_game_form_skip_turn_submit($form, &$form_state) {
  */
 function kw_djambi_game_form_withdraw_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
-  $grid = $form['#grid'];
+  $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->withdraw();
   $grid = $faction->getBattlefield();
@@ -1327,7 +1502,7 @@ function kw_djambi_game_form_withdraw_submit($form, &$form_state) {
  */
 function kw_djambi_game_form_comeback_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
-  $grid = $form['#grid'];
+  $grid = $form['grid']['#grid'];
   $clicked_button = $form_state['clicked_button']['#parents'][0];
   $id = substr($clicked_button, strpos($clicked_button, '_') + 1);
   $faction = $grid->getFactionById($id);
@@ -1341,7 +1516,7 @@ function kw_djambi_game_form_comeback_submit($form, &$form_state) {
  */
 function kw_djambi_game_form_draw_proposal_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
-  $grid = $form['#grid'];
+  $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->callForADraw();
   $grid = $faction->getBattlefield();
@@ -1353,7 +1528,7 @@ function kw_djambi_game_form_draw_proposal_submit($form, &$form_state) {
  */
 function kw_djambi_game_form_accept_peace_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
-  $grid = $form['#grid'];
+  $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->acceptDraw();
   $grid = $faction->getBattlefield();
@@ -1365,21 +1540,10 @@ function kw_djambi_game_form_accept_peace_submit($form, &$form_state) {
  */
 function kw_djambi_game_form_reject_peace_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
-  $grid = $form['#grid'];
+  $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->rejectDraw();
   _kw_djambi_save_game($grid);
-}
-
-/**
- * Soumission du bouton "Afficher le mouvement précédent"
- */
-function kw_djambi_game_form_show_prev_move_submit($form, &$form_state) {
-  $form_state['rebuild'] = TRUE;
-  if (isset($form_state['do_not_show_moves'])) {
-    unset($form_state['do_not_show_moves']);
-  }
-  $form_state['show_turn_move'] = $form['show_moves']['#value']['prev'];
 }
 
 /**
@@ -1416,11 +1580,11 @@ function kw_djambi_game_form_show_help_submit($form, &$form_state) {
  */
 function kw_djambi_game_form_replay_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
-  if ($form_state['clicked_button']['#id'] == 'ui-replay-pause') {
+  if ($form_state['clicked_button']['#name'] == 'ui-replay-pause') {
     $form_state['autoplay'] = FALSE;
     return;
   }
-  if ($form_state['clicked_button']['#id'] == 'ui-replay-autoplay') {
+  if ($form_state['clicked_button']['#name'] == 'ui-replay-autoplay') {
     $form_state['autoplay'] = TRUE;
     $form_state['show_replay']++;
     return;
@@ -1428,8 +1592,12 @@ function kw_djambi_game_form_replay_submit($form, &$form_state) {
   if (!isset($form_state['autoplay'])) {
     $form_state['autoplay'] = FALSE;
   }
-  $grid = $form['#grid'];
-  if (!isset($form_state['show_replay']) && $form_state['clicked_button']['#id'] == 'ui-replay-backward') {
+  if (substr($form_state['clicked_button']['#name'], 0, strlen('ui-move-view')) == 'ui-move-view') {
+    $form_state['show_replay'] = substr($form_state['clicked_button']['#name'], strlen('ui-move-view-'));
+    return;
+  }
+  $grid = $form['grid']['#grid'];
+  if (!isset($form_state['show_replay']) && $form_state['clicked_button']['#name'] == 'ui-replay-backward') {
     if ($grid->isPending()) {
       $form_state['show_replay'] = $grid->getCurrentTurnId() - count($form_state['values']['showable_turns']);
       $form_state['autoplay'] = TRUE;
@@ -1438,17 +1606,17 @@ function kw_djambi_game_form_replay_submit($form, &$form_state) {
       $form_state['show_replay'] = $grid->getCurrentTurnId();
     }
   }
-  elseif (!isset($form_state['show_replay']) || $form_state['clicked_button']['#id'] == 'ui-replay-begin') {
+  elseif (!isset($form_state['show_replay']) || $form_state['clicked_button']['#name'] == 'ui-replay-begin') {
     $form_state['show_replay'] = 0;
     $form_state['autoplay'] = TRUE;
   }
-  elseif ($form_state['clicked_button']['#id'] == 'ui-replay-backward') {
+  elseif ($form_state['clicked_button']['#name'] == 'ui-replay-backward') {
     if ($form_state['show_replay'] > 0) {
       $form_state['show_replay']--;
       $form_state['autoplay'] = FALSE;
     }
   }
-  elseif ($form_state['clicked_button']['#id'] == 'ui-replay-end') {
+  elseif ($form_state['clicked_button']['#name'] == 'ui-replay-end') {
     unset($form_state['show_replay']);
     unset($form_state['autoplay']);
   }
@@ -1475,7 +1643,7 @@ function kw_djambi_game_form_refresh_submit($form, &$form_state) {
  */
 function kw_djambi_game_form_participate_submit($form, &$form_state) {
   global $user;
-  $grid = $form['#grid'];
+  $grid = $form['grid']['#grid'];
   $form_state['kw_djambi']['change_turn'] = TRUE;
   $grid = _kw_djambi_load_game($grid->getId(), TRUE);
   if ($grid->getStatus() != KW_DJAMBI_STATUS_RECRUITING) {
@@ -1514,7 +1682,6 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
     }
     $grid->logEvent('info', 'NEW_TEAM', array('faction1' => $faction->getId(),
         '!user_id' => $user->uid, '!user_ip' => $_SERVER['REMOTE_ADDR']));
-    // FIXME changer l'appel lors de la personnalisation des camps
     drupal_set_message(t('You are now playing the !color team.',
         array('!color' => _kw_djambi_get_translatable_messages($faction->getName()))));
     _kw_djambi_save_game($grid);
@@ -1528,7 +1695,7 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
  * Soumission du bouton "Quitter la partie"
  */
 function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
-  $grid = $form['#grid'];
+  $grid = $form['grid']['#grid'];
   if ($grid->getStatus() == KW_DJAMBI_STATUS_RECRUITING) {
     $nb_playing_factions = 0;
     foreach ($grid->getFactions() as $faction) {
@@ -1558,7 +1725,7 @@ function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
 function kw_djambi_piece_selection_validate(&$errors, $piece_id, DjambiBattlefield $grid) {
   global $user;
   $errors = array();
-  $piece_form_locator = "pieces[movable][" . $piece_id;
+  $piece_form_locator = "grid[pieces][movable][" . $piece_id;
   $faction = $grid->getPlayingFaction();
   $is_current_user = _kw_djambi_check_current_user($faction);
   if (!$is_current_user) {
@@ -1594,13 +1761,12 @@ function kw_djambi_piece_selection_validate(&$errors, $piece_id, DjambiBattlefie
  * Validation des actions sur la grille de jeu
  */
 function kw_djambi_game_form_validate($form, &$form_state) {
-  module_load_include('inc', 'kw_djambi', 'kw_djambi.form');
   /* @var $grid DjambiBattlefield */
-  $grid = $form["#grid"];
+  $grid = $form['grid']["#grid"];
   $errors = array();
   // Détection du bouton cliqué.
   $button = $form_state["triggering_element"];
-  $type_button = isset($button["#array_parents"][1]) ? $button["#array_parents"][1] : NULL;
+  $type_button = isset($button["#array_parents"][2]) ? $button["#array_parents"][2] : NULL;
   // Traitement des différents cas
   if ($type_button == "movable") {
     $piece = kw_djambi_piece_selection_validate($errors, $button["#return_value"], $grid);

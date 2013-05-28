@@ -50,6 +50,10 @@ function kw_djambi_theme() {
          'render element' => 'form',
          'file' => 'kw_djambi.theme.inc'
      ),
+     'djambi_log' => array(
+         'render element' => 'form',
+         'file' => 'kw_djambi.theme.inc'
+     ),
      'hexagonal_grid' => array(
          'variables' => array('rows' => array(), 'caption' => NULL, 'attributes' => array()),
          'file' => 'kw_djambi.theme.inc'
@@ -489,8 +493,9 @@ function kw_djambi_node_delete($node) {
  */
 function kw_djambi_node_view($node, $view_mode) {
   if ($node->type == 'kw_djambi' && $view_mode =='full') {
-    $node->content['grid'] = drupal_get_form('kw_djambi_game_form', $node);
-    $datagrid = $node->content['grid']['#grid'];
+    $form = drupal_get_form('kw_djambi_game_form', $node);
+    $node->content['grid'] = $form;
+    $datagrid = $form['grid']['#grid'];
     module_load_include('inc', 'kw_djambi', 'kw_djambi.blocks');
     if ($datagrid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
       if (!$datagrid->isNotBegin()) {
@@ -613,23 +618,25 @@ function kw_djambi_check_update($nid, $version) {
     if (!empty($moves)) {
       foreach ($moves as $key => $move) {
         if ($move['time'] > $version) {
-          if ($move['type'] == 'move') {
+          if ($move['type'] == 'move' || !isset($move['acting_faction'])) {
             $faction_id = $move['target_faction'];
           }
           else {
             $faction_id = $move['acting_faction'];
           }
           $acting_faction = $grid->getFactionById($faction_id);
-          $changing_cells[$move['from']] = $acting_faction->getClass();
-          $changing_cells[$move['to']] = $acting_faction->getClass();
-          $new_moves[] = array(
+          if ($acting_faction) {
+            $changing_cells[$move['from']] = $acting_faction->getClass();
+            $changing_cells[$move['to']] = $acting_faction->getClass();
+            $new_moves[] = array(
               'description' => _kw_djambi_describe_move($move, $grid),
               'location' => $move['to'],
               'origin' => $move['from'],
               'order' => $move['turn'] + 1,
               'faction' => $acting_faction->getClass(),
               'animation' => $move['type'] . ':' . $move['to'],
-          );
+            );
+          }
         }
       }
     }
@@ -1020,7 +1027,6 @@ function kw_djambi_game_form($form, &$form_state, $node) {
 function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiBattlefield $grid = NULL) {
   if (isset($args['faction1']) && !is_null($grid)) {
     $faction1 = $grid->getFactionById($args['faction1']);
-    // TODO lors de la personnalisation des camps, ne pas faire appel à _kw_djambi_get_translatable_messages
     $args['!faction1'] = '<span class="faction ' . $faction1->getClass() . '">' . _kw_djambi_get_translatable_messages($faction1->getName()) . '</span>';
     unset($args['faction1']);
   }
@@ -1067,8 +1073,14 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
     case("NEW_DJAMBI_GAME"):
       $txt = t("New djambi chess game created.");
       break;
+    case("GAME_START"):
+      $txt = t("Here it is, the curtain rose on this tragic closed session, the competition can begin.");
+      break;
     case("SURROUNDED"):
       $txt = t("!faction1 leader is surrounded by dead pieces and cannot access to power anymore.", $args);
+      break;
+    case("LEADER_KILLED"):
+      $txt = t("The !faction1 side partisans are mourning the tragic loss of their mentor, the !piece, who was victim of a heinous murder.", $args);
       break;
     case("END"):
       $txt = t("End of the game !");
@@ -1204,22 +1216,22 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
       break;
     case("RULE1"):
         $txt = t("Leader surrounding rule");
-    break;
+      break;
     case("RULE3"):
         $txt = t("Team vassalization rule");
-    break;
+      break;
     case("RULE2"):
         $txt = t("Come-back possibilities rule");
-    break;
+      break;
     case("RULE4"):
         $txt = t("Canibalism rule");
-    break;
+      break;
     case("RULE5"):
         $txt = t("Self manipulation rule");
-    break;
+      break;
     case("RULE6"):
         $txt = t("Press liberty rule");
-    break;
+      break;
     case("RULE7"):
       $txt = t("Throne case interactions rule");
       break;
@@ -1227,38 +1239,38 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
       $txt = t('A leader is eliminated if he is not occupying the throne case,
       if he or his controlled adjacent pieces are surrounded by dead peaces (without empty cells)
       even if he is still controlling a living necromobile.');
-    break;
+      break;
     case("RULE1_LOOSE"):
       $txt = t('A leader is eliminated if he is not occupying the throne case,
       if he or his controlled adjacent pieces cannot move due to dead pieces barricade
       and if he is not controlling a living necromobile.');
-    break;
+      break;
     case("RULE1_THRONE_ACCESS"):
       $txt = t('A leader is eliminated if the way to throne case is locked by dead pieces (even if he can still move)
       and if he has no living necromobile among his controlled pieces.');
-    break;
+      break;
     case("RULE3_TEMPORARY"):
       $txt = t('A player who acceeds to power gains control of the withdrawn or surrounded leaders sides just during the time of his reign.');
-    break;
+      break;
     case("RULE3_FULL_CONTROL"):
       $txt = t('A player who acceeds to power gains full control of the withdrawn or surrounded leaders sides until the end of the game,
       even if he leaves the throne case.');
-    break;
+      break;
     case("RULE2_NEVER"):
       $txt = t('No come-back.');
-    break;
+      break;
     case("RULE2_SURROUNDING"):
       $txt = t('A player who had a surrounded leader can play again if his leader is not surrounded anymore, even if he is controlled by another team.');
-    break;
+      break;
     case("RULE2_ALLOWED"):
       $txt = t('A player who had withdrawn or had a surrounded leader can play again if his leader is still alive, not surrounded and not controlled by an another team.');
-    break;
+      break;
     case("RULE4_YES"):
       $txt = t('The end justifies the means. If needed, there will be sacrifices. They will remain in our memories.');
-    break;
+      break;
     case("RULE4_NO"):
       $txt = t('No way, killing your own pieces is forbidden.');
-    break;
+      break;
     case("RULE4_ETHICAL"):
       $txt = t('Responsible game : you cannot kill your own pieces and neutral pieces.');
       break;
@@ -1302,58 +1314,79 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
     break;
     case("OPTION1_NEVER"):
        $txt = t("Skipping turns is forbidden !");
-    break;
+      break;
     case("OPTION1_ALWAYS"):
        $txt = t("No limits, you can always skip your turn.");
-    break;
+      break;
     case("OPTION2_XTURN"):
        $txt = format_plural($args['!value'], '!value turn', '!value turns', $args);
-    break;
+      break;
     case('OPTION3'):
       $txt = t("Allow anonymous players to join this game");
-    break;
+      break;
     case('OPTION3_YES'):
       $txt = t("Yes, anyone can join this game");
-    break;
+      break;
     case('OPTION3_NO'):
       $txt = t("No, only registered users can play");
-    break;
+      break;
     case(KW_DJAMBI_USER_PLAYING):
       $txt = t('playing');
-    break;
+      break;
     case(KW_DJAMBI_USER_WINNER):
       $txt = t('winner');
-    break;
+      break;
     case(KW_DJAMBI_USER_DRAW):
       $txt = t('draw');
-    break;
+      break;
     case(KW_DJAMBI_USER_KILLED):
       $txt = t('killed');
-    break;
+      break;
     case(KW_DJAMBI_USER_WITHDRAW):
       $txt = t('withdrawn');
-    break;
+      break;
     case(KW_DJAMBI_USER_SURROUNDED):
       $txt = t('surrounded');
-    break;
+      break;
     case(KW_DJAMBI_USER_DEFECT):
       $txt = t('defect');
-    break;
+      break;
     case(KW_DJAMBI_USER_EMPTY_SLOT):
       $txt = t('empty');
-    break;
+      break;
     case(KW_DJAMBI_USER_READY):
       $txt = t('ready');
-    break;
+      break;
     case(KW_DJAMBI_USER_VASSALIZED):
       $txt = t('vassalized');
-    break;
+      break;
     case('NEW_TEAM');
       $txt = t('!faction1 side is now controlled by !user', $args);
-    break;
+      break;
     case('TEAM_EXIT'):
       $txt = t('!user left the game.', $args);
-    break;
+      break;
+    case('event');
+      $txt = t('game event');
+      break;
+    case('notice'):
+      $txt = t('turn info');
+      break;
+    case('info'):
+      $txt = t('game info');
+      break;
+    case('move'):
+      $txt = t('move');
+      break;
+    case('murder'):
+      $txt = t('crime');
+      break;
+    case('necromobility'):
+      $txt = t('exhumation');
+      break;
+    case('manipulation'):
+      $txt = t("manipulation");
+      break;
       /*case(""):
        $txt = t("");
       break;*/

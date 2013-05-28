@@ -12,7 +12,7 @@ function theme_djambi_grid($variables) {
   $selected_piece = NULL;
   $has_destination_layer = FALSE;
   $display_changes = TRUE;
-  $display_events = TRUE;
+  $display_events = $grid->isPending();
   $dispositions = DjambiBattlefield::getDispositions();
   $disposition = $grid->getDisposition();
   $cells = $grid->getCells();
@@ -79,22 +79,24 @@ function theme_djambi_grid($variables) {
         if ($move['turn'] == $displayed_turn_id) {
           $animated_moves['moves'][$i] = $move;
           $animated_moves['pieces'][$move['target']][] = $i;
-          if ($move['type'] == 'move') {
+          if ($move['type'] == 'move' || !isset($move['acting_faction'])) {
             $faction_id = $move['target_faction'];
           }
           else {
             $faction_id = $move['acting_faction'];
           }
           $acting_faction = $grid->getFactionById($faction_id);
-          $changing_cells[$move['from']] = $acting_faction->getClass();
-          $changing_cells[$move['to']] = $acting_faction->getClass();
-          $new_moves[$i++] = array(
-            'description' => _kw_djambi_describe_move($move, $grid),
-            'location' => $move['to'],
-            'order' => $move['turn'] + 1,
-            'faction' => $faction_id,
-            'hidden' => !$show_moves
-          );
+          if ($acting_faction) {
+            $changing_cells[$move['from']] = $acting_faction->getClass();
+            $changing_cells[$move['to']] = $acting_faction->getClass();
+            $new_moves[$i++] = array(
+              'description' => _kw_djambi_describe_move($move, $grid),
+              'location' => $move['to'],
+              'order' => $move['turn'] + 1,
+              'faction' => $faction_id,
+              'hidden' => !$show_moves
+            );
+          }
         }
       }
     }
@@ -106,7 +108,7 @@ function theme_djambi_grid($variables) {
       $showable_turns = $form['showable_turns']['#value'];
       foreach ($moves as $move_key => $move) {
         if (in_array($move['turn'], $showable_turns)) {
-          if ($move['type'] == 'move') {
+          if ($move['type'] == 'move' || empty($move['acting_faction'])) {
             $faction_id = $move['target_faction'];
           }
           else {
@@ -169,6 +171,9 @@ function theme_djambi_grid($variables) {
         foreach ($last_moves as $order => $move) {
           if ($move['location'] == $key) {
             $acting_faction = $grid->getFactionById($move['faction']);
+            if (!$acting_faction) {
+              continue;
+            }
             $change_html = "<div class='change " . $acting_faction->getClass() . "' data-order='" . $order . "'><span class='order' title=\""
               . t("A move involving !faction side recently happened here (it was move #!move).", array(
                   '!faction' => _kw_djambi_get_translatable_messages($acting_faction->getName()),
@@ -366,7 +371,7 @@ function theme_djambi_grid($variables) {
         array("%displayed_turn" => $displayed_turn["turn"], '%max_turn' => $max_turn["turn"])) . '</span>';
     if (!empty($animated_moves)) {
       $playing_faction = $grid->getFactionById($displayed_turn['side']);
-      $caption_title .= "<br /><span class='recap'>" . t("!faction side move, began at %begin, duration : %duration", array(
+      $caption_title .= "<br /><span class='recap'>" . t("Showing !faction side move, began at %begin, duration : %duration", array(
         '!faction' => '<span class="faction ' . $playing_faction->getClass() . '">' . _kw_djambi_get_translatable_messages($playing_faction->getName()) . '</span>',
         '%begin' => format_date($displayed_turn['begin'], 'short'),
         '%duration' => format_interval($displayed_turn['end'] - $displayed_turn['begin'])
@@ -376,6 +381,7 @@ function theme_djambi_grid($variables) {
       foreach ($grid->getEvents() as $event) {
         if ($event['turn'] == $displayed_turn_id && $event['type'] == 'event') {
           $caption_title .= "<br /><span class='recap'><em>" . format_date($event['time'], 'short') ."</em> : " . _kw_djambi_get_translatable_messages($event['event'], $event['args'], $grid) . "</span>";
+          break;
         }
       }
     }
@@ -477,7 +483,7 @@ function theme_djambi_grid($variables) {
       'caption' => $caption_title
     ));
   }
-  $form['grid']['table'] = array(
+  $form['table'] = array(
     '#markup' => $markup,
     '#weight' => 0
   );
@@ -494,7 +500,7 @@ function theme_djambi_grid($variables) {
       }
     }
     if (!empty($recent_events)) {
-      $form['grid']['recent_events'] = array(
+      $form['recent_events'] = array(
           '#markup' => '<div class="events">' . theme('item_list', array(
               'items' => $recent_events,
               'title' => t('Recent events'),
@@ -505,7 +511,12 @@ function theme_djambi_grid($variables) {
   }
   // Affichage
   unset($form['pieces']);
-  $html = drupal_render_children($form);
+  $form['#sorted'] = FALSE;
+  $children = element_children($form, TRUE);
+  $html = '';
+  foreach ($children as $child) {
+    $html .= drupal_render($form[$child]);
+  }
   return $html;
 }
 
@@ -577,12 +588,12 @@ function theme_djambi_recruiting_phase($variables) {
   );
   $rows = array();
   $empty = 0;
-  foreach (element_children($form['grid']['factions']) as $id) {
-    if (!empty($form['grid']['factions'][$id]['infos'])) {
-      $ip = $form['grid']['factions'][$id]['infos']['#value']['ip'];
-      $ping = $form['grid']['factions'][$id]['infos']['#value']['ping'];
+  foreach (element_children($form['factions']) as $id) {
+    if (!empty($form['factions'][$id]['infos'])) {
+      $ip = $form['factions'][$id]['infos']['#value']['ip'];
+      $ping = $form['factions'][$id]['infos']['#value']['ping'];
       $ping_array = _kw_djambi_format_ping_infos($ping);
-      $joined = format_interval(time() - $form['grid']['factions'][$id]['infos']['#value']['joined']);
+      $joined = format_interval(time() - $form['factions'][$id]['infos']['#value']['joined']);
     }
     else {
       $ip = $ping_array['status'] = $joined = '?';
@@ -591,30 +602,55 @@ function theme_djambi_recruiting_phase($variables) {
       $empty++;
     }
     $row = array(
-      0 => array('data' => $form['grid']['factions'][$id]['label']['#title']),
-      1 => array('data' => $form['grid']['factions'][$id]['label']['#markup'] .
-          (isset($form['grid']['factions'][$id]['infos']) && $form['grid']['factions'][$id]['infos']['#value']['me'] ? ' ('. t('Me !') . ')' : '')),
+      0 => array('data' => $form['factions'][$id]['label']['#title']),
+      1 => array('data' => $form['factions'][$id]['label']['#markup'] .
+          (isset($form['factions'][$id]['infos']) && $form['factions'][$id]['infos']['#value']['me'] ? ' ('. t('Me !') . ')' : '')),
       2 => array('data' => $ip),
       3 => array('data' => $ping_array['status'], 'class' => array($ping_array['class'], 'ping-info'),
             'title' => $ping_array['title']),
       4 => array('data' => $joined, 'class' => array('joined')),
-      5 => array('data' => !empty($form['grid']['factions'][$id]['action']) ? drupal_render($form['grid']['factions'][$id]['action']) : '-')
+      5 => array('data' => !empty($form['factions'][$id]['action']) ? drupal_render($form['factions'][$id]['action']) : '-')
     );
-    $rows[] = array('data' => $row, 'class' => isset($form['grid']['factions'][$id]['infos']) && $form['grid']['factions'][$id]['infos']['#value']['me'] ? array('me') : array('not-me'),
-            'data-djuid' => !empty($form['grid']['factions'][$id]['infos']['#value']['djuid']) ? $form['grid']['factions'][$id]['infos']['#value']['djuid'] : NULL);
+    $rows[] = array('data' => $row, 'class' => isset($form['factions'][$id]['infos']) && $form['factions'][$id]['infos']['#value']['me'] ? array('me') : array('not-me'),
+            'data-djuid' => !empty($form['factions'][$id]['infos']['#value']['djuid']) ? $form['factions'][$id]['infos']['#value']['djuid'] : NULL);
   }
-  unset($form['grid']['factions']);
+  unset($form['factions']);
   $caption = t('Waiting for other players : !remaining', array('!remaining' =>
       format_plural($empty, '1 empty slot remaining', '!nb empty slots remaining', array('!nb' => $empty))));
   $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
   $infos_lines[t("Unbegun game")] = _kw_djambi_waiting_label(NULL, $grid);
   _kw_djambi_add_info_lines($infos_lines, $form);
-  $form['grid']['players'] = array(
+  $form['players'] = array(
       '#markup' => theme('table', array('header' => $header, 'rows' => $rows,
           'caption' => $caption, 'attributes' => array('class' => array('players')))),
       '#weight' => 10
   );
+  $form['#sorted'] = FALSE;
+  $children = element_children($form, TRUE);
+  $html = '';
+  foreach ($children as $child) {
+    $html .= drupal_render($form[$child]);
+  }
+  return $html;
+}
+
+/**
+ * Affichage des logs
+ */
+function theme_djambi_log($variables) {
+  $form = $variables["form"];
+  $buttons = array();
+  if (!empty($form['buttons'])) {
+    $children = element_children($form['buttons']);
+    foreach ($children as $child) {
+      $buttons['[' . $child . ']'] = drupal_render($form['buttons'][$child]);
+    }
+    unset($form['buttons']);
+  }
   $html = drupal_render_children($form);
+  if (!empty($buttons)) {
+    $html =str_replace(array_keys($buttons), $buttons, $html);
+  }
   return $html;
 }
 
@@ -627,7 +663,7 @@ function _kw_djambi_add_info_lines($infos_lines, &$form) {
     foreach ($infos_lines as $legend => $line) {
       $infos_items[] = '<span class="pseudo-label">' . $legend . ' : </span><span class="value">' . $line . '</span>';
     }
-    $form['grid']['infos'] = array(
+    $form['infos'] = array(
         '#markup' => theme('item_list', array('items' => $infos_items)),
         '#weight' => -10
     );

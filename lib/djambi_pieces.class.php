@@ -301,6 +301,10 @@ class DjambiPiece {
     $this->faction->getBattlefield()->logMove($victim, $destination, "murder", $this);
     $victim->setPosition($destination["x"], $destination["y"]);
     if ($victim->getHability("must_live")) {
+      $this->getFaction()->getBattlefield()->logEvent('event', 'LEADER_KILLED', array(
+          'faction1' => $victim->getFaction()->getId(),
+          'piece' => $victim->getId()
+      ));
       $victim->getFaction()->dieDieDie(KW_DJAMBI_USER_KILLED);
       $victim->getFaction()->setControl($this->faction->getControl());
       $victim->getFaction()->setMaster($this->faction->getControl()->getId());
