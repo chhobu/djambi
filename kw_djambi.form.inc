@@ -1060,7 +1060,7 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
         $stats['peace'][$move['acting_faction']]++;
       }
       @$stats['terminator'][$move['acting']]++;
-      if ($grid->getPieceById($move['acting'])->getType() == 'reporter') {
+      if ($grid->getPieceById($move['acting']) && $grid->getPieceById($move['acting'])->getType() == 'reporter') {
         $target = $grid->getPieceById($move['target']);
         @$stats['pulitzer'][$move['acting']]++;
         if ($target->getHability('must_live')) {

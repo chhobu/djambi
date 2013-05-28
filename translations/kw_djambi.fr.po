@@ -802,7 +802,7 @@ msgstr "Tour n°%displayed_turn/%max_turn"
 
 #: kw_djambi.theme.inc:374
 msgid "Showing !faction side move, began at %begin, duration : %duration"
-msgstr "Mouvement effectué par le parti !side, commencé le %begin, ayant duré %duration"
+msgstr "Mouvement effectué par le parti !faction, commencé le %begin, ayant duré %duration"
 
 #: kw_djambi.theme.inc:390
 msgid "Finished on %date, game total duration : %duration"
