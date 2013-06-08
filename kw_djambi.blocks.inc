@@ -352,7 +352,7 @@ function _kw_djambi_list_user_games($nid = 0) {
     $grid = _kw_djambi_load_game();
   }
   if ($grid) {
-    $nid = $grid->getId();
+    $nid = $grid->getInfo('nid');
     $user_faction = _kw_djambi_get_user_faction($grid, $user);
     if ($user_faction && $grid->getMode() != KW_DJAMBI_MODE_SANDBOX && !$grid->isFinished()) {
       $elements['playing'] = array(
@@ -377,7 +377,9 @@ function _kw_djambi_list_user_games($nid = 0) {
         ':uid' => $user->uid
     ));
   }
-  $q->condition('n.nid', $nid, '!=');
+  if (!is_null($nid)) {
+    $q->condition('n.nid', $nid, '!=');
+  }
   $q->condition('n.status', DjambiBattlefield::getStatuses(FALSE, TRUE, TRUE, FALSE));
   $q->condition('n.autodelete', time(), '>');
   $q->leftJoin('djambi_users', 'up', 'up.nid = n.nid AND up.status = :status',
@@ -399,6 +401,7 @@ function _kw_djambi_list_user_games($nid = 0) {
   $games = array();
   $nids = array();
   $factions_info = DjambiPoliticalFaction::buildFactionsInfos();
+  //__debug($result);
   foreach($result as $game) {
     if ($game->mode == KW_DJAMBI_MODE_SANDBOX) {
       if (!in_array($game->nid, $nids)) {

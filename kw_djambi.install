@@ -109,6 +109,16 @@ function kw_djambi_schema() {
       'cookie' => array(
         'type' => 'varchar',
         'length' => 23
+      ),
+      'human' => array(
+        'type' => 'int',
+        'size' => 'tiny',
+        'unsigned' => TRUE,
+        'default' => 1
+      ),
+      'ia' => array(
+        'type' => 'varchar',
+        'length' => 50
       )
     ),
     'primary key' => array('djuid'),
@@ -152,5 +162,18 @@ function kw_djambi_update_7102() {
   db_add_field('djambi_node', 'disposition', array(
     'type' => 'varchar',
     'length' => 10
+  ));
+}
+
+function kw_djambi_update_7103() {
+  db_add_field('djambi_users', 'ia', array(
+    'type' => 'varchar',
+    'length' => 50
+  ));
+  db_add_field('djambi_users', 'human', array(
+    'type' => 'int',
+    'size' => 'tiny',
+    'unsigned' => TRUE,
+    'default' => 1
   ));
 }

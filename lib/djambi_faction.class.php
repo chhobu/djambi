@@ -1,11 +1,25 @@
 <?php
 class DjambiPoliticalFaction {
-  private $status, $ranking,
-    $user_data, $id, $name, $class, $control, $alive,
-    $pieces, $battlefield = NULL, $start_order, $playing,
-    $skipped_turns, $last_draw_proposal, $draw_status;
+  private
+    $status,
+    $ranking,
+    $user_data,
+    $id,
+    $name,
+    $class,
+    $control,
+    $alive,
+    $pieces,
+    $battlefield = NULL,
+    $start_order,
+    $playing,
+    $skipped_turns,
+    $last_draw_proposal,
+    $draw_status,
+    $ia;
 
-  public function __construct($user_data, $id, $data) {
+  public function __construct(DjambiBattlefield $battlefield, $user_data, $id, $data) {
+    $this->battlefield = $battlefield;
     $this->user_data = $user_data;
     $this->id = $id;
     $this->name = $data['name'];
@@ -20,6 +34,12 @@ class DjambiPoliticalFaction {
     $this->draw_status = isset($data['draw_status']) ? $data['draw_status'] : NULL;
     $this->ranking = isset($data['ranking']) ? $data['ranking'] : NULL;
     $this->master = isset($data['master']) ? $data['master'] : NULL;
+    $ia_class = $this->getUserDataItem('ia');
+    if (!empty($ia_class)) {
+      $ia_class = DjambiIA::getDefaultIAClass();
+      $ia = new $ia_class($this);
+      $this->ia = $ia;
+    }
     $this->setStatus($this->getUserDataItem('status'));
   }
 
@@ -110,6 +130,13 @@ class DjambiPoliticalFaction {
   public function setDrawStatus($value) {
     $this->draw_status = $value;
     return $this;
+  }
+
+  /**
+   * @return DjambiIA
+   */
+  public function getIa() {
+    return $this->ia;
   }
 
   public function setStatus($status) {
@@ -215,6 +242,10 @@ class DjambiPoliticalFaction {
     return $this;
   }
 
+  public function isHumanControlled() {
+    return $this->getUserDataItem('human');
+  }
+
   /**
    * @return DjambiBattlefield
    */
@@ -222,12 +253,12 @@ class DjambiPoliticalFaction {
     return $this->battlefield;
   }
 
-  public function setBattlefield(DjambiBattlefield $bt) {
-    $this->battlefield = $bt;
+  public function setBattlefield(DjambiBattlefield $grid) {
+    $this->battlefield = $grid;
   }
 
   public function createPieces($pieces_scheme, $start_scheme, $deads = NULL) {
-    foreach($pieces_scheme as $key => $scheme) {
+    foreach($pieces_scheme as $key => $piece_description) {
       $alive = TRUE;
       if (!is_null($deads) && is_array($deads)) {
         if (array_search($this->getId(). '-' . $key, $deads) !== FALSE) {
@@ -237,13 +268,8 @@ class DjambiPoliticalFaction {
       if (!isset($start_scheme[$key])) {
         continue;
       }
-      $piece = new DjambiPiece($this, $key, $scheme['shortname'], $scheme['longname'],
-        $scheme['type'], $start_scheme[$key]['x'], $start_scheme[$key]['y'], $alive);
-      if (isset($scheme['habilities']) && is_array($scheme['habilities'])) {
-        foreach($scheme['habilities'] as $hability => $value) {
-          $piece->setHability($hability, $value);
-        }
-      }
+      $original_faction_id = $this->getId();
+      $piece = new DjambiPiece($piece_description, $this, $original_faction_id, $start_scheme[$key], $alive);
       $this->pieces[$key] = $piece;
     }
   }
@@ -284,14 +310,14 @@ class DjambiPoliticalFaction {
   public function callForADraw() {
     $turns = $this->getBattlefield()->getTurns();
     $this->setLastDrawProposal($turns[$this->getBattlefield()->getCurrentTurnId()]['turn']);
-    $this->getBattlefield()->logEvent('info', 'DRAW_PROPOSAL', array('faction1' => $this->getId()));
+    $this->getBattlefield()->logEvent('event', 'DRAW_PROPOSAL', array('faction1' => $this->getId()));
     $this->getBattlefield()->setStatus(KW_DJAMBI_STATUS_DRAW_PROPOSAL);
     $this->setDrawStatus(1);
     $this->getBattlefield()->changeTurn();
   }
 
   public function acceptDraw() {
-    $this->getBattlefield()->logEvent('info', 'DRAW_ACCEPTED', array('faction1' => $this->getId()));
+    $this->getBattlefield()->logEvent('event', 'DRAW_ACCEPTED', array('faction1' => $this->getId()));
     $this->setDrawStatus(2);
     $factions = $this->getBattlefield()->getFactions();
     $alive_factions = array();
@@ -313,7 +339,7 @@ class DjambiPoliticalFaction {
   }
 
   public function rejectDraw() {
-    $this->getBattlefield()->logEvent('info', 'DRAW_REJECTED', array('faction1' => $this->getId()));
+    $this->getBattlefield()->logEvent('event', 'DRAW_REJECTED', array('faction1' => $this->getId()));
     $this->getBattlefield()->setStatus(KW_DJAMBI_STATUS_PENDING);
     $factions = $this->getBattlefield()->getFactions();
     foreach ($factions as $faction) {
@@ -331,12 +357,12 @@ class DjambiPoliticalFaction {
     foreach ($pieces as $key => $piece) {
       if ($piece->isAlive()) {
         // Contrôle 1 : chef vivant ?
-        if ($piece->getHability("must_live") && $piece->getFaction()->getId() == $this->getId()) {
+        if ($piece->getDescription()->hasHabilityMustLive() && $piece->getFaction()->getId() == $this->getId()) {
           $control_leader = TRUE;
           $leaders[] = $piece;
         }
         // Contrôle 2 : nécromobile vivant ?
-        if ($piece->getHability("move_dead_pieces")) {
+        if ($piece->getDescription()->hasHabilityMoveDeadPieces()) {
           $has_necromobile = TRUE;
         }
       }
@@ -426,7 +452,7 @@ class DjambiPoliticalFaction {
     return FALSE;
   }
 
-  public function toDatabase() {
+  public function toArray() {
     $data = array(
       'name' => $this->name,
       'class' => $this->class,

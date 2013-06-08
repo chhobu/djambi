@@ -1,6 +1,7 @@
 <?php
 define('KW_DJAMBI_MODE_SANDBOX', 'bac-a-sable');
 define('KW_DJAMBI_MODE_FRIENDLY', 'amical');
+define('KW_DJAMBI_MODE_TRAINING', 'training');
 
 define('KW_DJAMBI_STATUS_PENDING', 'pending');
 define('KW_DJAMBI_STATUS_FINISHED', 'finished');
@@ -21,114 +22,81 @@ define('KW_DJAMBI_USER_READY', 'ready'); // Création de partie, prêt à jouer
 
 
 class DjambiBattlefield {
-  private $id, $rows, $cols, $cells, $factions, $directions,
-    $moves, $mode, $status, $turns, $play_order, $events, $options,
-    $infos, $rules, $living_factions_at_turn_begin, $summary, $disposition,
-    $displayed_turn_id;
+  private $id,
+          $scheme,
+          $cells =array(),
+          $factions = array(),
+          $moves = array(),
+          $mode,
+          $status,
+          $turns = array(),
+          $play_order,
+          $events = array(),
+          $options = array(),
+          $infos = array(),
+          $rules = array(),
+          $living_factions_at_turn_begin = array(),
+          $summary = array(),
+          $disposition,
+          $displayed_turn_id,
+          $habilities_store = array(),
+          $savable = TRUE;
 
-  public function __construct($id, $data) {
-    $this->id = $id;
+  /**
+   * Construction de l'objet DjambiBattlefield
+   * @param String $id : identifiant
+   * @param array $data : informations sur la partie en cours ou à créer
+   * @return DjambiBattlefield
+   */
+  public function __construct($data) {
+    if (isset($data['id'])) {
+      $this->id = $data['id'];
+    }
+    else {
+      $this->id = uniqid('Dj');
+    }
     $this->setDefaultOptions();
     $this->moves = array();
     $this->events = array();
     $this->summary = array();
-    if ($id > 0) {
-      return $this->loadBattlefield($data);
-    }
-    elseif (is_array($data) && isset($data['mode'])) {
-      $this->setInfo('sequence', $data['sequence']);
+    if (isset($data['is_new']) && $data['is_new']) {
+      unset($data['is_new']);
+      if (isset($data['sequence'])) {
+        $this->setInfo('sequence', $data['sequence']);
+      }
+      if (isset($data['savable']) && is_bool($data['savable'])) {
+        $this->savable = $data['savable'];
+      }
       $this->setDisposition($data['disposition']);
       $this->setMode($data['mode']);
-      return $this->createNewGame($data['user_id'], $data['user_cookie']);
+      return $this->createNewGame($data);
     }
     else {
-      return NULL;
+      return $this->loadBattlefield($data);
     }
   }
 
-  public function __toString() {
-    return $this->id;
-  }
+  // ------------------------------------------------------------
+  // ------------------ FONCTIONS STATIQUES ---------------------
+  // ------------------------------------------------------------
 
-  private function createNewGame($user_id, $user_cookie) {
-    $dispositions = self::getDispositions();
-    $disposition = $dispositions[$this->disposition];
-    // Construction des factions
-    switch ($this->disposition) {
-      case('2std'):
-        $players = array(
-          1 => 'human',
-          2 => 'vassal',
-          3 => 'human',
-          4 => 'vassal'
-        );
-        break;
-      default:
-        $players = array_fill(1, $disposition['nb'], 'human');
-    }
-    $players_info = array();
-    foreach ($players as $key => $player) {
-      switch ($player) {
-        case('human'):
-          if ($this->mode == KW_DJAMBI_MODE_SANDBOX || ($key == 1 && $this->mode == KW_DJAMBI_MODE_FRIENDLY)) {
-            $data['ip'] = $_SERVER['REMOTE_ADDR'];
-            if ($this->mode != KW_DJAMBI_MODE_SANDBOX) {
-              $data['ping'] = $data['joined'] = time();
-            }
-            $players_info[$key] = array(
-                'uid' => $user_id,
-                'data' => $data,
-                'status' => KW_DJAMBI_USER_READY,
-                'cookie' => $user_cookie
-            );
-          }
-          else {
-            $players_info[$key] = array(
-                'uid' => 0,
-                'data' => array(),
-                'status' => KW_DJAMBI_USER_EMPTY_SLOT,
-                'cookie' => NULL
-            );
-          }
-          break;
-        case('vassal'):
-          $players_info[$key] = array(
-            'uid' => 0,
-            'data' => array(),
-            'status' => KW_DJAMBI_USER_VASSALIZED,
-            'cookie' => NULL
-          );
-          break;
-      }
-    }
-    $this->setInfo('players_info', $players_info);
-    $factions_data = DjambiPoliticalFaction::buildFactionsInfos();
-    $nb_factions = count($players_info);
-    $i = 0;
-    foreach ($factions_data as $key => $faction_data) {
-      $i++;
-      if ($i > count($players_info)) {
-        break;
-      }
-      $faction = new DjambiPoliticalFaction($players_info[$i], $key, $faction_data);
-      $this->factions[$i] = $faction;
-    }
-    $this->setOption('directions', $disposition['directions']);
-    if ($nb_factions == 4) {
-      $this->buildSquareBattlefieldWith4Factions();
-    }
-    elseif ($nb_factions == 3) {
-      $this->buildHexagonalBattlefieldWith3Factions();
-    }
-    $this->logEvent('info', 'NEW_DJAMBI_GAME');
-    return $this;
-  }
-
-  public static function getModes($with_description = FALSE) {
+  /**
+   * Liste des modes de jeu
+   * @param boolean $with_description
+   * @param boolean $with_hidden
+   * @return array
+   */
+  public static function getModes($with_description = FALSE, $with_hidden = FALSE) {
     $modes = array(
         KW_DJAMBI_MODE_FRIENDLY => 'MODE_FRIENDLY_DESCRIPTION',
         KW_DJAMBI_MODE_SANDBOX => 'MODE_SANDBOX_DESCRIPTION',
     );
+    $hidden_modes = array(
+        KW_DJAMBI_MODE_TRAINING => 'MODE_TRAINING_DESCRIPTION'
+    );
+    if ($with_hidden) {
+      $modes = array_merge($modes, $hidden_modes);
+    }
     if ($with_description) {
       return $modes;
     }
@@ -137,6 +105,14 @@ class DjambiBattlefield {
     }
   }
 
+  /**
+   * Liste des différentes statuts de jeu
+   * @param boolean $with_description
+   * @param boolean $with_recruiting
+   * @param boolean $with_pending
+   * @param boolean $with_finished
+   * @return array:
+   */
   public static function getStatuses($with_description = FALSE, $with_recruiting = TRUE, $with_pending = TRUE, $with_finished = TRUE) {
     $statuses = array();
     if ($with_recruiting) {
@@ -157,30 +133,42 @@ class DjambiBattlefield {
     }
   }
 
-  public static function getDispositions($elements = 'all') {
+  /**
+   * Liste des différentes dispositions de jeu disponibles
+   * @param string $elements : liste des éléments du tableau à renvoyer : 'all', 'description', 'sides', 'nb' ou 'scheme'
+   * @param boolean $with_hidden
+   * @return array
+   */
+  public static function getDispositions($elements = 'all', $with_hidden = TRUE) {
     $games = array(
         '4std' => array(
             'description' => '4STD_DESCRIPTION',
             'nb' => 4,
-            'scheme' => 'standard',
-            'grid' => 'table',
-            'directions' => 'cardinal'
+            'scheme' => 'DjambiBattlefieldSchemeStandardGridWith4Sides'
         ),
         '2std' => array(
             'description' => '2STD_DESCRIPTION',
             'nb' => 2,
-            'scheme' => 'standard',
-            'grid' => 'table',
-            'directions' => 'cardinal'
+            'sides' => array(1 => 'playable', 2 => 'vassal', 3 => 'playable', 4 => 'vassal'),
+            'scheme' => 'DjambiBattlefieldSchemeStandardGridWith4Sides'
         ),
         '3hex' => array(
             'description' => '3HEX_DESCRIPTION',
             'nb' => 3,
-            'scheme' => 'standard',
-            'grid' => 'hexagonal',
-            'directions' => 'hexagonal'
+            'scheme' => 'DjambiBattlefieldSchemeHexagonalGridWith3Sides'
         )
     );
+    $hidden_games = array(
+        '2mini' => array(
+            'description' => '2MINI_DESCRPTION',
+            'nb' => 2,
+            'scheme' => 'DjambiBattlefieldSchemeMiniGridWith2Sides',
+            'hidden' => TRUE
+        )
+    );
+    if ($with_hidden) {
+      $games = array_merge($games, $hidden_games);
+    }
     if ($elements == 'all') {
       return $games;
     }
@@ -194,6 +182,520 @@ class DjambiBattlefield {
       }
     }
     return $return;
+  }
+
+  /**
+   * Liste des options de jeu
+   * @return array
+   */
+  public static function getOptionsInfo() {
+    return array(
+        'allow_anonymous_players' => array(
+            'default' => 1,
+            'configurable' => TRUE,
+            'title' => 'OPTION3',
+            'widget' => 'radios',
+            'type' => 'game_option',
+            'choices' => array(1 => 'OPTION3_YES', 0 => 'OPTION3_NO'),
+            'modes' => array(KW_DJAMBI_MODE_FRIENDLY)
+        ),
+        'allowed_skipped_turns_per_user' => array(
+            'default' => -1,
+            'configurable' => TRUE,
+            'title' => 'OPTION1',
+            'widget' => 'select',
+            'type' => 'game_option',
+            'choices' => array(
+                0 => 'OPTION1_NEVER',
+                1 => 'OPTION1_XTIME',
+                2 => 'OPTION1_XTIME',
+                3 => 'OPTION1_XTIME',
+                4 => 'OPTION1_XTIME',
+                5 => 'OPTION1_XTIME',
+                10 => 'OPTION1_XTIME',
+                -1 => 'OPTION1_ALWAYS')
+        ),
+        'turns_before_draw_proposal' => array(
+            'default' => 10,
+            'configurable' => TRUE,
+            'title' => 'OPTION2',
+            'widget' => 'select',
+            'type' => 'game_option',
+            'choices' => array(
+                -1 => 'OPTION2_NEVER',
+                0 => 'OPTION2_ALWAYS',
+                2 => 'OPTION2_XTURN',
+                5 => 'OPTION2_XTURN',
+                10 => 'OPTION2_XTURN',
+                20 => 'OPTION2_XTURN')
+        ),
+        'rule_surrounding' => array(
+            'title' => 'RULE1',
+            'type' => 'rule_variant',
+            'configurable' => TRUE,
+            'default' => 'throne_access',
+            'widget' => 'radios',
+            'choices' => array(
+                'throne_access' => 'RULE1_THRONE_ACCESS',
+                'strict' => 'RULE1_STRICT',
+                'loose' => 'RULE1_LOOSE'
+            )
+        ),
+        'rule_comeback' => array(
+            'title' => 'RULE2',
+            'type' => 'rule_variant',
+            'configurable' => TRUE,
+            'default' => 'allowed',
+            'widget' => 'radios',
+            'choices' => array(
+                'never' => 'RULE2_NEVER',
+                'surrounding' => 'RULE2_SURROUNDING',
+                'allowed' => 'RULE2_ALLOWED'
+            )
+        ),
+        'rule_vassalization' => array(
+            'title' => 'RULE3',
+            'type' => 'rule_variant',
+            'configurable' => TRUE,
+            'widget' => 'radios',
+            'default' => 'full_control',
+            'choices' => array(
+                'temporary' => 'RULE3_TEMPORARY',
+                'full_control' => 'RULE3_FULL_CONTROL'
+            )
+        ),
+        'rule_canibalism' => array(
+            'title' => 'RULE4',
+            'type' => 'rule_variant',
+            'widget' => 'radios',
+            'configurable' => TRUE,
+            'default' => 'no',
+            'choices' => array(
+                'yes' => 'RULE4_YES',
+                'vassals' => 'RULE4_VASSALS',
+                'no' => 'RULE4_NO',
+                'ethical' => 'RULE4_ETHICAL'
+            )
+        ),
+        'rule_self_diplomacy' => array(
+            'title' => 'RULE5',
+            'type' => 'rule_variant',
+            'configurable' => TRUE,
+            'widget' => 'radios',
+            'default' => 'never',
+            'choices' => array(
+                'never' => 'RULE5_NEVER',
+                'vassal' => 'RULE5_VASSAL'
+            )
+        ),
+        'rule_press_liberty' => array(
+            'title' => 'RULE6',
+            'type' => 'rule_variant',
+            'configurable' => TRUE,
+            'widget' => 'radios',
+            'default' => 'pravda',
+            'choices' => array(
+                'pravda' => 'RULE6_PRAVDA',
+                'foxnews' => 'RULE6_FOXNEWS'
+            )
+        ),
+        'rule_throne_interactions' => array(
+            'title' => 'RULE7',
+            'type' => 'rule_variant',
+            'configurable' => TRUE,
+            'widget' => 'radios',
+            'default' => 'normal',
+            'choices' => array(
+                'normal' => 'RULE7_NORMAL',
+                'extended' => 'RULE7_EXTENDED'
+            )
+        ),
+    );
+  }
+
+  /**
+   * Retourne le nom d'une case à partir d'un tableau de coordonnées
+   * @param array $position : tableeau contenant des clés 'x' et 'y'
+   * @return string
+   */
+  public static function locateCell($position) {
+    if (!isset($position['x']) || !isset($position['y'])) {
+      throw new Exception('Bad argument');
+    }
+    return DjambiBattlefield::locateCellByXY($position["x"], $position["y"]);
+  }
+
+  /**
+   * Renvoie le nom d'une case à partir de ses coordonnées
+   * @param int $x
+   * @param int $y
+   * @return string
+   */
+  public static function locateCellByXY($x, $y) {
+    return DjambiBattlefield::intToAlpha($x) . $y;
+  }
+
+  /**
+   * Convertit une coordonnée en code alphabétique
+   * @param int $int
+   * @param boolean $inverse
+   * @return string
+   */
+  public static function intToAlpha($int, $inverse = FALSE) {
+    if ($int < 0 || $int > 1000) {
+      throw new Exception('Bad argument : ' . $int);
+    }
+    static $alpha = array("A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
+        "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z");
+    $alpha_size = count($alpha);
+    if ($int > $alpha_size) {
+      $j = 1;
+      for ($i = $alpha_size ; $i < $int; $i++) {
+        if ($i - $j * $alpha_size >= $alpha_size) {
+          $j++;
+        }
+        $alpha[] = $alpha[$j - 1] . $alpha[($i - $j * $alpha_size)];
+      }
+    }
+    if ($inverse) {
+      return array_search($int, $alpha);
+    }
+    if (isset($alpha[$int -1])) {
+      return $alpha[$int - 1];
+    }
+    return '#';
+  }
+
+  // ------------------------------------------------------------
+  // ------------- CREATION / CHARGEMENT D'UNE PARTIE -----------
+  // ------------------------------------------------------------
+
+  private function createNewGame($data) {
+    $user_id = isset($data['user_id']) ? $data['user_id'] : 0;
+    $user_cookie = isset($data['user_cookie']) ? $data['user_cookie'] : NULL;
+    if (isset($data['computers'])) {
+      $computers_classes = $data['computers'];
+    }
+    $dispositions = self::getDispositions();
+    $disposition = $dispositions[$this->disposition];
+    // Construction des factions
+    if (isset($disposition['sides'])) {
+      $players = $disposition['sides'];
+    }
+    else {
+      $players = array_fill(1, $disposition['nb'], 'playable');
+    }
+    $players_info = array();
+    $ready = TRUE;
+    foreach ($players as $key => $player) {
+      switch ($player) {
+        case('playable'):
+          if ($this->mode == KW_DJAMBI_MODE_SANDBOX || ($key == 1 && in_array($this->mode, array(KW_DJAMBI_MODE_FRIENDLY, KW_DJAMBI_MODE_TRAINING)))) {
+            $user_data['ip'] = $_SERVER['REMOTE_ADDR'];
+            if ($this->mode != KW_DJAMBI_MODE_SANDBOX) {
+              $user_data['ping'] = $user_data['joined'] = time();
+            }
+            $players_info[$key] = array(
+                'uid' => $user_id,
+                'data' => $user_data,
+                'status' => KW_DJAMBI_USER_READY,
+                'cookie' => $user_cookie,
+                'human' => TRUE,
+                'ia' => FALSE
+            );
+          }
+          else {
+            if ($this->mode == KW_DJAMBI_MODE_FRIENDLY) {
+              $players_info[$key] = array(
+                'uid' => 0,
+                'data' => array(),
+                'status' => KW_DJAMBI_USER_EMPTY_SLOT,
+                'cookie' => NULL,
+                'human' => TRUE,
+                'ia' => NULL
+              );
+              $ready = FALSE;
+            }
+            else {
+              $class_candidate = NULL;
+              if (isset($computers_classes)) {
+                if (is_array($computers_classes) && isset($computers_classes[$key])) {
+                  $class_candidate = $computers_classes[$key];
+                }
+                else {
+                  $class_candidate = $computers_classes;
+                }
+              }
+              if (!is_null($class_candidate) && class_exists($class_candidate) && in_array($class_candidate, class_parents($class_candidate))) {
+                $computer_class = $class_candidate;
+              }
+              else {
+                $computer_class = DjambiIA::getDefaultIAClass();
+              }
+              $players_info[$key] = array(
+                  'uid' => 0,
+                  'data' => array(),
+                  'status' => KW_DJAMBI_USER_READY,
+                  'cookie' => NULL,
+                  'human' => FALSE,
+                  'ia' => $computer_class
+              );
+            }
+          }
+          break;
+        case('vassal'):
+          $players_info[$key] = array(
+            'uid' => 0,
+            'data' => array(),
+            'status' => KW_DJAMBI_USER_VASSALIZED,
+            'cookie' => NULL,
+            'human' => FALSE,
+            'ia' => NULL
+          );
+          break;
+      }
+    }
+    $this->setInfo('players_info', $players_info);
+    $factions_data = DjambiPoliticalFaction::buildFactionsInfos();
+    $nb_factions = count($players_info);
+    $i = 0;
+    foreach ($factions_data as $key => $faction_data) {
+      $i++;
+      if ($i > count($players_info)) {
+        break;
+      }
+      $faction = new DjambiPoliticalFaction($this, $players_info[$i], $key, $faction_data);
+      $this->factions[$i] = $faction;
+    }
+    // Placement initial des pièces
+    $scheme_class = $disposition['scheme'];
+    if (!class_exists($scheme_class) || !in_array('DjambiBattlefieldScheme', class_parents($scheme_class))) {
+      throw new Exception('Unknown battlefield scheme.');
+    }
+    /* @var $scheme DjambiBattlefieldScheme */
+    $scheme = new $scheme_class(isset($disposition['scheme_settings']) ? $disposition['scheme_settings'] : array());
+    $this->setScheme($scheme);
+    $this->buildField();
+    $directions = $scheme->getDirections();
+    $scheme_sides = $scheme->getSides();
+    $cells = $this->getCells();
+    foreach ($this->factions as $i => $faction) {
+      $start_order = $faction->getStartOrder();
+      $current_side = current(array_slice($scheme_sides, $start_order - 1, 1));
+      $leader_position = self::locateCell($current_side);
+      $start_scheme = array();
+      $axis = NULL;
+      foreach ($directions as $orientation => $direction) {
+        $next_cell = $leader_position;
+        while (isset($cells[$next_cell]['neighbours'][$orientation])) {
+          if ($cells[$next_cell]['type'] == 'throne') {
+            $axis = $orientation;
+            break;
+          }
+          $next_cell = $cells[$next_cell]['neighbours'][$orientation];
+        }
+        if (!empty($axis)) {
+          break;
+        }
+      }
+      if (empty($axis)) {
+        throw new Exception('Bad pieces start scheme.');
+      }
+      /* @var $piece DjambiPieceDescription */
+      foreach ($scheme->getPieceScheme() as $piece_id => $piece) {
+        $start_position = $piece->getStartPosition();
+        $starting_cell = $leader_position;
+        for ($i = 0; $i < $start_position['y'] ; $i++) {
+          $starting_cell = $cells[$starting_cell]['neighbours'][$axis];
+        }
+        if ($start_position['x'] > 0) {
+          $new_axis = $directions[$axis]['right'];
+        }
+        else {
+          $new_axis = $directions[$axis]['left'];
+        }
+        for ($i = 0; $i < abs($start_position['x']) ; $i++) {
+          $starting_cell = $cells[$starting_cell]['neighbours'][$new_axis];
+        }
+        $start_scheme[$piece_id] = array('x' => $cells[$starting_cell]['x'], 'y' => $cells[$starting_cell]['y']);
+      }
+      $faction->createPieces($scheme->getPieceScheme(), $start_scheme);
+    }
+    $this->logEvent('info', 'NEW_DJAMBI_GAME');
+    if ($ready) {
+      $this->setStatus(KW_DJAMBI_STATUS_PENDING);
+    }
+    else {
+      $this->setStatus(KW_DJAMBI_STATUS_RECRUITING);
+    }
+    $this->setInfo('changed', time());
+    return $this;
+  }
+
+  private function loadBattlefield($data) {
+    if (isset($data['scheme']) && class_exists($data['scheme']) && in_array('DjambiBattlefieldScheme', class_parents($data['scheme']))) {
+      if (isset($data['scheme_settings'])) {
+        $settings = $data['scheme_settings'];
+      }
+      else {
+        $settings = array();
+      }
+      $scheme = new $data['scheme']($settings);
+    }
+    else {
+      $special_cells = array();
+      foreach ($data['special_cells'] as $cell => $type) {
+        $special_cells[] = array('type' => $type, 'location' => $cell);
+      }
+      $scheme = new DjambiBattlefieldScheme(array(
+          'disposition' => $data['options']['directions'],
+          'rows' => $data['rows'],
+          'cols' => $data['cols'],
+          'special_cells' => $special_cells
+      ));
+    }
+    $this->setScheme($scheme);
+    $this->setMode($data['mode']);
+    $this->setDisposition($data['disposition']);
+    $this->setStatus($data['status']);
+    $this->infos = isset($data['infos']) ? $data['infos'] : $this->infos;
+    $this->moves = isset($data['moves']) ? $data['moves'] : $this->moves;
+    $this->turns = isset($data['turns']) ? $data['turns'] : $this->turns;
+    $this->points = isset($data['points']) ? $data['points'] : $this->points;
+    $this->events = isset($data['events']) ? $data['events'] : $this->events;
+    $this->summary = isset($data['summary']) ? $data['summary'] : $this->summary;
+    $this->factions = array();
+    if (isset($data['savable'])) {
+      $this->savable = $data['savable'];
+    }
+    if (isset($data['options']) && is_array($data['options'])) {
+      foreach($data['options'] as $option => $value) {
+        $this->setOption($option, $value);
+      }
+    }
+    $this->buildField();
+    $pieces_scheme = $scheme->getPieceScheme();
+    $controls = array();
+    foreach ($data['factions'] as $key => $faction_data) {
+      $faction = new DjambiPoliticalFaction($this, $data['users'][$key], $key, $faction_data);
+      $positions = array();
+      foreach ($data['positions'] as $cell => $piece_id) {
+        $piece_data = explode('-', $piece_id, 2);
+        if ($piece_data[0] == $key) {
+          $positions[$piece_data[1]] = $this->cells[$cell];
+        }
+      }
+      $faction->setAlive($faction_data['alive']);
+      $faction->createPieces($pieces_scheme, $positions, $data['deads']);
+      $this->factions[] = $faction;
+    }
+    if (!empty($this->summary)) {
+      $this->rebuildFactionsControls($this->summary[max(array_keys($this->summary))]);
+    }
+    return $this;
+  }
+
+  private function buildField() {
+    $cells = array();
+    $special_cells = $this->getScheme()->getSpecialCells();
+    for ($x = 1; $x <= $this->getCols(); $x++) {
+      for ($y = 1; $y <= $this->getRows(); $y++) {
+        $cells[self::locateCellByXY($x, $y)] = array('x' => $x, 'y' => $y, 'type' => 'std', 'occupant' => NULL);
+      }
+    }
+    foreach ($special_cells as $key => $description) {
+      $cells[$description['location']]['type'] = $description['type'];
+    }
+    foreach ($cells as $key => $cell) {
+      if ($cell['type'] == 'disabled') {
+        continue;
+      }
+      $neighbours = array();
+      foreach ($this->getScheme()->getDirections() as $d => $direction) {
+        $new_x = $cell['x'] + $direction['x'];
+        $new_y = $cell['y'] + $direction['y'];
+        if (!empty($direction['modulo_x'])) {
+          if ($cell['y'] % 2 == 1) {
+            if (in_array($d, array('NE', 'SE'))) {
+              $new_x = $cell['x'];
+            }
+          }
+          else {
+            if (in_array($d, array('NW', 'SW'))) {
+              $new_x = $cell['x'];
+            }
+          }
+        }
+        $neighbour = self::locateCellByXY($new_x, $new_y);
+        if (isset($cells[$neighbour]) && $cells[$neighbour]['type'] != 'disabled') {
+          $neighbours[$d] = $neighbour;
+        }
+      }
+      $cells[$key]['neighbours'] = $neighbours;
+    }
+    $this->cells = $cells;
+    return $this;
+  }
+
+  public function placePiece(DjambiPiece $piece, $old_position = NULL) {
+    $new_position = $piece->getPosition();
+    $this->cells[self::locateCell($new_position)]["occupant"] = $piece;
+    if (!is_null($old_position) && !($new_position['x'] == $old_position['x'] && $new_position['y'] == $old_position['y'])) {
+      $old_cell = self::locateCell($old_position);
+      $occupant = $this->getCellOccupant($old_cell);
+      if ($occupant && $occupant->getId() == $piece->getId()) {
+        $this->cells[$old_cell]["occupant"] = NULL;
+      }
+    }
+    return $this;
+  }
+
+  public function getCellOccupant($cell) {
+    if (!empty($this->cells[$cell]['occupant'])) {
+      return $this->cells[$cell]['occupant'];
+    }
+    return NULL;
+  }
+
+  private function setDefaultOptions() {
+    $defaults = self::getOptionsInfo();
+    foreach ($defaults as $key => $value) {
+      $this->setOption($key, $value['default']);
+    }
+    return $this;
+  }
+
+  // ----------------------------------------------------------
+  // ---------- RECUPERATION D'INFOS SUR LA PARTIE ------------
+  // ----------------------------------------------------------
+
+  public function getHabilitiesStore() {
+    return $this->habilities_store;
+  }
+
+  public function addHabilitiesInStore($habilities) {
+    foreach ($habilities as $hability => $value) {
+      if (!$this->isHabilityInStore($hability)) {
+        $this->habilities_store[] = $hability;
+      }
+    }
+    return $this;
+  }
+
+  public function isHabilityInStore($hability) {
+    return in_array($hability, $this->getHabilitiesStore());
+  }
+
+  private function setScheme(DjambiBattlefieldScheme $scheme) {
+    $this->scheme = $scheme;
+    return $this;
+  }
+
+  /**
+   * @return DjambiBattlefieldScheme
+   */
+  public function getScheme() {
+    return $this->scheme;
   }
 
   public function setDisposition($disposition) {
@@ -223,431 +725,6 @@ class DjambiBattlefield {
     return $this;
   }
 
-  private function loadBattlefield($data) {
-    $this->rows = $data['rows'];
-    $this->cols = $data['cols'];
-    $this->moves = isset($data['moves']) ? $data['moves'] : array();
-    $this->turns = isset($data['turns']) ? $data['turns'] : array();
-    $this->points = isset($data['points']) ? $data['points'] : 0;
-    $this->events = isset($data['events']) ? $data['events'] : array();
-    $this->summary = isset($data['summary']) ? $data['summary'] : array();
-    $this->setInfo('sequence', $data['sequence']);
-    $this->factions = array();
-    if (isset($data['options']) && is_array($data['options'])) {
-      foreach($data['options'] as $option => $value) {
-        $this->setOption($option, $value);
-      }
-    }
-    $this->cells = $this->buildField($data['special_cells']);
-    $pieces_scheme = new DjambiPieceScheme($this->getOption('piece_scheme'));
-    $controls = array();
-    foreach ($data['factions'] as $key => $faction_data) {
-      $faction = new DjambiPoliticalFaction($data['users'][$key], $key, $faction_data);
-      $positions = array();
-      foreach ($data['positions'] as $cell => $piece_id) {
-        $piece_data = explode('-', $piece_id, 2);
-        if ($piece_data[0] == $key) {
-          $positions[$piece_data[1]] = $this->cells[$cell];
-        }
-      }
-      $faction->setBattlefield($this);
-      $faction->setAlive($faction_data['alive']);
-      $faction->createPieces($pieces_scheme->getPieceScheme(), $positions, $data['deads']);
-      $this->factions[] = $faction;
-    }
-    if (!empty($this->summary)) {
-      $this->rebuildFactionsControls($this->summary[max(array_keys($this->summary))]);
-    }
-    return $this;
-  }
-
-  public static function getOptionsInfo() {
-    return array(
-      'allow_anonymous_players' => array(
-        'default' => 1,
-        'configurable' => TRUE,
-        'title' => 'OPTION3',
-        'widget' => 'radios',
-        'type' => 'game_option',
-        'choices' => array(1 => 'OPTION3_YES', 0 => 'OPTION3_NO'),
-        'modes' => array(KW_DJAMBI_MODE_FRIENDLY)
-      ),
-      'allowed_skipped_turns_per_user' => array(
-          'default' => -1,
-          'configurable' => TRUE,
-          'title' => 'OPTION1',
-          'widget' => 'select',
-          'type' => 'game_option',
-          'choices' => array(
-              0 => 'OPTION1_NEVER',
-              1 => 'OPTION1_XTIME',
-              2 => 'OPTION1_XTIME',
-              3 => 'OPTION1_XTIME',
-              4 => 'OPTION1_XTIME',
-              5 => 'OPTION1_XTIME',
-              10 => 'OPTION1_XTIME',
-              -1 => 'OPTION1_ALWAYS')
-      ),
-      'turns_before_draw_proposal' => array(
-          'default' => 10,
-          'configurable' => TRUE,
-          'title' => 'OPTION2',
-          'widget' => 'select',
-          'type' => 'game_option',
-          'choices' => array(
-              -1 => 'OPTION2_NEVER',
-              0 => 'OPTION2_ALWAYS',
-              2 => 'OPTION2_XTURN',
-              5 => 'OPTION2_XTURN',
-              10 => 'OPTION2_XTURN',
-              20 => 'OPTION2_XTURN')
-      ),
-      'piece_scheme' => array(
-          'default'=> 'standard',
-          'configurable' => FALSE,
-          'type' => 'game_option'
-      ),
-      'directions' => array(
-          'default' => 'cardinal',
-          'configurable' => FALSE,
-          'type' => 'game_option'
-       ),
-      'rule_surrounding' => array(
-         'title' => 'RULE1',
-         'type' => 'rule_variant',
-         'configurable' => TRUE,
-         'default' => 'throne_access',
-         'widget' => 'radios',
-         'choices' => array(
-           'throne_access' => 'RULE1_THRONE_ACCESS',
-           'strict' => 'RULE1_STRICT',
-           'loose' => 'RULE1_LOOSE'
-         )
-      ),
-      'rule_comeback' => array(
-         'title' => 'RULE2',
-         'type' => 'rule_variant',
-         'configurable' => TRUE,
-         'default' => 'allowed',
-         'widget' => 'radios',
-         'choices' => array(
-           'never' => 'RULE2_NEVER',
-           'surrounding' => 'RULE2_SURROUNDING',
-           'allowed' => 'RULE2_ALLOWED'
-         )
-      ),
-      'rule_vassalization' => array(
-         'title' => 'RULE3',
-         'type' => 'rule_variant',
-         'configurable' => TRUE,
-         'widget' => 'radios',
-         'default' => 'full_control',
-         'choices' => array(
-           'temporary' => 'RULE3_TEMPORARY',
-           'full_control' => 'RULE3_FULL_CONTROL'
-         )
-      ),
-      'rule_canibalism' => array(
-         'title' => 'RULE4',
-         'type' => 'rule_variant',
-         'widget' => 'radios',
-         'configurable' => TRUE,
-         'default' => 'no',
-         'choices' => array(
-           'yes' => 'RULE4_YES',
-           'vassals' => 'RULE4_VASSALS',
-           'no' => 'RULE4_NO',
-           'ethical' => 'RULE4_ETHICAL'
-         )
-      ),
-      'rule_self_diplomacy' => array(
-         'title' => 'RULE5',
-         'type' => 'rule_variant',
-         'configurable' => TRUE,
-         'widget' => 'radios',
-         'default' => 'never',
-         'choices' => array(
-           'never' => 'RULE5_NEVER',
-           'vassal' => 'RULE5_VASSAL'
-         )
-      ),
-      'rule_press_liberty' => array(
-         'title' => 'RULE6',
-         'type' => 'rule_variant',
-         'configurable' => TRUE,
-         'widget' => 'radios',
-         'default' => 'pravda',
-         'choices' => array(
-           'pravda' => 'RULE6_PRAVDA',
-           'foxnews' => 'RULE6_FOXNEWS'
-         )
-      ),
-      'rule_throne_interactions' => array(
-          'title' => 'RULE7',
-          'type' => 'rule_variant',
-          'configurable' => TRUE,
-          'widget' => 'radios',
-          'default' => 'normal',
-          'choices' => array(
-            'normal' => 'RULE7_NORMAL',
-            'extended' => 'RULE7_EXTENDED'
-          )
-      ),
-    );
-  }
-
-  private function setDefaultOptions() {
-    $defaults = self::getOptionsInfo();
-    foreach ($defaults as $key => $value) {
-      $this->setOption($key, $value['default']);
-    }
-  }
-
-  private function buildField($special_cells = array()) {
-    $cells = array();
-    $this->buildDirectionsArray();
-    for ($x = 1; $x <= $this->cols; $x++) {
-      for ($y = 1; $y <= $this->rows; $y++) {
-        $cells[self::locateCellByXY($x, $y)] = array('x' => $x, 'y' => $y, 'type' => 'std', 'occupant' => NULL);
-      }
-    }
-    foreach ($special_cells as $key => $type) {
-      $cells[$key]['type'] = $type;
-    }
-    foreach ($cells as $key => $cell) {
-      if ($cell['type'] == 'disabled') {
-        continue;
-      }
-      $neighbours = array();
-      foreach ($this->directions as $d => $direction) {
-        $new_x = $cell['x'] + $direction['x'];
-        $new_y = $cell['y'] + $direction['y'];
-        if (!empty($direction['modulo_x'])) {
-          if ($cell['y'] % 2 == 1) {
-            if (in_array($d, array('NE', 'SE'))) {
-              $new_x = $cell['x'];
-            }
-          }
-          else {
-            if (in_array($d, array('NW', 'SW'))) {
-              $new_x = $cell['x'];
-            }
-          }
-        }
-        $neighbour = self::locateCellByXY($new_x, $new_y);
-        if (isset($cells[$neighbour]) && $cells[$neighbour]['type'] != 'disabled') {
-          $neighbours[$d] = $neighbour;
-        }
-      }
-      $cells[$key]['neighbours'] = $neighbours;
-    }
-    return $cells;
-  }
-
-  private function buildDirectionsArray() {
-    switch($this->getOption('directions')) {
-      case('hexagonal'):
-        $this->directions = array(
-          'NE' => array('x' => 1, 'y' => -1, 'diagonal' => FALSE, 'modulo_x' => TRUE),
-          'E' => array('x' => 1, 'y' => 0, 'diagonal' => FALSE),
-          'SE' => array('x' => 1, 'y' => 1, 'diagonal' => FALSE, 'modulo_x' => TRUE),
-          'SW' => array('x' => -1, 'y' => 1, 'diagonal' => FALSE, 'modulo_x' => TRUE),
-          'W' => array('x' => -1, 'y' => 0, 'diagonal' => FALSE),
-          'NW' => array('x' => -1, 'y' => -1, 'diagonal' => FALSE, 'modulo_x' => TRUE)
-        );
-        break;
-      case('cardinal'):
-      default :
-        $this->directions = array(
-            'N' => array('x' => 0, 'y' => -1, 'diagonal' => FALSE),
-            'NE' => array('x' => 1, 'y' => -1, 'diagonal' => TRUE),
-            'E' => array('x' => 1, 'y' => 0, 'diagonal' => FALSE),
-            'SE' => array('x' => 1, 'y' => 1, 'diagonal' => TRUE),
-            'S' => array('x' => 0, 'y' => 1, 'diagonal' => FALSE),
-            'SW' => array('x' => -1, 'y' => 1, 'diagonal' => TRUE),
-            'W' => array('x' => -1, 'y' => 0, 'diagonal' => FALSE),
-            'NW' => array('x' => -1, 'y' => -1, 'diagonal' => TRUE)
-        );
-    }
-  }
-
-  private function buildHexagonalBattlefieldWith3Factions() {
-    $this->rows = 9;
-    $this->cols = 9;
-    $special_cells = array(
-      'E5' => 'throne',
-      'A1' => 'disabled',
-      'B1' => 'disabled',
-      'H1' => 'disabled',
-      'I1' => 'disabled',
-      'A2' => 'disabled',
-      'H2' => 'disabled',
-      'I2' => 'disabled',
-      'A3' => 'disabled',
-      'I3' => 'disabled',
-      'I4' => 'disabled',
-      'I6' => 'disabled',
-      'A7' => 'disabled',
-      'I7' => 'disabled',
-      'A8' => 'disabled',
-      'H8' => 'disabled',
-      'I8' => 'disabled',
-      'A9' => 'disabled',
-      'B9' => 'disabled',
-      'H9' => 'disabled',
-      'I9' => 'disabled'
-    );
-    $this->cells = $this->buildField($special_cells);
-    $pieces_scheme = new DjambiPieceScheme();
-    foreach ($this->factions as $key => $faction) {
-      switch ($faction->getStartOrder()) {
-        case(1) :
-          $start_scheme = array(
-            'L'  => array('x' => 1, 'y' => 5),
-            'R'  => array('x' => 1, 'y' => 4),
-            'M1' => array('x' => 2, 'y' => 3),
-            'A'  => array('x' => 1, 'y' => 6),
-            'D'  => array('x' => 2, 'y' => 5),
-            'M2' => array('x' => 2, 'y' => 4),
-            'M3' => array('x' => 2, 'y' => 6),
-            'M4' => array('x' => 2, 'y' => 7),
-            'N'  => array('x' => 3, 'y' => 5)
-          );
-          break;
-        case(2) :
-          $start_scheme = array(
-            'L'  => array('x' => 7, 'y' => 9),
-            'R'  => array('x' => 6, 'y' => 9),
-            'M1' => array('x' => 5, 'y' => 9),
-            'A'  => array('x' => 7, 'y' => 8),
-            'D'  => array('x' => 6, 'y' => 8),
-            'M2' => array('x' => 5, 'y' => 8),
-            'M3' => array('x' => 8, 'y' => 7),
-            'M4' => array('x' => 7, 'y' => 7),
-            'N'  => array('x' => 6, 'y' => 7)
-          );
-          break;
-        case(3) :
-          $start_scheme = array(
-            'L'  => array('x' => 7, 'y' => 1),
-            'A'  => array('x' => 6, 'y' => 1),
-            'M1' => array('x' => 5, 'y' => 1),
-            'R'  => array('x' => 7, 'y' => 2),
-            'D'  => array('x' => 6, 'y' => 2),
-            'M2' => array('x' => 5, 'y' => 2),
-            'M3' => array('x' => 8, 'y' => 3),
-            'M4' => array('x' => 7, 'y' => 3),
-            'N'  => array('x' => 6, 'y' => 3)
-          );
-          break;
-      }
-      $faction->setBattlefield($this);
-      $faction->createPieces($pieces_scheme->getPieceScheme(), $start_scheme);
-    }
-  }
-
-  private function buildSquareBattlefieldWith4Factions() {
-    $this->rows = 9;
-    $this->cols = 9;
-    $this->cells = $this->buildField(array('E5' => 'throne'));
-    $pieces_scheme = new DjambiPieceScheme();
-    foreach ($this->factions as $key => $faction) {
-      switch ($faction->getStartOrder()) {
-        case (4) :
-          $start_scheme = array(
-            'L'  => array('x' => 1, 'y' => 1),
-            'R'  => array('x' => 1, 'y' => 2),
-            'M1' => array('x' => 1, 'y' => 3),
-            'A'  => array('x' => 2, 'y' => 1),
-            'D'  => array('x' => 2, 'y' => 2),
-            'M2' => array('x' => 2, 'y' => 3),
-            'M3' => array('x' => 3, 'y' => 1),
-            'M4' => array('x' => 3, 'y' => 2),
-            'N'  => array('x' => 3, 'y' => 3)
-            );
-        break;
-        case (3) :
-          $start_scheme = array(
-            'L'  => array('x' => 9, 'y' => 1),
-            'R'  => array('x' => 9, 'y' => 2),
-            'M1' => array('x' => 9, 'y' => 3),
-            'A'  => array('x' => 8, 'y' => 1),
-            'D'  => array('x' => 8, 'y' => 2),
-            'M2' => array('x' => 8, 'y' => 3),
-            'M3' => array('x' => 7, 'y' => 1),
-            'M4' => array('x' => 7, 'y' => 2),
-            'N'  => array('x' => 7, 'y' => 3)
-          );
-        break;
-        case (2) :
-          $start_scheme = array(
-            'L'  => array('x' => 9, 'y' => 9),
-            'R'  => array('x' => 9, 'y' => 8),
-            'M1' => array('x' => 9, 'y' => 7),
-            'A'  => array('x' => 8, 'y' => 9),
-            'D'  => array('x' => 8, 'y' => 8),
-            'M2' => array('x' => 8, 'y' => 7),
-            'M3' => array('x' => 7, 'y' => 9),
-            'M4' => array('x' => 7, 'y' => 8),
-            'N'  => array('x' => 7, 'y' => 7)
-          );
-        break;
-        case (1) :
-          $start_scheme = array(
-            'L'  => array('x' => 1, 'y' => 9),
-            'R'  => array('x' => 1, 'y' => 8),
-            'M1' => array('x' => 1, 'y' => 7),
-            'A'  => array('x' => 2, 'y' => 9),
-            'D'  => array('x' => 2, 'y' => 8),
-            'M2' => array('x' => 2, 'y' => 7),
-            'M3' => array('x' => 3, 'y' => 9),
-            'M4' => array('x' => 3, 'y' => 8),
-            'N'  => array('x' => 3, 'y' => 7)
-          );
-        break;
-      }
-      $faction->setBattlefield($this);
-      $faction->createPieces($pieces_scheme->getPieceScheme(), $start_scheme);
-    }
-  }
-
-  public static function locateCell($position) {
-    return DjambiBattlefield::locateCellByXY($position["x"], $position["y"]);
-  }
-
-  public static function locateCellByXY($x, $y) {
-    return DjambiBattlefield::intToAlpha($x) . $y;
-  }
-
-  public static function intToAlpha($int, $inverse = FALSE) {
-    $alpha = array("#", "A", "B", "C", "D", "E", "F", "G", "H", "I", "J", "K",
-      "L", "M", "N", "O", "P", "Q", "R", "S", "T", "U", "V", "W", "X", "Y", "Z");
-    if ($inverse) {
-      return array_search($int, $alpha);
-    }
-    if (isset($alpha[$int])) {
-      return $alpha[$int];
-    }
-    return $alpha[0];
-  }
-
-  public function placePiece($piece, $old_position = NULL) {
-    $this->cells[$this->locateCell($piece->getPosition())]["occupant"] = $piece;
-    if (!is_null($old_position) && $piece->getPosition() != $old_position) {
-      $old_cell = $this->locateCell($old_position);
-      if ($this->getCellOccupant($old_cell) == $piece) {
-        $this->cells[$old_cell]["occupant"] = NULL;
-      }
-    }
-  }
-
-  public function getCellOccupant($cell) {
-    if (!empty($this->cells[$cell]['occupant'])) {
-      return $this->cells[$cell]['occupant'];
-    }
-    return NULL;
-  }
-
   public function getId() {
     return $this->id;
   }
@@ -659,12 +736,16 @@ class DjambiBattlefield {
   public function getFactionById($id) {
     foreach($this->factions as $key => $faction) {
       if ($faction->getId() == $id) {
+        $faction->setBattlefield($this);
         return $faction;
       }
     }
     return FALSE;
   }
 
+  /**
+   * @return DjambiPoliticalFaction
+   */
   public function getPlayingFaction() {
     if (!$this->isPending()) {
       return FALSE;
@@ -700,6 +781,9 @@ class DjambiBattlefield {
     }
   }
 
+  /**
+   * @return DjambiPiece
+   */
   public function getPieceById($piece_id) {
     list($faction_id, $piece_id) = explode("-", $piece_id, 2);
     $faction = $this->getFactionById($faction_id);
@@ -719,19 +803,35 @@ class DjambiBattlefield {
   }
 
   public function getRows() {
-    return $this->rows;
+    return $this->getScheme()->getRows();
   }
 
   public function getCols() {
-    return $this->cols;
+    return $this->getScheme()->getCols();
   }
 
   public function getCells() {
     return $this->cells;
   }
 
+  public function getCellXY($key) {
+    if (!isset($this->cells[$key])) {
+      throw new Exception("Undefined cell : " . $key);
+    }
+    return array('x' => $this->cells[$key]['x'], 'y' => $this->cells[$key]['y']);
+  }
+
   public function updateCell($cell, $key, $value) {
     $this->cells[$cell][$key] = $value;
+  }
+
+  public function resetCells() {
+    foreach ($this->cells as $key => $data) {
+      if (isset($data['reachable'])) {
+        unset($this->cells[$key]['reachable']);
+      }
+    }
+    return $this;
   }
 
   public function getStatus() {
@@ -748,15 +848,11 @@ class DjambiBattlefield {
   }
 
   public function getDimensions() {
-    return max($this->rows, $this->cols);
+    return max($this->getRows(), $this->getCols());
   }
 
   public function getTurns() {
     return $this->turns;
-  }
-
-  public function getDirections() {
-    return $this->directions;
   }
 
   public function getOption($option_key) {
@@ -771,6 +867,14 @@ class DjambiBattlefield {
     return $this;
   }
 
+  public function isSavable() {
+    return $this->savable;
+  }
+
+  // ----------------------------------------------------------
+  // ---------- GESTION DES EVENEMENTS DE JEU -----------------
+  // ----------------------------------------------------------
+
   public function cancelLastTurn() {
     $current_turn_key = $this->getCurrentTurnId();
     unset($this->turns[$current_turn_key]);
@@ -779,6 +883,7 @@ class DjambiBattlefield {
     $last_turn['end'] = NULL;
     $this->turns[$last_turn_key] = $last_turn;
     $this->viewTurnHistory($last_turn_key, TRUE);
+    return $this;
   }
 
   public function viewTurnHistory($turn, $unset = FALSE) {
@@ -788,15 +893,13 @@ class DjambiBattlefield {
     foreach ($inverted_moves as $key => $move) {
       if ($move['turn'] >= $turn) {
         $piece = $this->getPieceById($move['target']);
+        if (!$piece) {
+          continue;
+        }
         $position = $cells[$move['from']];
-        $piece->setPosition($position['x'], $position['y']);
+        $piece->setPosition($position);
         if ($move['type'] == 'murder' || $move['type'] == 'elimination') {
           $piece->setAlive(TRUE);
-        }
-        if ($move['turn'] > $turn && $move['type'] == 'type' && !empty($move['acting'])) {
-          $piece2 = $this->getPieceById($move['acting']);
-          $position = self::locateCell($move['to']);
-          $piece2->setPosition($position['x'], $position['y']);
         }
         if ($unset) {
           unset($this->moves[$key]);
@@ -828,6 +931,45 @@ class DjambiBattlefield {
     if (!$unset) {
       $this->displayed_turn_id = $turn;
     }
+    return $this;
+  }
+
+  public function returnLastMoveData($version, $show_moves, $description_function = NULL) {
+    $moves = $this->getMoves();
+    $new_moves = array();
+    $changing_cells = array();
+    if (!empty($moves)) {
+      foreach ($moves as $key => $move) {
+        if ($move['time'] > $version) {
+          if ($move['type'] == 'move' || !isset($move['acting_faction'])) {
+            $faction_id = $move['target_faction'];
+          }
+          else {
+            $faction_id = $move['acting_faction'];
+          }
+          $acting_faction = $this->getFactionById($faction_id);
+          if ($acting_faction) {
+            $changing_cells[$move['from']] = $acting_faction->getClass();
+            $changing_cells[$move['to']] = $acting_faction->getClass();
+            $new_move = array(
+                'location' => $move['to'],
+                'origin' => $move['from'],
+                'order' => $move['turn'] + 1,
+                'faction' => $acting_faction->getClass(),
+                'animation' => $move['type'] . ':' . $move['to'],
+            );
+            if (!is_null($description_function) && function_exists($description_function)) {
+              $new_move['description'] = call_user_func_array($description_function, array($move, $this));
+            }
+            $new_moves[] = $new_move;
+          }
+        }
+      }
+    }
+    $return['show_moves'] = $show_moves;
+    $return['changing_cells'] = $changing_cells;
+    $return['moves'] = $new_moves;
+    return $return;
   }
 
   private function rebuildFactionsControls($summary) {
@@ -837,6 +979,7 @@ class DjambiBattlefield {
       $faction->setControl($this->getFactionById($data['control']), FALSE);
       $faction->setMaster(isset($data['master']) ? $data['master'] : NULL);
     }
+    return $this;
   }
 
   public function endGame($living_factions) {
@@ -860,6 +1003,7 @@ class DjambiBattlefield {
     $this->updateSummary();
     $this->buildFinalRanking($nb_living_factions);
     $this->logEvent("event", "END");
+    return $this;
   }
 
   public function changeTurn() {
@@ -875,9 +1019,10 @@ class DjambiBattlefield {
           if (count($kings) == 1) {
             // Cas d'un abandon : lors de la prise de pouvoir, retrait de l'ancien chef
             $pieces = $faction->getPieces();
+            /* @var $piece DjambiPiece */
             foreach ($pieces as $key => $piece) {
               if ($this->getOption('rule_vassalization') == 'full_control'
-                  && $piece->isAlive() && $piece->getHability('must_live')) {
+                  && $piece->isAlive() && $piece->getDescription()->hasHabilityMustLive()) {
                 $piece->setAlive(FALSE);
                 $this->logMove($piece, $piece->getPosition(), 'elimination');
               }
@@ -910,7 +1055,7 @@ class DjambiBattlefield {
           $this->logEvent("event", "SURROUNDED", array('faction1' => $faction->getId()));
           if ($this->getOption('rule_comeback') == 'never' && $this->getOption('rule_vassalization') == 'full_control') {
             foreach ($faction->getPieces() as $piece) {
-              if ($piece->isAlive() && $piece->getHability('must_live') && $piece->getFaction()->getId() == $faction->getId()) {
+              if ($piece->isAlive() && $piece->getDescription()->hasHabilityMustLive() && $piece->getFaction()->getId() == $faction->getId()) {
                 $this->logMove($piece, $piece->getPosition(), 'elimination');
                 $piece->setAlive(FALSE);
               }
@@ -945,6 +1090,7 @@ class DjambiBattlefield {
         $this->updateSummary();
       }
     }
+    return $this;
   }
 
   private function findKings() {
@@ -1034,7 +1180,7 @@ class DjambiBattlefield {
       foreach ($thrones as $throne) {
         if (isset($this->cells[$throne]) && !empty($this->cells[$throne]["occupant"])) {
           $piece = $this->cells[$throne]["occupant"];
-          if ($piece->getHability("access_throne") && $piece->isAlive()) {
+          if ($piece->getDescription()->hasHabilityAccessThrone() && $piece->isAlive()) {
             foreach ($turn_scheme as $key => $turn) {
               if ($turn["type"] == "throne" && $turn["case"] == $throne) {
                 if ($piece->getFaction()->getControl()->getId() == $piece->getFaction()->getId()) {
@@ -1207,6 +1353,7 @@ class DjambiBattlefield {
       $active_faction->withdraw();
       $this->changeTurn();
     }
+    return $this;
   }
 
   public function countLivingFactions() {
@@ -1223,7 +1370,7 @@ class DjambiBattlefield {
     $cell = $this->cells[self::locateCell($position)];
     $next_positions = array();
     foreach ($cell['neighbours'] as $direction_key => $neighbour) {
-      $direction = $this->directions[$direction_key];
+      $direction = $this->getScheme()->getDirection($direction_key);
       if ($use_diagonals || !$direction['diagonal']) {
         $next_positions[] = array('x' => $this->cells[$neighbour]['x'],
           'y' => $this->cells[$neighbour]['y']);
@@ -1242,17 +1389,17 @@ class DjambiBattlefield {
     return $special_cells;
   }
 
-  public function getFreeCells(DjambiPiece $piece, $keep_alive = TRUE, $murder = FALSE) {
+  public function getFreeCells(DjambiPiece $piece, $keep_alive = TRUE, $murder = FALSE, $force_free_cell = NULL) {
     $freecells = array();
     foreach ($this->cells as $key => $cell) {
-      if (!isset($cell['occupant'])) {
+      if (!isset($cell['occupant']) || (!is_null($force_free_cell) && DjambiBattlefield::locateCell($force_free_cell) == $key)) {
         if($cell["type"] == 'throne') {
           $can_place_throne = FALSE;
-          if ($piece->getHability('access_throne') && $piece->isAlive() && $keep_alive) {
+          if ($piece->getDescription()->hasHabilityAccessThrone() && $piece->isAlive() && $keep_alive) {
             $can_place_throne = TRUE;
           }
           if ($this->getOption('rule_throne_interactions') == 'extended' && $murder
-            && $piece->getHability('access_throne')) {
+            && $piece->getDescription()->hasHabilityAccessThrone()) {
             $can_place_throne = TRUE;
           }
           if ($can_place_throne) {
@@ -1276,6 +1423,7 @@ class DjambiBattlefield {
       $this->getPlayOrder(TRUE);
       $this->defineMovablePieces();
     }
+    return $this;
   }
 
   public function getSummary() {
@@ -1300,6 +1448,7 @@ class DjambiBattlefield {
         next($players);
       }
     }
+    return $this;
   }
 
   public function updateSummary() {
@@ -1329,6 +1478,7 @@ class DjambiBattlefield {
       }
     }
     $this->summary[$event['turn']] = $infos;
+    return $this;
   }
 
   private function buildFinalRanking($begin) {
@@ -1345,6 +1495,7 @@ class DjambiBattlefield {
       $this->getFactionById($faction_key)->setRanking($rank);
       $last_turn = $turn;
     }
+    return $this;
   }
 
   public function logEvent($type, $event_txt, $event_args = NULL, $time = NULL) {
@@ -1356,6 +1507,7 @@ class DjambiBattlefield {
       "args" => $event_args
     );
     $this->events[] = $event;
+    return $this;
   }
 
   public function getCurrentTurnId() {
@@ -1372,19 +1524,24 @@ class DjambiBattlefield {
   }
 
   public function logMove(DjambiPiece $target_piece, $destination, $type = "move", DjambiPiece $acting_piece = NULL) {
-    $destination_cell = self::locateCell($destination);
+    if (is_array($destination)) {
+      $destination_cell = self::locateCell($destination);
+    }
+    else {
+      $destination_cell = $destination;
+    }
     $origin_cell = self::locateCell($target_piece->getPosition());
-    if ($this->cells[$destination_cell]['type'] == 'throne' && $target_piece->getHability('access_throne') && $target_piece->isAlive()) {
+    if ($this->cells[$destination_cell]['type'] == 'throne' && $target_piece->getDescription()->hasHabilityAccessThrone() && $target_piece->isAlive()) {
       $special_event = 'THRONE_ACCESS';
     }
-    elseif ($this->cells[$destination_cell]['type'] == 'throne' && $target_piece->getHability('access_throne') && !$target_piece->isAlive()) {
+    elseif ($this->cells[$destination_cell]['type'] == 'throne' && $target_piece->getDescription()->hasHabilityAccessThrone() && !$target_piece->isAlive()) {
       $special_event = 'THRONE_MAUSOLEUM';
     }
-    elseif ($this->cells[$origin_cell]['type'] == 'throne' && $target_piece->getHability('access_throne') && $target_piece->isAlive()) {
+    elseif ($this->cells[$origin_cell]['type'] == 'throne' && $target_piece->getDescription()->hasHabilityAccessThrone() && $target_piece->isAlive()) {
       $special_event = 'THRONE_RETREAT';
     }
-    elseif ($this->cells[$origin_cell]['type'] == 'throne' && $target_piece->getHability('access_throne') && !$target_piece->isAlive()) {
-      if ($acting_piece->getHability('kill_throne_leader')) {
+    elseif ($this->cells[$origin_cell]['type'] == 'throne' && $target_piece->getDescription()->hasHabilityAccessThrone() && !$target_piece->isAlive()) {
+      if ($acting_piece->getDescription()->hasHabilityKillThroneLeader()) {
         $special_event = 'THRONE_MURDER';
       }
       else {
@@ -1412,18 +1569,19 @@ class DjambiBattlefield {
       $move['special_event'] = $special_event;
     }
     $this->moves[] = $move;
+    return $this;
   }
 
-  public function toDatabase() {
+  // ----------------------------------------------------------
+  // ---------- ENREGISTREMENT EN BASE DE DONNEES -------------
+  // ----------------------------------------------------------
+
+  public function toArray() {
     $positions = array();
     $pieces = array();
     $factions = array();
     $deads = array();
-    $special_cells = array();
     foreach ($this->cells as $key => $cell) {
-      if (isset($cell['type']) && $cell['type'] != 'std') {
-        $special_cells[$key] = $cell['type'];
-      }
       if (isset($cell['occupant'])) {
         $piece = $cell['occupant'];
         $positions[$key] = $piece->getId();
@@ -1433,23 +1591,28 @@ class DjambiBattlefield {
       }
     }
     foreach ($this->factions as $key => $faction) {
-      $factions[$faction->getId()] = $faction->toDatabase();
+      $factions[$faction->getId()] = $faction->toArray();
     }
-    return array(
-      'rows' => $this->rows,
-      'cols' => $this->cols,
+    $return = array(
+      'id' => $this->id,
+      'scheme' => get_class($this->getScheme()),
+      'scheme_settings' => $this->getScheme()->getSettings(),
       'positions' => $positions,
       'factions' => $factions,
       'moves' => $this->moves,
       'turns' => isset($this->turns) ? $this->turns : array(),
       'points' => isset($this->points) ? $this->points : 0,
       'deads' => $deads,
-      'special_cells' => $special_cells,
       'events' => $this->events,
       'options' => $this->options,
       'summary' => $this->summary,
-      'sequence' => $this->getInfo('sequence')
+      'mode' => $this->getMode(),
+      'status' => $this->getStatus(),
+      'infos' => $this->infos,
+      'disposition' => $this->getDisposition(),
+      'savable' => $this->isSavable()
     );
+    return $return;
   }
 
 }

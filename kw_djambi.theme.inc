@@ -11,11 +11,13 @@ function theme_djambi_grid($variables) {
   $current_form_action = NULL;
   $selected_piece = NULL;
   $has_destination_layer = FALSE;
-  $display_changes = TRUE;
   $display_events = $grid->isPending();
-  $dispositions = DjambiBattlefield::getDispositions();
-  $disposition = $grid->getDisposition();
+  if ($grid->getInfo('interface') == 'minimal') {
+    $display_events = FALSE;
+  }
   $cells = $grid->getCells();
+  $image_folder = base_path() . drupal_get_path('module', 'kw_djambi') . '/img/';
+  $image_extension = 'png';
   if (is_null($cells)) {
     return t("This game has been deleted.");
   }
@@ -26,35 +28,39 @@ function theme_djambi_grid($variables) {
   $helps = _kw_djambi_load_rule_nodes($grid);
   // Détermination de la phase de jeu
   if (isset($form["pieces"])) {
-    $display_changes = FALSE;
     $form_pieces = $form["pieces"];
     if (isset($form_pieces["murder"])) {
       $current_form_action = "murder";
       $has_destination_layer = TRUE;
+      $show_moves = FALSE;
     }
     elseif (isset($form_pieces["necromobility"])) {
       $current_form_action = "necromobility";
       $has_destination_layer = TRUE;
+      $show_moves = FALSE;
     }
     elseif (isset($form_pieces["manipulation"])) {
       $current_form_action = "manipulation";
       $has_destination_layer = TRUE;
+      $show_moves = FALSE;
     }
     elseif (isset($form_pieces["destination"])) {
       $current_form_action = "destination";
       $has_destination_layer = TRUE;
+      $show_moves = FALSE;
     }
     elseif (isset($form_pieces["reportage"])) {
       $current_form_action = "reportage";
       $has_destination_layer = TRUE;
+      $show_moves = FALSE;
     }
     elseif (isset($form_pieces["throne_evacuation"])) {
       $current_form_action = "throne_evacuation";
       $has_destination_layer = TRUE;
+      $show_moves = FALSE;
     }
     else {
       $current_form_action = "piece_selection";
-      $display_changes = TRUE;
     }
   }
   // Préparation de l'affichage d'un déplacement
@@ -62,7 +68,12 @@ function theme_djambi_grid($variables) {
   $moves = $grid->getMoves();
   $displayed_turn_id = $grid->getDisplayedTurnId();
   $current_turn_id = $grid->getCurrentTurnId();
-  $displayed_turn = isset($turns[$displayed_turn_id]) ? $turns[$displayed_turn_id] : $turns[$current_turn_id];
+  if (!empty($turns)) {
+    $displayed_turn = isset($turns[$displayed_turn_id]) ? $turns[$displayed_turn_id] : $turns[$current_turn_id];
+  }
+  else {
+    $displayed_turn = 0;
+  }
   $max_turn = end($turns);
   $new_moves = array();
   $last_moves = array();
@@ -127,7 +138,7 @@ function theme_djambi_grid($variables) {
     }
   }
   // Construction de la grille
-  if ($dispositions[$disposition]['grid'] != 'hexagonal') {
+  if ($grid->getScheme()->getDisposition() != 'hexagonal') {
     for ($i = 0; $i <= $grid->getDimensions(); $i++) {
       $header[] = array("data" => DjambiBattlefield::intToAlpha($i), "class" => array("graduation"));
       if ($i > 0) {
@@ -253,7 +264,7 @@ function theme_djambi_grid($variables) {
         $row_inner_html .= drupal_render($form["pieces"]["movable"][$piece->getId()]);
       }
       else {
-        $row_inner_html .= "<img src=\"/" . $piece->getImage() . "\" alt=\"\" />";
+        $row_inner_html .= "<img src=\"" . $image_folder . $piece->getImage() . '.' . $image_extension . "\" alt=\"\" />";
       }
       if ($piece->isAlive()) {
         $row_inner_html .= "<span class='piece-txt'><abbr title=\"" . t("!piece, owned by !color team.", array(
@@ -281,7 +292,7 @@ function theme_djambi_grid($variables) {
           }
           $title = t("Move the manipulated !piece_name in an empty cell", array('!piece' => $piece_name));
           $row_inner_html .= "<div class='" . implode(' ', $classes) . "' title=\"" . $title . "\">"
-              . "<img src=\"/" . $manipulated_piece->getImage() . "\" alt=\"" . $piece_name . "\" />"
+              . "<img src=\"" . $image_folder . $manipulated_piece->getImage() . '.' . $image_extension . "\" alt=\"" . $piece_name . "\" />"
               . "</div>";
         }
       }
@@ -302,7 +313,9 @@ function theme_djambi_grid($variables) {
   }
   // Création des légendes de la grille
   $caption = "";
-  $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
+  if ($grid->getInfo('interface') != 'minimal') {
+    $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
+  }
   if ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
     foreach ($grid->getFactions() as $random_faction) {
       if ($random_faction->getStatus() != KW_DJAMBI_USER_VASSALIZED) {
@@ -320,33 +333,52 @@ function theme_djambi_grid($variables) {
     $infos_lines[t('Player')] = t('!player, controlling all sides.', array('!player' => $player));
   }
   elseif ($grid->isPending()) {
-    $pheader = array(
-      array('data' => t('Sides')),
-      array('data' => t('Players')),
-      array('data' => t('IP address')),
-      array('data' => t('Ping')),
-      array('data' => t('Status'))
-    );
+    $pheader['sides'] = array('data' => t('Sides'), 'scope' => 'col');
+    $pheader['players'] = array('data' => t('Players'), 'scope' => 'col');
+    if ($grid->getMode() == KW_DJAMBI_MODE_FRIENDLY) {
+      $pheader['ip'] = array('data' => t('IP address'), 'scope' => 'col');
+      $pheader['ping'] = array('data' => t('Ping'), 'scope' => 'col');
+    }
+    $pheader['status'] = array('data' => t('Status'), 'scope' => 'col');
     $prows = array();
     foreach ($grid->getFactions() as $faction) {
       $prow = array();
-      $prow[] = array('data' => '<span class="faction ' . $faction->getClass() . '">'
+      $prow['sides'] = array('data' => '<span class="faction ' . $faction->getClass() . '">'
           . _kw_djambi_get_translatable_messages($faction->getName()) . '</span>');
       if (!in_array($faction->getStatus(), array(KW_DJAMBI_USER_VASSALIZED, KW_DJAMBI_USER_EMPTY_SLOT))) {
-        $ping = _kw_djambi_format_ping_infos($faction->getUserDataItem('ping'));
-        $me = _kw_djambi_check_current_user($faction, FALSE);
-        $prow[] = array('data' => theme('username', array('account' => user_load($faction->getUserDataItem('uid'))))
-          . ($me ? ' (' . t('Me !') . ')' : ''));
-        $prow[] = array('data' => $faction->getUserDataItem('ip'));
-        $prow[] = array('data' => $ping['status'], 'class' => array('ping-info', $ping['class']), 'title' => $ping['title']);
+        $me = _kw_djambi_check_current_user($grid, $faction, FALSE);
+        if (!$faction->isHumanControlled()) {
+          $prow['players'] = array('data' => '<div class="icon cogs">' . t('Computer') . ' <em>(' . $faction->getIa()->getName() . ')</em></div>');
+        }
+        else {
+          $uid = $faction->getUserDataItem('uid');
+          if ($me && $uid == 0) {
+            $prow['players'] = array('data' => t('Me !'));
+          }
+          else {
+            $prow['players'] = array('data' => theme('username', array('account' => user_load($uid)))
+              . ($me ? ' (' . t('Me !') . ')' : ''));
+          }
+        }
+        if (isset($pheader['ip'])) {
+          $prow['ip'] = array('data' => $faction->getUserDataItem('ip'));
+        }
+        if (isset($pheader['ping'])) {
+          $ping = _kw_djambi_format_ping_infos($faction->getUserDataItem('ping'));
+          $prow['ping'] = array('data' => $ping['status'], 'class' => array('ping-info', $ping['class']), 'title' => $ping['title']);
+        }
       }
       else {
         $me = FALSE;
-        $prow[] = array('data' => '-');
-        $prow[] = array('data' => '-');
-        $prow[] = array('data' => '-');
+        $prow['players'] = array('data' => '-');
+        if (isset($pheader['ip'])) {
+          $prow['ip'] = array('data' => '-');
+        }
+        if (isset($pheader['ping'])) {
+          $prow['ping'] = array('data' => '-');
+        }
       }
-      $prow[] = array('data' => _kw_djambi_get_translatable_messages($faction->getStatus()) .
+      $prow['status'] = array('data' => _kw_djambi_get_translatable_messages($faction->getStatus()) .
           ($faction->getControl()->getId() != $faction->getId() ? ', '
               . t('controlled by !faction', array('!faction' => '<span class="faction ' . $faction->getControl()->getClass()
                   . '">' . _kw_djambi_get_translatable_messages($faction->getControl()->getName()) . '</span>')) : ''));
@@ -354,7 +386,7 @@ function theme_djambi_grid($variables) {
             'class' => $me ? array('me') : array('not-me'));
     }
     $infos_lines[t('Players')] = theme('table', array('rows' => $prows, 'header' => $pheader,
-        'attributes' => array('class' => array('players'))));
+        'attributes' => array('class' => array('players')), 'sticky' => FALSE));
   }
   $caption_title = _kw_djambi_get_translatable_messages($grid->getStatus());
   $turns = $grid->getTurns();
@@ -450,13 +482,15 @@ function theme_djambi_grid($variables) {
       if (!empty($waiting)) {
         $infos_lines[t("Undecided sides")] = implode(', ', $waiting);
         $last_change = $grid->getInfo('changed');
-        if (!_kw_djambi_check_current_user($playing_faction)) {
+        if (!_kw_djambi_check_current_user($grid, $playing_faction)) {
           $infos_lines[t("Pending decision")] = _kw_djambi_waiting_label($now_playing_faction, $grid);
         }
       }
     }
   }
-  _kw_djambi_add_info_lines($infos_lines, $form);
+  if (!empty($infos_lines)) {
+    _kw_djambi_add_info_lines($infos_lines, $form);
+  }
   // Affichage du tableau
   $thrones = $grid->getSpecialCells('throne');
   if (!empty($thrones)) {
@@ -468,7 +502,7 @@ function theme_djambi_grid($variables) {
   }
   $grid_classes = array('djambigrid', !$show_changes ? 'static' : 'animated');
   $grid_id = 'DjambiGrid' . $grid->getId();
-  if ($dispositions[$disposition]['grid'] == 'hexagonal') {
+  if ($grid->getScheme()->getDisposition() == 'hexagonal') {
     $markup = theme('hexagonal_grid', array(
       'rows' => $rows,
       'attributes' => array('class' => $grid_classes, 'id' => $grid_id),
@@ -480,7 +514,8 @@ function theme_djambi_grid($variables) {
       'header' => $header,
       'rows' => $rows,
       'attributes' => array('class' => $grid_classes, 'id' => $grid_id),
-      'caption' => $caption_title
+      'caption' => $caption_title,
+      'sticky' => !$show_changes
     ));
   }
   $form['table'] = array(
@@ -697,16 +732,20 @@ function _kw_djambi_waiting_label($now_playing_faction, DjambiBattlefield $grid)
   . ')</span>';
 }
 
+/**
+ * Chargement des contenus de type règle du jeu correspondant aux pièces présentes dans la partie
+ * @param DjambiBattlefield $grid
+ * @return array -> tableau de noeuds
+ */
 function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
   $nodes = array();
   if (!node_type_load('rule_element')) {
     return $nodes;
   }
-  $scheme = $grid->getOption('piece_scheme');
-  $piece_scheme = new DjambiPieceScheme($scheme);
+  $scheme = $grid->getScheme();
   $types = array();
-  foreach ($piece_scheme->getPieceScheme() as $key => $data) {
-    $types[] = $data['type'];
+  foreach ($scheme->getPieceScheme() as $key => $piece) {
+    $types[] = $piece->getRulePattern();
   }
   $pieces = $types;
   $types = array_unique($types);

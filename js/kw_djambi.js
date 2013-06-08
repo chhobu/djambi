@@ -24,7 +24,7 @@
     // Scripts passés sur une partie de type Djambi
     $('.djambi').once('Djambi', function() {
       var $djambi = $(this);
-      var gridId = $djambi.data('grid');
+      gridId = $djambi.attr('id');
       var autoplay = false;
       if ($(this).hasClass('autoplay')) {
         autoplay = true;
@@ -176,17 +176,23 @@
       }
       // Rafraichissement automatique des données
       $djambi.find('.refresh-button').hide();
-      if ($djambi.data('refresh') == 'yes') {
+      refresh_type = $djambi.data('refresh');
+      if (refresh_type != 'no') {
         if (typeof DjambiRefreshInterval !== 'undefined') {
           clearInterval(DjambiRefreshInterval);
         }
         DjambiRefreshInterval = setInterval(function() {
-          $grid = $('#DjambiGridFieldset' + gridId);
+          $grid = $('#'+ gridId);
           if ($grid.data('refresh') == 'no') {
             clearInterval(DjambiRefreshInterval);
             return;
           }
-          jQuery.ajax('/djambi/' + gridId + '/check-update/' + $grid.data('version')).done(function(json) {
+          else if ($grid.data('refresh') == 'force') {
+            clearInterval(DjambiRefreshInterval);
+            $('.djambi input[name="ui-computer-refresh"]').mousedown();
+            return;
+          }
+          jQuery.ajax('/djambi/' + $grid.data('nid') + '/check-update/' + $grid.data('version')).done(function(json) {
             result = jQuery.parseJSON(json);
             $block = $('#DjambiActiveGameInfo');
             if ($block.length > 0 && ($block.data('user-faction') != result['user-faction'] || $block.data('status') != result['status'])) {
@@ -239,7 +245,7 @@
               }, ends);
             }
           });
-        }, 10000);
+        }, refresh_type == 'force' ? 1000 : 10000);
       }
       // Glisser-déposer des pièces
       $djambigrid.find(".cell.std").not(".throne").hover(function() {
