@@ -724,6 +724,14 @@ function _kw_djambi_load_game($nid = NULL, $reset = FALSE) {
   }
   $data = unserialize($data);
   $data["users"] = $users;
+  if (!isset($data['status'])) { // Compatibilité anciennes parties
+    $data['id'] = $result['nid'];
+    $data = array_merge($data, $result);
+    if (isset($data['sequence'])) {
+      $data['infos']['sequence'] = $data['sequence'];
+      unset($data['sequence']);
+    }
+  }
   $battlefield = new DjambiBattlefield($data);
   $battlefield->setInfo('nid', $nid);
   $battlefield->setInfo('changed', $result['changed']);
