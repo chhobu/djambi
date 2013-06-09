@@ -1375,21 +1375,21 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
     $total['data'][3]['data'] += $row[3]['data'];
     $row[4] = array(
         'data' => !empty($stats['playtime'][$faction->getId()]) ?
-        kw_tools_duration($stats['playtime'][$faction->getId()]) : 0,
+        kw_djambi_duration($stats['playtime'][$faction->getId()]) : 0,
         'class' => 'number');
     if (isset($stats['playtime'][$faction->getId()])) {
       $total['data'][4]['data'] += $stats['playtime'][$faction->getId()];
     }
     $row[5] = array(
         'data' => !empty($stats['playtime'][$faction->getId()]) && !empty($stats['moves']['turns'][$faction->getId()]) ?
-        kw_tools_duration($stats['playtime'][$faction->getId()] / $stats['moves']['turns'][$faction->getId()]) : '-',
+        kw_djambi_duration($stats['playtime'][$faction->getId()] / $stats['moves']['turns'][$faction->getId()]) : '-',
         'class' => 'number');
     $rows[] = $row;
   }
   if ($total['data'][1]['data'] > 0) {
-    $total['data'][5]['data'] = kw_tools_duration($total['data'][4]['data'] / $total['data'][1]['data']);
+    $total['data'][5]['data'] = kw_djambi_duration($total['data'][4]['data'] / $total['data'][1]['data']);
   }
-  $total['data'][4]['data'] = kw_tools_duration($total['data'][4]['data']);
+  $total['data'][4]['data'] = kw_djambi_duration($total['data'][4]['data']);
   $rows[] = $total;
   $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => t('Table of moves')));
   $form['stats']['items'] = array(
@@ -1780,7 +1780,7 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
       $grid->setStatus(KW_DJAMBI_STATUS_PENDING);
     }
     $grid->logEvent('info', 'NEW_TEAM', array('faction1' => $faction->getId(),
-        '!user_id' => $user->uid, '!user_ip' => $_SERVER['REMOTE_ADDR']));
+        '!user_id' => $user->uid, '!user_ip' => ip_address()));
     drupal_set_message(t('You are now playing the !color team.',
         array('!color' => _kw_djambi_get_translatable_messages($faction->getName()))));
     _kw_djambi_save_game($grid, $form_state);
@@ -1810,7 +1810,7 @@ function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
     }
     else {
       global $user;
-      $grid->logEvent('info', 'TEAM_EXIT', array('!user_id' => $user->uid, '!user_ip' => $_SERVER['REMOTE_ADDR']));
+      $grid->logEvent('info', 'TEAM_EXIT', array('!user_id' => $user->uid, '!user_ip' => ip_address()));
       _kw_djambi_save_game($grid, $form_state);
     }
     drupal_set_message(t('You just left Djambi game #!nb', array('!nb' => $grid->getInfo('sequence'))));

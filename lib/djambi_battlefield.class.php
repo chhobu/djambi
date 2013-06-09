@@ -391,7 +391,7 @@ class DjambiBattlefield {
       switch ($player) {
         case('playable'):
           if ($this->mode == KW_DJAMBI_MODE_SANDBOX || ($key == 1 && in_array($this->mode, array(KW_DJAMBI_MODE_FRIENDLY, KW_DJAMBI_MODE_TRAINING)))) {
-            $user_data['ip'] = $_SERVER['REMOTE_ADDR'];
+            $user_data['ip'] = function_exists('ip_address') ? ip_address() : $_SERVER['REMOTE_ADDR'];
             if ($this->mode != KW_DJAMBI_MODE_SANDBOX) {
               $user_data['ping'] = $user_data['joined'] = time();
             }

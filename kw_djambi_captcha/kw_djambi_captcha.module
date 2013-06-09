@@ -1,5 +1,14 @@
 <?php
+function _kw_djambi_check_flood() {
+  if (!flood_is_allowed('registration', 5)) {
+    drupal_set_message(t('Too many registration failures : you are not allowed to register now.'), 'error');
+    drupal_access_denied();
+    die;
+  }
+}
+
 function kw_djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
+  _kw_djambi_check_flood();
   form_load_include($form_state, 'inc', 'kw_djambi', 'kw_djambi.form');
   if (!empty($form_state['kw_djambi']['selected_piece']) && !$form_state['kw_djambi']['change_turn']) {
     $piece = $form_state['kw_djambi']['selected_piece'];
@@ -56,11 +65,27 @@ function kw_djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
 }
 
 function kw_djambi_captcha_registration_validate($form, &$form_state) {
+  $errors = FALSE;
   if (!isset($form_state['kw_djambi']['result'])) {
     form_set_error('grid', t("Computer is still alive !"));
+    if (!empty($form_state['values']['name'])) {
+      watchdog('djambi', 'User !name (!mail) tried to register without finishing Djambi game validation.',
+      array('!name' => $form_state['values']['name'], '!mail' => $form_state['values']['mail']), WATCHDOG_WARNING);
+      flood_register_event('registration', 3600);
+      $errors = TRUE;
+    }
   }
   elseif ($form_state['kw_djambi']['result'] != KW_DJAMBI_USER_WINNER) {
     form_set_error('grid', t("You are not smart enough to register."));
+    if (!empty($form_state['values']['name'])) {
+      watchdog('djambi', 'User !name (!mail) failed succeeding in Djambi game registration validation.',
+      array('!name' => $form_state['values']['name'], '!mail' => $form_state['values']['mail']), WATCHDOG_WARNING);
+      flood_register_event('registration', 3600);
+      $errors = TRUE;
+    }
+  }
+  if ($errors) {
+    _kw_djambi_check_flood();
   }
 }
 

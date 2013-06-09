@@ -714,7 +714,7 @@ function _kw_djambi_waiting_label($now_playing_faction, DjambiBattlefield $grid)
   if (!is_null($now_playing_faction)) {
     $args = array(
       '!side' => _kw_djambi_get_translatable_messages($now_playing_faction->getName()),
-      '!duration' => '<span class="time-elapsed">' . kw_tools_duration(time() - $last_change) . '</span>'
+      '!duration' => '<span class="time-elapsed">' . kw_djambi_duration(time() - $last_change) . '</span>'
     );
   }
   switch ($grid->getStatus()) {
@@ -760,8 +760,20 @@ function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
   $with_transliteration = module_exists('transliteration');
   $with_lightbox = module_exists('ctools');
   if ($raw_result->rowCount() > 0) {
-    if ($with_lightbox) {
-      kw_tools_add_modal_settings();
+    if ($with_lightbox && module_exists('ctools')) {
+      ctools_include('ajax');
+      ctools_include('modal');
+      ctools_modal_add_js();
+      $modal_style = array(
+          'kweb-modal' => array(
+              'modalOptions' => array(
+                  'opacity' => .5,
+                  'background-color' => '#000',
+              ),
+              'closeImage' => ''
+          ),
+      );
+      drupal_add_js($modal_style, 'setting');
     }
     foreach ($raw_result as $result) {
       if ($with_transliteration) {

@@ -401,7 +401,6 @@ function _kw_djambi_list_user_games($nid = 0) {
   $games = array();
   $nids = array();
   $factions_info = DjambiPoliticalFaction::buildFactionsInfos();
-  //__debug($result);
   foreach($result as $game) {
     if ($game->mode == KW_DJAMBI_MODE_SANDBOX) {
       if (!in_array($game->nid, $nids)) {

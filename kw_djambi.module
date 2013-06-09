@@ -123,7 +123,7 @@ function kw_djambi_cron() {
   $q->condition('dj.autodelete', 0, '!=');
   $nids = $q->execute()->fetchCol('nid');
   if (!empty($nids)) {
-    watchdog('kw_djambi', 'Automatic deletion of Djambi nodes !nids',
+    watchdog('djambi', 'Automatic deletion of Djambi nodes !nids',
       array('!nids' => implode(', ', $nids)));
     node_delete_multiple($nids);
   }
@@ -564,7 +564,7 @@ function kw_djambi_check_update($nid, $version) {
   if (!$return['changed']) {
     global $user;
     $return['status'] = $result['status'];
-    $return['time-elapsed'] = kw_tools_duration(time() - $result['changed']);
+    $return['time-elapsed'] = kw_djambi_duration(time() - $result['changed']);
     $return['time-last-update'] = format_date(time(), 'custom', 'H:i:s');
     $query = db_select('djambi_users', 'u')
       ->fields('u', array('djuid', 'data', 'uid', 'cookie', 'status', 'faction'))
@@ -812,7 +812,7 @@ function _kw_djambi_save_game(DjambiBattlefield $grid, &$form_state) {
  * Mise à jour du ping et de l'IP d'un utilisateur
  */
 function _kw_djambi_update_user_infos($user_data, $djuid, $join = FALSE) {
-  $user_data['ip'] = $_SERVER['REMOTE_ADDR'];
+  $user_data['ip'] = ip_address();
   $user_data['ping'] = time();
   $unstored_keys = array('djuid', 'cookie', 'status', 'ranking', 'uid');
   foreach ($user_data as $key => $value) {
@@ -846,7 +846,7 @@ function _kw_djambi_get_full_piece_name(DjambiPiece $piece) {
 
 /**
  * Fixe le temps de conservation d'une partie
- * @param String $mode
+ * @param string $mode
  */
 function _kw_djambi_autodelete_time($mode = 'std') {
   if ($mode == 'no_autodelete') {
@@ -1019,6 +1019,33 @@ function kw_djambi_game_form($form, &$form_state, $node) {
     _kw_djambi_build_game_form($form, $form_state, $grid);
   }
   return $form;
+}
+
+/**
+ * Fonction permettant d'afficher une durée à partir d'un intervalle en secondes
+ * @param int $seconds_count
+ * @return string
+ */
+function kw_djambi_duration($seconds_count) {
+  $seconds = $seconds_count % 60;
+  $minutes = floor($seconds_count/60) % 60;
+  $hours   = floor($seconds_count/3600) % 24;
+  $days = floor($seconds_count/(3600 * 24));
+  $seconds = t('!sec s', array('!sec' => str_pad($seconds, 2, '0', STR_PAD_LEFT)));
+  $minutes = t('!mn min', array('!mn' => $minutes)) . ' ';
+  if($hours > 0) {
+    $hours = t('!h h', array('!h' => $hours)) . ' ';
+  }
+  else {
+    $hours = '';
+  }
+  if ($days > 0) {
+    $days = format_plural($days, '1 day', '!days days', array('!days' => $days)) . ' ';
+  }
+  else {
+    $days = '';
+  }
+  return $days . $hours . $minutes . $seconds;
 }
 
 /**
