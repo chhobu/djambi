@@ -74,7 +74,6 @@ function kw_djambi_captcha_registration_validate($form, &$form_state) {
   if (!isset($form_state['kw_djambi']['result'])) {
     form_set_error('grid', t("Computer is still alive !"));
     if (!empty($form_state['values']['name']) && $clicked_button_family != 'grid') {
-      __debug($clicked_button_family);
       watchdog('djambi', 'User !name (!mail) tried to register without finishing Djambi game validation.',
       array('!name' => $form_state['values']['name'], '!mail' => $form_state['values']['mail']), WATCHDOG_WARNING);
       flood_register_event('registration', 3600);
