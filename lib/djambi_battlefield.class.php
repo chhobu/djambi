@@ -1,26 +1,4 @@
 <?php
-define('KW_DJAMBI_MODE_SANDBOX', 'bac-a-sable');
-define('KW_DJAMBI_MODE_FRIENDLY', 'amical');
-define('KW_DJAMBI_MODE_TRAINING', 'training');
-
-define('KW_DJAMBI_STATUS_PENDING', 'pending');
-define('KW_DJAMBI_STATUS_FINISHED', 'finished');
-define('KW_DJAMBI_STATUS_DRAW_PROPOSAL', 'draw_proposal');
-define('KW_DJAMBI_STATUS_RECRUITING', 'recruiting');
-
-define('KW_DJAMBI_USER_PLAYING', 'playing'); // Partie en cours
-define('KW_DJAMBI_USER_WINNER', 'winner'); // Fin du jeu, vainqueur
-define('KW_DJAMBI_USER_DRAW', 'draw'); // Fin du jeu, nul
-define('KW_DJAMBI_USER_KILLED', 'killed'); // Fin du jeu, perdant
-define('KW_DJAMBI_USER_WITHDRAW', 'withdraw'); // Fin du jeu, abandon
-define('KW_DJAMBI_USER_VASSALIZED', 'vassalized'); // Camp vassalisé
-define('KW_DJAMBI_USER_FANTOCHE', 'fantoche'); // Camp fantôche
-define('KW_DJAMBI_USER_SURROUNDED', 'surrounded'); // Fin du jeu, encerclement
-define('KW_DJAMBI_USER_DEFECT', 'defect'); // Fin du jeu, disqualification
-define('KW_DJAMBI_USER_EMPTY_SLOT', 'empty'); // Création de partie, place libre
-define('KW_DJAMBI_USER_READY', 'ready'); // Création de partie, prêt à jouer
-
-
 class DjambiBattlefield {
   private $id,
           $scheme,
@@ -40,7 +18,7 @@ class DjambiBattlefield {
           $disposition,
           $displayed_turn_id,
           $habilities_store = array(),
-          $savable = TRUE;
+          $game_manager;
 
   /**
    * Construction de l'objet DjambiBattlefield
@@ -49,12 +27,10 @@ class DjambiBattlefield {
    * @return DjambiBattlefield
    */
   public function __construct($data) {
-    if (isset($data['id'])) {
-      $this->id = $data['id'];
+    if (!isset($data['id']) || !isset($data['mode']) || !isset($data['disposition'])) {
+      throw new Exception('Error during DjambiBattlefield object creation : bad data argument.');
     }
-    else {
-      $this->id = uniqid('Dj');
-    }
+    $this->id = $data['id'];
     $this->setDefaultOptions();
     $this->moves = array();
     $this->events = array();
@@ -63,9 +39,6 @@ class DjambiBattlefield {
       unset($data['is_new']);
       if (isset($data['sequence'])) {
         $this->setInfo('sequence', $data['sequence']);
-      }
-      if (isset($data['savable']) && is_bool($data['savable'])) {
-        $this->savable = $data['savable'];
       }
       $this->setDisposition($data['disposition']);
       $this->setMode($data['mode']);
@@ -79,239 +52,6 @@ class DjambiBattlefield {
   // ------------------------------------------------------------
   // ------------------ FONCTIONS STATIQUES ---------------------
   // ------------------------------------------------------------
-
-  /**
-   * Liste des modes de jeu
-   * @param boolean $with_description
-   * @param boolean $with_hidden
-   * @return array
-   */
-  public static function getModes($with_description = FALSE, $with_hidden = FALSE) {
-    $modes = array(
-        KW_DJAMBI_MODE_FRIENDLY => 'MODE_FRIENDLY_DESCRIPTION',
-        KW_DJAMBI_MODE_SANDBOX => 'MODE_SANDBOX_DESCRIPTION',
-    );
-    $hidden_modes = array(
-        KW_DJAMBI_MODE_TRAINING => 'MODE_TRAINING_DESCRIPTION'
-    );
-    if ($with_hidden) {
-      $modes = array_merge($modes, $hidden_modes);
-    }
-    if ($with_description) {
-      return $modes;
-    }
-    else {
-      return array_keys($modes);
-    }
-  }
-
-  /**
-   * Liste des différentes statuts de jeu
-   * @param boolean $with_description
-   * @param boolean $with_recruiting
-   * @param boolean $with_pending
-   * @param boolean $with_finished
-   * @return array:
-   */
-  public static function getStatuses($with_description = FALSE, $with_recruiting = TRUE, $with_pending = TRUE, $with_finished = TRUE) {
-    $statuses = array();
-    if ($with_recruiting) {
-      $statuses[KW_DJAMBI_STATUS_RECRUITING] = 'STATUS_RECRUITING_DESCRIPTION';
-    }
-    if ($with_pending) {
-      $statuses[KW_DJAMBI_STATUS_PENDING] = 'STATUS_PENDING_DESCRIPTION';
-      $statuses[KW_DJAMBI_STATUS_DRAW_PROPOSAL] = 'STATUS_DRAW_PROPOSAL_DESCRIPTION';
-    }
-    if ($with_finished) {
-      $statuses[KW_DJAMBI_STATUS_FINISHED] = 'STATUS_FINISHED_DESCRIPTION';
-    }
-    if ($with_description) {
-      return $statuses;
-    }
-    else {
-      return array_keys($statuses);
-    }
-  }
-
-  /**
-   * Liste des différentes dispositions de jeu disponibles
-   * @param string $elements : liste des éléments du tableau à renvoyer : 'all', 'description', 'sides', 'nb' ou 'scheme'
-   * @param boolean $with_hidden
-   * @return array
-   */
-  public static function getDispositions($elements = 'all', $with_hidden = TRUE) {
-    $games = array(
-        '4std' => array(
-            'description' => '4STD_DESCRIPTION',
-            'nb' => 4,
-            'scheme' => 'DjambiBattlefieldSchemeStandardGridWith4Sides'
-        ),
-        '2std' => array(
-            'description' => '2STD_DESCRIPTION',
-            'nb' => 2,
-            'sides' => array(1 => 'playable', 2 => 'vassal', 3 => 'playable', 4 => 'vassal'),
-            'scheme' => 'DjambiBattlefieldSchemeStandardGridWith4Sides'
-        ),
-        '3hex' => array(
-            'description' => '3HEX_DESCRIPTION',
-            'nb' => 3,
-            'scheme' => 'DjambiBattlefieldSchemeHexagonalGridWith3Sides'
-        )
-    );
-    $hidden_games = array(
-        '2mini' => array(
-            'description' => '2MINI_DESCRPTION',
-            'nb' => 2,
-            'scheme' => 'DjambiBattlefieldSchemeMiniGridWith2Sides',
-            'hidden' => TRUE
-        )
-    );
-    if ($with_hidden) {
-      $games = array_merge($games, $hidden_games);
-    }
-    if ($elements == 'all') {
-      return $games;
-    }
-    $return = array();
-    foreach($games as $key => $game) {
-      if (isset($game[$elements])) {
-        $return[$key] = $game[$elements];
-      }
-      else {
-        $return[$key] = $game;
-      }
-    }
-    return $return;
-  }
-
-  /**
-   * Liste des options de jeu
-   * @return array
-   */
-  public static function getOptionsInfo() {
-    return array(
-        'allow_anonymous_players' => array(
-            'default' => 1,
-            'configurable' => TRUE,
-            'title' => 'OPTION3',
-            'widget' => 'radios',
-            'type' => 'game_option',
-            'choices' => array(1 => 'OPTION3_YES', 0 => 'OPTION3_NO'),
-            'modes' => array(KW_DJAMBI_MODE_FRIENDLY)
-        ),
-        'allowed_skipped_turns_per_user' => array(
-            'default' => -1,
-            'configurable' => TRUE,
-            'title' => 'OPTION1',
-            'widget' => 'select',
-            'type' => 'game_option',
-            'choices' => array(
-                0 => 'OPTION1_NEVER',
-                1 => 'OPTION1_XTIME',
-                2 => 'OPTION1_XTIME',
-                3 => 'OPTION1_XTIME',
-                4 => 'OPTION1_XTIME',
-                5 => 'OPTION1_XTIME',
-                10 => 'OPTION1_XTIME',
-                -1 => 'OPTION1_ALWAYS')
-        ),
-        'turns_before_draw_proposal' => array(
-            'default' => 10,
-            'configurable' => TRUE,
-            'title' => 'OPTION2',
-            'widget' => 'select',
-            'type' => 'game_option',
-            'choices' => array(
-                -1 => 'OPTION2_NEVER',
-                0 => 'OPTION2_ALWAYS',
-                2 => 'OPTION2_XTURN',
-                5 => 'OPTION2_XTURN',
-                10 => 'OPTION2_XTURN',
-                20 => 'OPTION2_XTURN')
-        ),
-        'rule_surrounding' => array(
-            'title' => 'RULE1',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'default' => 'throne_access',
-            'widget' => 'radios',
-            'choices' => array(
-                'throne_access' => 'RULE1_THRONE_ACCESS',
-                'strict' => 'RULE1_STRICT',
-                'loose' => 'RULE1_LOOSE'
-            )
-        ),
-        'rule_comeback' => array(
-            'title' => 'RULE2',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'default' => 'allowed',
-            'widget' => 'radios',
-            'choices' => array(
-                'never' => 'RULE2_NEVER',
-                'surrounding' => 'RULE2_SURROUNDING',
-                'allowed' => 'RULE2_ALLOWED'
-            )
-        ),
-        'rule_vassalization' => array(
-            'title' => 'RULE3',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'widget' => 'radios',
-            'default' => 'full_control',
-            'choices' => array(
-                'temporary' => 'RULE3_TEMPORARY',
-                'full_control' => 'RULE3_FULL_CONTROL'
-            )
-        ),
-        'rule_canibalism' => array(
-            'title' => 'RULE4',
-            'type' => 'rule_variant',
-            'widget' => 'radios',
-            'configurable' => TRUE,
-            'default' => 'no',
-            'choices' => array(
-                'yes' => 'RULE4_YES',
-                'vassals' => 'RULE4_VASSALS',
-                'no' => 'RULE4_NO',
-                'ethical' => 'RULE4_ETHICAL'
-            )
-        ),
-        'rule_self_diplomacy' => array(
-            'title' => 'RULE5',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'widget' => 'radios',
-            'default' => 'never',
-            'choices' => array(
-                'never' => 'RULE5_NEVER',
-                'vassal' => 'RULE5_VASSAL'
-            )
-        ),
-        'rule_press_liberty' => array(
-            'title' => 'RULE6',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'widget' => 'radios',
-            'default' => 'pravda',
-            'choices' => array(
-                'pravda' => 'RULE6_PRAVDA',
-                'foxnews' => 'RULE6_FOXNEWS'
-            )
-        ),
-        'rule_throne_interactions' => array(
-            'title' => 'RULE7',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'widget' => 'radios',
-            'default' => 'normal',
-            'choices' => array(
-                'normal' => 'RULE7_NORMAL',
-                'extended' => 'RULE7_EXTENDED'
-            )
-        ),
-    );
-  }
 
   /**
    * Retourne le nom d'une case à partir d'un tableau de coordonnées
@@ -376,7 +116,7 @@ class DjambiBattlefield {
     if (isset($data['computers'])) {
       $computers_classes = $data['computers'];
     }
-    $dispositions = self::getDispositions();
+    $dispositions = DjambiGameManager::getDispositions();
     $disposition = $dispositions[$this->disposition];
     // Construction des factions
     if (isset($disposition['sides'])) {
@@ -565,9 +305,6 @@ class DjambiBattlefield {
     $this->events = isset($data['events']) ? $data['events'] : $this->events;
     $this->summary = isset($data['summary']) ? $data['summary'] : $this->summary;
     $this->factions = array();
-    if (isset($data['savable'])) {
-      $this->savable = $data['savable'];
-    }
     if (isset($data['options']) && is_array($data['options'])) {
       foreach($data['options'] as $option => $value) {
         $this->setOption($option, $value);
@@ -658,7 +395,7 @@ class DjambiBattlefield {
   }
 
   private function setDefaultOptions() {
-    $defaults = self::getOptionsInfo();
+    $defaults = DjambiGameManager::getOptionsInfo();
     foreach ($defaults as $key => $value) {
       $this->setOption($key, $value['default']);
     }
@@ -699,7 +436,7 @@ class DjambiBattlefield {
   }
 
   public function setDisposition($disposition) {
-    $dispositions = self::getDispositions();
+    $dispositions = DjambiGameManager::getDispositions();
     if (isset($dispositions[$disposition])) {
       $this->disposition = $disposition;
     }
@@ -867,8 +604,16 @@ class DjambiBattlefield {
     return $this;
   }
 
-  public function isSavable() {
-    return $this->savable;
+  /**
+   * @return DjambiGameManager
+   */
+  public function getGameManager() {
+    return $this->game_manager;
+  }
+
+  public function setGameManager(DjambiGameManager $gm) {
+    $this->game_manager = $gm;
+    return $this;
   }
 
   // ----------------------------------------------------------
@@ -1337,7 +1082,7 @@ class DjambiBattlefield {
     return TRUE;
   }
 
-  private function defineMovablePieces() {
+  public function defineMovablePieces() {
     /* @var $active_faction DjambiPoliticalFaction */
     $current_order = current($this->play_order);
     $active_faction = $this->getFactionById($current_order["side"]);
@@ -1414,18 +1159,6 @@ class DjambiBattlefield {
     return $freecells;
   }
 
-  public function play() {
-    if ($this->status == KW_DJAMBI_STATUS_PENDING) {
-      if (empty($this->summary)) {
-        $this->prepareSummary();
-        $this->updateSummary();
-      }
-      $this->getPlayOrder(TRUE);
-      $this->defineMovablePieces();
-    }
-    return $this;
-  }
-
   public function getSummary() {
     return $this->summary;
   }
@@ -1448,6 +1181,7 @@ class DjambiBattlefield {
         next($players);
       }
     }
+    $this->updateSummary();
     return $this;
   }
 
@@ -1610,7 +1344,6 @@ class DjambiBattlefield {
       'status' => $this->getStatus(),
       'infos' => $this->infos,
       'disposition' => $this->getDisposition(),
-      'savable' => $this->isSavable()
     );
     return $return;
   }

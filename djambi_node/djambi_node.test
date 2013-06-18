@@ -1,5 +1,5 @@
 <?php
-class KwDjambiLiveTestCase extends DrupalWebTestCase {
+class DjambiNodeLiveTestCase extends DrupalWebTestCase {
 
   protected function setUp() {
     drupal_set_time_limit($this->timeLimit);
@@ -25,10 +25,10 @@ class KwDjambiLiveTestCase extends DrupalWebTestCase {
     }
     $edit['mode'] = $mode;
     $edit['nb_players'] = $disposal;
-    $this->drupalPost('node/add/kw-djambi', $edit, t('Begin game'));
-    $nid = (int) current($this->xpath("//div[starts-with(@id,'DjambiContainer')]/@data-grid"));
+    $this->drupalPost('node/add/djambi', $edit, t('Begin game'));
+    $nid = (int) current($this->xpath("//div[starts-with(@id,'DjambiGridFieldset')]/@data-nid"));
     $node = node_load($nid);
-    if (!$node || $node->type != 'kw_djambi') {
+    if (!$node || $node->type != 'djambi') {
       $this->fail(t('Game creation failed !'));
       return FALSE;
     }
@@ -125,7 +125,7 @@ class KwDjambiLiveTestCase extends DrupalWebTestCase {
   }
 
   protected function assertDjambiGameInformations($testing_element, $testing_value) {
-    $xml_element = current($this->xpath("//div[starts-with(@id,'DjambiContainer')]"));
+    $xml_element = current($this->xpath("//div[starts-with(@id,'DjambiGridFieldset')]"));
     if (!is_object($xml_element)) {
       $this->fail(t("Djambi container not found."));
       return FALSE;
@@ -155,7 +155,8 @@ class KwDjambiLiveTestCase extends DrupalWebTestCase {
     for ($i = 0; $i < $turns; $i++) {
       // Chargement de la datagrid
       /* @var $grid DjambiBattlefield */
-      $grid = _kw_djambi_load_game($node->nid, TRUE);
+      $grid = DjambiGameManagerNode::loadGameFromNid($node->nid, TRUE)->getBattlefield();
+      $grid->getGameManager()->play();
       if (!$grid) {
         $this->fail(t("Fail to load Djambi game."));
         return;
@@ -258,7 +259,7 @@ class KwDjambiLiveTestCase extends DrupalWebTestCase {
   protected function djambiPlayFriendlyGame($disposal, $options = array()) {
     $test_users = array('sun-tzu', 'von-klausewitz', 'kissinger', 'nash', 'gracian', 'mazarin', 'richelieu', 'gwbush');
     shuffle($test_users);
-    $disposals = DjambiBattlefield::getDispositions();
+    $disposals = DjambiGameManager::getDispositions();
     $players = $disposals[$disposal]['nb'];
     $users = array();
     for ($i = 0; $i < $players; $i++) {
@@ -274,11 +275,11 @@ class KwDjambiLiveTestCase extends DrupalWebTestCase {
         }
         $current_url = $this->getUrl();
         $alias = drupal_lookup_path('alias', 'node/' . $node->nid);
-        $grid = _kw_djambi_load_game($node->nid);
+        $grid = DjambiGameManagerNode::loadGameFromNid($node->nid)->getBattlefield();
         $factions = $grid->getFactions();
         $this->assertDjambiGameInformations('status', KW_DJAMBI_STATUS_RECRUITING);
         $empty_factions = array();
-        $default_faction = _kw_djambi_get_user_faction($grid, $user);
+        $default_faction = $grid->getGameManager()->getUserFaction($user->uid, _kw_djambi_cookie());
         if (is_null($default_faction)) {
           $this->fail(t("The current user doesn't control any faction."));
           return;
@@ -319,7 +320,7 @@ class KwDjambiLiveTestCase extends DrupalWebTestCase {
   }
 }
 
-class KwDjambiTestSandboxGame extends KwDjambiLiveTestCase {
+class DjambiNodeTestSandboxGame extends DjambiNodeLiveTestCase {
   public static function getInfo() {
     return array(
         'name' => t('Djambi automated sandbox game'),
@@ -329,13 +330,13 @@ class KwDjambiTestSandboxGame extends KwDjambiLiveTestCase {
   }
 
   public function testRandomSandboxGame() {
-    $disposals = DjambiBattlefield::getDispositions();
+    $disposals = DjambiGameManager::getDispositions('all', FALSE);
     $disposal = array_rand($disposals);
     $this->djambiPlaySandboxGame($disposal);
   }
 }
 
-class KwDjambiTestFriendlyGame extends KwDjambiLiveTestCase {
+class DjambiNodeTestFriendlyGame extends DjambiNodeLiveTestCase {
   public static function getInfo() {
     return array(
         'name' => t('Djambi automated friendly game'),
@@ -345,7 +346,7 @@ class KwDjambiTestFriendlyGame extends KwDjambiLiveTestCase {
   }
 
   public function testRandomFriendlyGame() {
-    $disposals = DjambiBattlefield::getDispositions();
+    $disposals = DjambiGameManager::getDispositions('all', FALSE);
     $disposal = array_rand($disposals);
     $this->djambiPlayFriendlyGame($disposal);
   }

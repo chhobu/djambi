@@ -346,7 +346,7 @@ function theme_djambi_grid($variables) {
       $prow['sides'] = array('data' => '<span class="faction ' . $faction->getClass() . '">'
           . _kw_djambi_get_translatable_messages($faction->getName()) . '</span>');
       if (!in_array($faction->getStatus(), array(KW_DJAMBI_USER_VASSALIZED, KW_DJAMBI_USER_EMPTY_SLOT))) {
-        $me = _kw_djambi_check_current_user($grid, $faction, FALSE);
+        $me = $grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $faction, FALSE);
         if (!$faction->isHumanControlled()) {
           $prow['players'] = array('data' => '<div class="icon cogs">' . t('Computer') . ' <em>(' . $faction->getIa()->getName() . ')</em></div>');
         }
@@ -482,7 +482,7 @@ function theme_djambi_grid($variables) {
       if (!empty($waiting)) {
         $infos_lines[t("Undecided sides")] = implode(', ', $waiting);
         $last_change = $grid->getInfo('changed');
-        if (!_kw_djambi_check_current_user($grid, $playing_faction)) {
+        if (!$grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $playing_faction)) {
           $infos_lines[t("Pending decision")] = _kw_djambi_waiting_label($now_playing_faction, $grid);
         }
       }
@@ -540,7 +540,7 @@ function theme_djambi_grid($variables) {
               'items' => $recent_events,
               'title' => t('Recent events'),
           )) . '</div>',
-          '#weight' => 20
+          '#weight' => 30
       );
     }
   }
@@ -714,7 +714,7 @@ function _kw_djambi_waiting_label($now_playing_faction, DjambiBattlefield $grid)
   if (!is_null($now_playing_faction)) {
     $args = array(
       '!side' => _kw_djambi_get_translatable_messages($now_playing_faction->getName()),
-      '!duration' => '<span class="time-elapsed">' . kw_djambi_duration(time() - $last_change) . '</span>'
+      '!duration' => '<span class="time-elapsed">' . _kw_djambi_get_duration(time() - $last_change) . '</span>'
     );
   }
   switch ($grid->getStatus()) {

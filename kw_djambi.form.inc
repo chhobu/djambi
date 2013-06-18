@@ -1,6 +1,7 @@
 <?php
 function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $grid, $options = NULL) {
   global $user;
+  $user->djookie = _kw_djambi_cookie();
   $show_log = TRUE;
   $show_rules = TRUE;
   $show_stats = TRUE;
@@ -13,7 +14,7 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
   if (isset($options['show_stats'])) {
     $show_stats = $options['show_stats'];
   }
-  $current_user_faction = _kw_djambi_get_user_faction($grid, $user);
+  $current_user_faction = $grid->getGameManager()->getUserFaction($user->uid, $user->djookie);
   if ($grid->isFinished() && !empty($current_user_faction)) {
     $form_state['kw_djambi']['result'] = $current_user_faction->getStatus();
   }
@@ -26,13 +27,14 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
   }
   if (!$replay && !$grid->isFinished() && !in_array($grid->getMode(), array(KW_DJAMBI_MODE_SANDBOX, KW_DJAMBI_MODE_TRAINING))
     && !is_null($current_user_faction)) {
-    $user_data = _kw_djambi_update_user_infos($current_user_faction->getUserData(),
+    $user_data = $grid->getGameManager()->updateUserInfos($current_user_faction->getUserData(),
       $current_user_faction->getUserDataItem('djuid'));
     $current_user_faction->updateUserData($user_data);
   }
   $faction = $grid->getPlayingFaction();
+  $is_user_playing_current_faction = !$faction ? FALSE : $grid->getGameManager()->checkUserPlayingFaction($user->uid, $user->djookie, $faction);
   // Inclusion du Javascript et du CSS
-  if ($grid->isPending() && _kw_djambi_check_current_user($grid, $faction)) {
+  if ($grid->isPending() && $is_user_playing_current_faction) {
     drupal_add_library('system', 'ui.core');
     drupal_add_library('system', 'ui.widget');
     drupal_add_library('system', 'ui.mouse');
@@ -151,9 +153,9 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
   if (!isset($form_state['show_replay']) && $grid->isPending()) {
     // Interface de réponse sur proposition de partie nulle
     if ($faction && $grid->getStatus() == KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
-      _kw_djambi_build_part_draw_proposal($form['grid'], $grid, $faction, $ajax_settings);
+      _kw_djambi_build_part_draw_proposal($form['grid'], $grid, $faction, $ajax_settings, $is_user_playing_current_faction);
     }
-    elseif ($faction && $grid->getStatus() == KW_DJAMBI_STATUS_PENDING && _kw_djambi_check_current_user($grid, $faction)) {
+    elseif ($faction && $grid->getStatus() == KW_DJAMBI_STATUS_PENDING && $is_user_playing_current_faction) {
       _kw_djambi_build_part_player_actions($form, $form_state, $grid, $faction, $ajax_settings);
       _kw_djambi_build_part_pieces_controls($form['grid'], $form_state, $grid, $faction, $ajax_settings);
     }
@@ -381,7 +383,7 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
 }
 
 function _kw_djambi_build_part_rules(&$form, DjambiBattlefield $grid) {
-  $options = DjambiBattlefield::getOptionsInfo();
+  $options = DjambiGameManager::getOptionsInfo();
   $rules_rows = array();
   $nb_rule = $nb_option = 1;
   foreach ($options as $key => $option) {
@@ -420,7 +422,7 @@ function _kw_djambi_build_part_rules(&$form, DjambiBattlefield $grid) {
   }
 }
 
-function _kw_djambi_build_part_draw_proposal(&$form, DjambiBattlefield $grid, DjambiPoliticalFaction $faction, $ajax_settings) {
+function _kw_djambi_build_part_draw_proposal(&$form, DjambiBattlefield $grid, DjambiPoliticalFaction $faction, $ajax_settings, $is_user_playing_current_faction) {
   $form['actions'] = array(
       '#type' => 'fieldset',
       '#title' => t('Actions'),
@@ -433,7 +435,7 @@ function _kw_djambi_build_part_draw_proposal(&$form, DjambiBattlefield $grid, Dj
       break;
     }
   }
-  if (_kw_djambi_check_current_user($grid, $faction)) {
+  if ($is_user_playing_current_faction) {
     $form['actions']['descriptions'] = array(
         '#type' => 'item',
         '#title' => t('Now playing') . ' : ',
@@ -1375,21 +1377,21 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
     $total['data'][3]['data'] += $row[3]['data'];
     $row[4] = array(
         'data' => !empty($stats['playtime'][$faction->getId()]) ?
-        kw_djambi_duration($stats['playtime'][$faction->getId()]) : 0,
+        _kw_djambi_get_duration($stats['playtime'][$faction->getId()]) : 0,
         'class' => 'number');
     if (isset($stats['playtime'][$faction->getId()])) {
       $total['data'][4]['data'] += $stats['playtime'][$faction->getId()];
     }
     $row[5] = array(
         'data' => !empty($stats['playtime'][$faction->getId()]) && !empty($stats['moves']['turns'][$faction->getId()]) ?
-        kw_djambi_duration($stats['playtime'][$faction->getId()] / $stats['moves']['turns'][$faction->getId()]) : '-',
+        _kw_djambi_get_duration($stats['playtime'][$faction->getId()] / $stats['moves']['turns'][$faction->getId()]) : '-',
         'class' => 'number');
     $rows[] = $row;
   }
   if ($total['data'][1]['data'] > 0) {
-    $total['data'][5]['data'] = kw_djambi_duration($total['data'][4]['data'] / $total['data'][1]['data']);
+    $total['data'][5]['data'] = _kw_djambi_get_duration($total['data'][4]['data'] / $total['data'][1]['data']);
   }
-  $total['data'][4]['data'] = kw_djambi_duration($total['data'][4]['data']);
+  $total['data'][4]['data'] = _kw_djambi_get_duration($total['data'][4]['data']);
   $rows[] = $total;
   $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => t('Table of moves')));
   $form['stats']['items'] = array(
@@ -1742,9 +1744,12 @@ function kw_djambi_game_form_refresh_submit($form, &$form_state) {
  */
 function kw_djambi_game_form_participate_submit($form, &$form_state) {
   global $user;
-  $grid = $form['grid']['#grid'];
   $form_state['kw_djambi']['change_turn'] = TRUE;
-  $grid = _kw_djambi_load_game($grid->getInfo('nid'), TRUE);
+  $grid = $form['grid']['#grid'];
+  $gm = $grid->getGameManager();
+  if (!is_null($gm)) {
+    $grid = $gm->reload()->getBattlefield();
+  }
   if ($grid->getStatus() != KW_DJAMBI_STATUS_RECRUITING) {
     return;
   }
@@ -1762,7 +1767,7 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
   $nb_empty_factions = 0;
   foreach ($grid->getFactions() as $faction) {
     if ($faction->getId() != $faction_id) {
-      if (_kw_djambi_check_current_user($grid, $faction)) {
+      if ($grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $faction)) {
         $faction->setStatus(KW_DJAMBI_USER_EMPTY_SLOT);
       }
       if ($faction->getStatus() == KW_DJAMBI_USER_EMPTY_SLOT) {
@@ -1775,7 +1780,7 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
     $faction->setStatus(KW_DJAMBI_USER_READY);
     $user_data = $faction->getUserData();
     $user_data['joined'] = time();
-    _kw_djambi_update_user_infos($user_data, $faction->getUserDataItem('djuid'), TRUE);
+    $grid->getGameManager()->updateUserInfos($user_data, $faction->getUserDataItem('djuid'), TRUE);
     if ($nb_empty_factions == 0) {
       $grid->setStatus(KW_DJAMBI_STATUS_PENDING);
     }
@@ -1796,9 +1801,10 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
 function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
   $grid = $form['grid']['#grid'];
   if ($grid->getStatus() == KW_DJAMBI_STATUS_RECRUITING) {
+    global $user;
     $nb_playing_factions = 0;
     foreach ($grid->getFactions() as $faction) {
-      if (_kw_djambi_check_current_user($grid, $faction)) {
+      if ($grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $faction)) {
         $faction->setStatus(KW_DJAMBI_USER_EMPTY_SLOT);
       }
       if ($faction->getStatus() == KW_DJAMBI_USER_READY) {
@@ -1826,8 +1832,7 @@ function kw_djambi_piece_selection_validate(&$errors, $piece_id, DjambiBattlefie
   $errors = array();
   $piece_form_locator = "grid[pieces][movable][" . $piece_id;
   $faction = $grid->getPlayingFaction();
-  $is_current_user = _kw_djambi_check_current_user($grid, $faction);
-  if (!$is_current_user) {
+  if ($faction && !$grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $faction)) {
     $errors[] = array(
         "location" => $piece_form_locator,
         "msg" => t("You do not own the !faction pieces.", array("!faction",

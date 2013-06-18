@@ -192,8 +192,13 @@
             $('.djambi input[name="ui-computer-refresh"]').mousedown();
             return;
           }
-          jQuery.ajax('/djambi/' + $grid.data('nid') + '/check-update/' + $grid.data('version')).done(function(json) {
-            result = jQuery.parseJSON(json);
+          jQuery.ajax('/js/djambi_node/check_update/' + $grid.data('nid') + '/' + $grid.data('version')).done(function(json) {
+            if (typeof json === 'string') {
+              result = jQuery.parseJSON(json);
+            }
+            else {
+              result = json;
+            }
             $block = $('#DjambiActiveGameInfo');
             if ($block.length > 0 && ($block.data('user-faction') != result['user-faction'] || $block.data('status') != result['status'])) {
               $('.refresh-my-djambi-panel a').click();

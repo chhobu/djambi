@@ -2,7 +2,7 @@
 /**
  * Implements hook_theme()
  */
-function kw_djambi_chat_theme() {
+function djambi_chat_theme() {
   return array(
     'djambi_chat' => array(
       'variables' => array('messages' => array(), 'form' => NULL, 'attributes' => array()),
@@ -13,13 +13,13 @@ function kw_djambi_chat_theme() {
 /**
  * Implements hook_node_view().
  */
-function kw_djambi_chat_node_view($node, $view_mode) {
-  if ($node->type == 'kw_djambi' && $view_mode =='full') {
+function djambi_chat_node_view($node, $view_mode) {
+  if ($node->type == 'djambi' && $view_mode =='full') {
     /* @var $grid DjambiBattlefield */
     $grid = $node->content['grid']['#grid'];
-    $messages = _kw_djambi_chat_display_messages($grid);
+    $messages = _djambi_chat_display_messages($grid);
     if ($grid->isPending() || $grid->isNotBegin()) {
-      $form = drupal_get_form('kw_djambi_chat_add_message_form', $grid);
+      $form = drupal_get_form('djambi_chat_add_message_form', $grid);
     }
     else {
       $form = NULL;
@@ -33,7 +33,7 @@ function kw_djambi_chat_node_view($node, $view_mode) {
 /**
  * Affichage des messages d'un chat
  */
-function _kw_djambi_chat_display_messages(DjambiBattlefield $grid) {
+function _djambi_chat_display_messages(DjambiBattlefield $grid) {
   $messages = array();
   return $messages;
 }
@@ -41,7 +41,7 @@ function _kw_djambi_chat_display_messages(DjambiBattlefield $grid) {
 /**
  * Formulaire d'ajout de messages sur le chat
  */
-function kw_djambi_chat_add_message_form($form, &$form_state, DjambiBattlefield $grid) {
+function djambi_chat_add_message_form($form, &$form_state, DjambiBattlefield $grid) {
   $form['new_message'] = array(
     '#type' => 'textfield',
     '#title' => t('New message')
@@ -56,7 +56,7 @@ function kw_djambi_chat_add_message_form($form, &$form_state, DjambiBattlefield 
 /**
  * Traitement du formulaire d'ajout de messages
  */
-function kw_djambi_chat_add_message_form_submit($form, &$form_state) {
+function djambi_chat_add_message_form_submit($form, &$form_state) {
 
 }
 

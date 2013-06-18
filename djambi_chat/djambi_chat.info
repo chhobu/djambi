@@ -4,5 +4,5 @@ description = "Chat together with your fellow Djambi opponents."
 core = 7.x
 version = 7.x-1.0-dev
 package = Kweb Djambi
-dependencies[] = kw_djambi
-files[] = ../lib/djambi_interactions.class.php
+dependencies[] = djambi_node
+files[] = djambi_interactions.class.php

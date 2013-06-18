@@ -1,0 +1,640 @@
+<?php
+/**
+ * Implements hook_menu().
+ */
+function djambi_node_menu() {
+  $items['js/djambi_node/check_update/%/%'] = array(
+   'page callback' => 'djambi_node_check_update',
+      'page arguments' => array(3, 4),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK
+  );
+  $items['djambi/refresh/%'] = array(
+      'page callback' => 'djambi_node_refresh_area',
+      'page arguments' => array(2),
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK
+  );
+  $items['djambi'] = array(
+      'page callback' => 'djambi_node_start_game',
+      'access callback' => TRUE,
+      'type' => MENU_CALLBACK
+  );
+  return $items;
+}
+
+/**
+ * Implements hook_permission().
+ */
+function djambi_node_permission() {
+  return array(
+      'administer djambi games' => array(
+          'title' => t('Administer djambi games'),
+          'description' => t('Perform administrative tasks dealing with djambi games.')
+      )
+  );
+}
+
+/**
+ * Implements hook_block_info().
+ */
+function djambi_node_block_info() {
+  $blocks['djambi_games'] = array(
+      'info' => t('Djambi games'),
+      'cache' => DRUPAL_NO_CACHE
+  );
+  $blocks['djambi_panel'] = array(
+      'info' => t('My Djambi games'),
+      'cache' => DRUPAL_NO_CACHE
+  );
+  return $blocks;
+}
+
+/**
+ * Implements hook_block_view().
+ */
+function djambi_node_block_view($delta) {
+  switch ($delta) {
+    case ('djambi_games') :
+      module_load_include('inc', 'djambi_node', 'djambi_node.blocks');
+      $block['subject'] = t('Djambi games');
+      $block['content'] = _djambi_node_list_games();
+      return $block;
+      break;
+    case ('djambi_panel') :
+      module_load_include('inc', 'djambi_node', 'djambi_node.blocks');
+      $block['subject'] = t('My Djambi games');
+      $block['content'] = _djambi_node_list_user_games();
+      return $block;
+      break;
+  }
+}
+
+/**
+ * Implements hook_block_view_alter().
+ */
+function djambi_node_block_view_alter(&$data, $block) {
+  // On retire l'affichage des blocs de connexion / de déconnexion si l'utilisateur joue une partie
+  if ($block->module == 'user' || $block->delta == 'user-menu') {
+    try {
+      $current_game = DjambiGameManagerNode::retrieveCurrentGame();
+    }
+    catch (Exception $e) {
+      $current_game = NULL;
+    }
+    if (!empty($current_game) && !$current_game->getBattlefield()->isFinished()) {
+      global $user;
+      $check = $current_game->getUserFaction($user->uid, _kw_djambi_cookie());
+      if (!is_null($check)) {
+        $data = array();
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_cron().
+ */
+function djambi_node_cron() {
+  $q = db_select('djambi_node', 'dj');
+  $q->fields('dj', array('nid'));
+  $q->condition('dj.autodelete', time(), '<');
+  $q->condition('dj.autodelete', 0, '!=');
+  $nids = $q->execute()->fetchCol('nid');
+  if (!empty($nids)) {
+    watchdog('djambi', 'Automatic deletion of Djambi nodes !nids',
+    array('!nids' => implode(', ', $nids)));
+    node_delete_multiple($nids);
+  }
+}
+
+/**
+ * Implements hook_node_info().
+ * Création d'un nouveau type de contenu "partie de Djambi".
+ */
+function djambi_node_node_info() {
+  return array(
+      'djambi' => array(
+          'name' => t('Djambi game'),
+          'base' => 'node_content',
+          'description' => t('Create a new machiavelli chess game.'),
+          'has_title' => FALSE,
+          'locked' => TRUE
+      ),
+  );
+}
+
+/**
+ * Implements hook_node_insert().
+ */
+function djambi_node_node_insert($node) {
+  if ($node->type == 'djambi' && isset($node->dj_prepared) && $node->dj_prepared) {
+    /* @var $battlefield DjambiBattlefield  */
+    $battlefield = $node->dj_battlefield;
+    $record = array(
+        'nid' => $node->nid,
+        'mode' => $node->dj_mode,
+        'points' => 0,
+        'status' => $battlefield->getStatus(),
+        'nb_moves' => 0,
+        'data' => $node->dj_data,
+        'begin' => $node->dj_begin,
+        'changed' => $node->dj_begin,
+        'autodelete' => $node->dj_delete,
+        'compressed' => 0,
+        'disposition' => $node->dj_disposition
+    );
+    drupal_write_record('djambi_node', $record);
+    $factions = $battlefield->getFactions();
+    /* @var $faction DjambiPoliticalFaction */
+    foreach ($factions as $key => $faction) {
+      $user = current($node->dj_users);
+      $record = array(
+          'nid' => $node->nid,
+          'uid' => $user['uid'],
+          'status' => $user['status'],
+          'faction' => $faction->getId(),
+          'data' => $user['data'],
+          'cookie' => $user['cookie']
+      );
+      drupal_write_record('djambi_users', $record);
+      if (next($node->dj_users) === FALSE) {
+        break;
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_node_view().
+ */
+function djambi_node_node_view($node, $view_mode) {
+  if ($node->type == 'djambi' && $view_mode =='full') {
+    $form = drupal_get_form('djambi_node_game_form', $node);
+    $node->content['grid'] = $form;
+    $datagrid = $form['grid']['#grid'];
+    module_load_include('inc', 'djambi_node', 'djambi_node.blocks');
+    if ($datagrid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
+      if (!$datagrid->isNotBegin()) {
+        $node->content['navigation'] = _djambi_node_list_viewable_games(NULL, $node->nid);
+      }
+      else {
+        $node->content['navigation'] = _djambi_node_list_recruiting_games($node->nid);
+      }
+    }
+  }
+}
+
+/**
+ * Implements hook_node_delete().
+ */
+function djambi_node_node_delete($node) {
+  if ($node->type == 'djambi') {
+    db_delete("djambi_users")->condition("nid", $node->nid)->execute();
+    db_delete("djambi_node")->condition("nid", $node->nid)->execute();
+  }
+}
+
+/**
+ * Implements hook_user_delete().
+ */
+function djambi_node_user_delete($account) {
+  db_update("djambi_users")
+    ->fields(array('uid' => 0))
+    ->condition('uid', $account->uid)
+    ->execute();
+}
+
+/**
+ * Implements hook_form_FORM_ID_alter().
+ */
+function djambi_node_form_djambi_node_form_alter(&$form, &$form_state) {
+  if (!$form["nid"]["#value"]) {
+    $form['actions']['submit']['#value'] = t('Begin game');
+    $form['basics'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Game presets')
+    );
+    $nb_players_options = DjambiGameManager::getDispositions('description', FALSE);
+    foreach ($nb_players_options as $option => $description) {
+      $nb_players_options[$option] = _kw_djambi_get_translatable_messages($description);
+    }
+    $form['basics']['nb_players'] = array(
+        '#type' => 'radios',
+        '#title' => t('Number of players'),
+        '#default_value' => isset($nb_players_options['4std']) ? '4std' : key($nb_players_options),
+        '#options' => $nb_players_options,
+        '#required' => TRUE
+    );
+    $mode_options = DjambiGameManager::getModes(TRUE);
+    global $user;
+    $cookie = _kw_djambi_cookie();
+    $allowed = _djambi_node_check_user_already_playing($user, array_keys($mode_options), $cookie, FALSE);
+    foreach ($mode_options as $option => $description) {
+      if (!isset($allowed[$option])) {
+        unset($mode_options[$option]);
+      }
+      else {
+        $mode_options[$option] = _kw_djambi_get_translatable_messages($description);
+      }
+    }
+    if (empty($mode_options) || (isset($_GET['mode']) && !isset($allowed[$_GET['mode']]))) {
+      drupal_access_denied();
+      die();
+    }
+    if (isset($_GET['mode']) && isset($mode_options[$_GET['mode']])) {
+      $default_mode = $_GET['mode'];
+    }
+    else {
+      $default_mode = KW_DJAMBI_MODE_FRIENDLY;
+    }
+    $form['basics']['mode'] = array(
+        '#type' => 'radios',
+        '#title' => t('Game mode'),
+        '#default_value' => isset($mode_options[$default_mode]) ? $default_mode : key($mode_options),
+        '#options' => $mode_options,
+        '#required' => TRUE
+    );
+    $form['advanced'] = array(
+        '#type' => 'fieldset',
+        '#title' => t('Advanced options'),
+        '#tree' => TRUE,
+        '#collapsible' => TRUE,
+        '#collapsed' => TRUE
+    );
+    $form['#attached']['css'][] = drupal_get_path('module', 'kw_djambi').'/kw_djambi.css';
+    $defaults = DjambiGameManager::getOptionsInfo();
+    $nb_rule = 0;
+    $nb_option = 0;
+    foreach($defaults as $option => $data) {
+      if ($data['configurable']) {
+        $form['advanced'][$option] = array(
+            '#type' => $data['widget'],
+            '#default_value' => isset($_GET[$option]) ? $_GET[$option] : $data['default']
+        );
+        if (!empty($data['title'])) {
+          $form['advanced'][$option]['#title'] = _kw_djambi_get_translatable_messages($data['title']);
+        }
+        if ($data['type'] == 'rule_variant') {
+          $nb_rule++;
+          $form['advanced'][$option]['#title'] .= '<span class="rule-variant">' . t('Rule variant #!number', array('!number' => str_pad($nb_rule, 2, '0', STR_PAD_LEFT))) . '</span>';
+        }
+        elseif ($data['type'] == 'game_option') {
+          $nb_option++;
+          $form['advanced'][$option]['#title'] .= '<span class="game-option">' . t('Game option #!number', array('!number' => str_pad($nb_option, 2, '0', STR_PAD_LEFT))) . '</span>';
+        }
+        $form['advanced'][$option]['#required'] = TRUE;
+        if (in_array($data['widget'], array('radios', 'select'))) {
+          $choices = array();
+          foreach ($data['choices'] as $choice_key => $description) {
+            $choices[$choice_key] = _kw_djambi_get_translatable_messages($description, array('!value' => $choice_key));
+          }
+          if (isset($_GET[$option]) && !isset($choices[$_GET[$option]])) {
+            $form['advanced'][$option]['#default_value'] = $data['default'];
+          }
+          $form['advanced'][$option]['#options'] = $choices;
+        }
+        if (isset($data['modes'])) {
+          foreach ($mode_options as $mode => $desc) {
+            if (!in_array($mode, $data['modes'])) {
+              $form['advanced'][$option]['#states']['invisible'][':input[name="mode"]'] = array('value' => $mode);
+            }
+          }
+        }
+      }
+    }
+    $form['#submit'] = array('djambi_node_form_djambi_node_new_game_submit');
+  }
+  else {
+    $node = $form["#node"];
+    if (user_access('administer djambi games')) {
+      try {
+        $grid = DjambiGameManagerNode::loadGameFromNid($node->nid)->getBattlefield();
+      }
+      catch (Exception $e) {
+        $grid = FALSE;
+      }
+      if ($grid && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+        $form['djambi_mode'] = array(
+            '#type' => 'value',
+            '#value' => $grid->getMode()
+        );
+        $form['no_autodelete'] = array(
+            '#type' => 'checkbox',
+            '#title' => t('Do not autodelete this game'),
+            '#description' => t('Finished or inactive games are automatically removed after an amount of time. Check this box to keep this game alive.'),
+            '#default_value' => $grid->getInfo('autodelete') === 0 ? 1 : 0,
+            '#return_value' => 1
+        );
+        $form['#submit'][] = 'djambi_node_form_djambi_node_extra_submit';
+      }
+    }
+  }
+}
+
+/**
+ * Soumission d'un formulaire de création de contenu de type kw_djambi.
+ * Traitement des champs réservés aux administrateurs.
+ */
+function djambi_node_form_djambi_node_extra_submit($form, &$form_state) {
+  if (user_access('administer djambi games') && isset($form_state['values']['no_autodelete'])) {
+    $q = db_update('djambi_node')
+    -> fields(array('autodelete' => $form_state['values']['no_autodelete'] == 1 ? 0 :
+        _kw_djambi_autodelete_time()))
+        -> condition('nid', $form['#node']->nid)
+        -> execute();
+  }
+}
+
+/**
+ * Soumission d'un formulaire de création de contenu de type kw_djambi.
+ * Création d'une nouvelle partie
+ * @param String $mode
+ */
+function djambi_node_form_djambi_node_new_game_submit($form, &$form_state) {
+  global $user;
+  $node = $form['#node'];
+  $game_id = variable_get('kw_djambi_game_sequence', 0);
+  $game_id++;
+  $node->title = t("Machiavelli chess - Game #!i", array("!i" => $game_id));
+  $mode = $form_state["values"]["mode"];
+  $cookie = _kw_djambi_cookie();
+  _djambi_node_check_user_already_playing($user, $mode, $cookie);
+
+  $dispositions = DjambiGameManager::getDispositions();
+  $disposition = $form_state['values']['nb_players'];
+  $data = array(
+    'user_id' => $user->uid,
+    'user_cookie' => $cookie
+  );
+  $game = DjambiGameManagerNode::createGameNode($game_id, $mode, $disposition, $data, $form_state['values']['advanced']);
+  $node->dj_players = $dispositions[$disposition]['nb'];
+  $node->dj_mode = $mode;
+  $node->dj_begin = time();
+  $node->dj_delete = _djambi_node_autodelete_time();
+  $node->dj_disposition = $disposition;
+  $node->dj_users = $game->getBattlefield()->getInfo('players_info');
+  $node->dj_data = $game->getBattlefield()->toArray();
+  $node->dj_prepared = TRUE;
+  $node->dj_battlefield = $game->getBattlefield();
+  variable_set('kw_djambi_game_sequence', $game_id);
+}
+
+/**
+ * Implements hook_js().
+ * @see http://drupal.org/project/js
+ */
+function djambi_node_js() {
+  return array(
+      'check_update' => array(
+          'callback'     => 'djambi_node_check_update',
+          'includes'     => array('common'),
+          'dependencies' => array('user', 'kw_djambi'),
+          'bootstrap'    => DRUPAL_BOOTSTRAP_SESSION,
+          'page_arguments'  => array()
+      ),
+  );
+}
+
+/**
+ * Callback : permet de vérifier si un contenu de type kw_djambi a été mis à jour
+ *   pendant la consultation de la page.
+ */
+function djambi_node_check_update($nid, $version) {
+  if (empty($nid) || empty($version)) {
+    return;
+  }
+  $query = db_select('djambi_node', 'dj')
+  ->fields('dj', array('changed','status'))
+  ->condition('dj.nid', $nid);
+  $result = $query->execute()->fetchAssoc();
+  $return['changed'] = ($result['changed'] > $version) ? 1 : 0;
+  if (!$return['changed']) {
+    global $user;
+    $return['status'] = $result['status'];
+    $return['time-elapsed'] = _kw_djambi_get_duration(time() - $result['changed']);
+    $return['time-last-update'] = format_date(time(), 'custom', 'H:i:s');
+    $query = db_select('djambi_users', 'u')
+    ->fields('u', array('djuid', 'data', 'uid', 'cookie', 'status', 'faction'))
+    ->condition('u.nid', $nid)
+    ->condition('u.status', array('vassalized', 'empty'), 'NOT IN');
+    $players = $query->execute()->fetchAll(PDO::FETCH_ASSOC);
+    $cookie = _kw_djambi_cookie();
+    foreach ($players as $player) {
+      $data = unserialize($player['data']);
+      if (($player['uid'] > 0 && $user->uid == $player['uid']) || (!empty($cookie) && $player['cookie'] == $cookie)) {
+        $data = DjambiGameManagerNode::updateStaticUserInfos($data, $player['djuid']);
+        $return['user-faction'] = $player['faction'];
+      }
+      if (!empty($data['ping'])) {
+        $ping = _kw_djambi_format_ping_infos($data['ping']);
+        $return['pings'][$player['djuid']] = array(
+            'status' => $ping['status'],
+            'title' => $ping['title'],
+            'class' => $ping['class']
+        );
+        if (isset($data['joined'])) {
+          $return['pings'][$player['djuid']]['joined'] = format_interval(time() - $data['joined']);
+        }
+      }
+    }
+  }
+  else {
+    // Récupération des données concernant le dernier mouvement
+    try {
+      $grid = DjambiGameManagerNode::loadGameFromNid($nid)->getBattlefield();
+    }
+    catch (Exception $e) {
+      drupal_json_output($return);
+      die();
+    }
+    global $user;
+    if ($user->uid > 0 && isset($user->data['djambi_show_moves'])) {
+      $show_moves = $user->data['djambi_show_moves'];
+    }
+    elseif (isset($_SESSION['djambi']['show_moves'])) {
+      $show_moves = $_SESSION['djambi']['show_moves'];
+    }
+    else {
+      $show_moves = TRUE;
+    }
+    $return = array_merge($return, $grid->returnLastMoveData($version, $show_moves, '_kw_djambi_describe_move'));
+  }
+  drupal_json_output($return);
+}
+
+/**
+ * Formulaire créant une grille de Djambi à partir d'un noeud
+ */
+function djambi_node_game_form($form, &$form_state, $node) {
+  // Chargement de la grille
+  try {
+    if (!empty($form_state['kw_djambi']['selected_piece']) && !$form_state['kw_djambi']['change_turn']) {
+      $piece = $form_state['kw_djambi']['selected_piece'];
+      $grid = $piece->getFaction()->getBattlefield();
+    }
+    elseif (isset($form_state['kw_djambi']['change_turn'])) {
+      $grid = DjambiGameManagerNode::loadGameFromNid($node->nid, TRUE)->getBattlefield();
+      $grid->getGameManager()->play();
+      unset($form_state['kw_djambi']);
+    }
+    else {
+      $grid = DjambiGameManagerNode::loadGameFromNid($node->nid)->getBattlefield();
+      $grid->getGameManager()->play();
+    }
+  }
+  catch (Exception $e) {
+    watchdog('djambi', 'Unable to load Djambi game from node !nid', array('!nid' => $node->nid));
+    drupal_not_found();
+    die();
+  }
+  if (!empty($grid)) {
+    form_load_include($form_state, 'inc', 'kw_djambi', 'kw_djambi.form');
+    _kw_djambi_build_game_form($form, $form_state, $grid);
+  }
+  return $form;
+}
+
+/**
+ * Callback permettant la création rapide d'une partie
+ */
+function djambi_node_start_game() {
+  // Recherche d'une partie en attente
+  global $user;
+  $cookie = _kw_djambi_cookie();
+  $allowed_new_games = _djambi_node_check_user_already_playing($user, DjambiGameManager::getModes(), $cookie, FALSE);
+  $new_game = db_query('SELECT dn.nid FROM {djambi_node} dn
+      WHERE dn.status = :status AND dn.autodelete > :time
+      ORDER BY dn.changed DESC LIMIT 0,1',
+      array(':status' => KW_DJAMBI_STATUS_RECRUITING, ':time' => time()));
+  foreach ($new_game as $game) {
+    if ($allowed_new_games) {
+      drupal_set_message(t("We found a game still recruiting players. You may also !create_link.",
+      array('!create_link' => l(t('create your own new game'), 'node/add/djambi')))
+      );
+    }
+    drupal_goto('node/' . $game->nid);
+    break;
+  }
+  // Si aucune partie, redirection vers l'interface de création de partie
+  drupal_goto('node/add/djambi');
+}
+
+/**
+ * Callback : fonction permettant de rafraîchir une zone de l'écran,
+ *   générée avec la fonction $callback
+ */
+function djambi_node_refresh_area($id) {
+  switch ($id) {
+    case('my-games-panel'):
+      module_load_include('inc', 'djambi_node', 'djambi_node.blocks');
+      $callback = '_djambi_node_list_user_games';
+      $args = array(arg(3));
+      $fragment = 'block-djambi-node-djambi-panel';
+      $target = '#' . $fragment . ' .content';
+      break;
+    default:
+      drupal_access_denied();
+      die();
+  }
+  if(!empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) == 'xmlhttprequest') {
+    $ajax = TRUE;
+  }
+  else {
+    $ajax = FALSE;
+  }
+  if ($ajax) {
+    $output = call_user_func_array($callback, $args);
+    $commands[] = ajax_command_html($target, drupal_render($output));
+    $page = array('#type' => 'ajax', '#commands' => $commands);
+    ajax_deliver($page);
+  }
+  else {
+    drupal_goto('', array(
+    'query' => drupal_get_destination(),
+    'fragment' => isset($fragment) ? $fragment : ''
+        ));
+  }
+}
+
+/**
+ * Vérification : l'utilisateur courant participe-t-il déjà à une partie ?
+ */
+function _djambi_node_check_user_already_playing($user, $modes, $cookie, $redirect = TRUE) {
+  if (!is_array($modes)) {
+    $modes_array[] = $modes;
+  }
+  else {
+    $modes_array = $modes;
+  }
+  // Recherche d'une partie en cours pour l'utilisateur courant
+  $q = db_select("djambi_users", "u");
+  $q->join("djambi_node", "n", "n.nid = u.nid");
+  $q->join("node", "n2", "n.nid = n2.nid");
+  $q->fields("n", array("nid", "mode", "status"));
+  $q->fields("n2", array("created"));
+  $q->condition("n.mode", $modes);
+  $q->condition("n.status", DjambiGameManager::getStatuses(FALSE, TRUE, TRUE, FALSE));
+  $q->condition("u.uid", $user->uid);
+  if ($user->uid == 0 && !is_null($cookie)) {
+    $q->condition('u.cookie', $cookie);
+  }
+  $results = $q->execute()->fetchAll();
+  $allowed = array_flip($modes_array);
+  $force_redirect = FALSE;
+  foreach ($results as $result) {
+    if ($result->mode == KW_DJAMBI_MODE_SANDBOX && in_array($result->status, DjambiGameManager::getStatuses(FALSE, TRUE, TRUE, FALSE))
+    && isset($allowed[KW_DJAMBI_MODE_SANDBOX])) {
+      unset($allowed[KW_DJAMBI_MODE_SANDBOX]);
+      if ($redirect) {
+        $force_redirect = TRUE;
+        break;
+      }
+    }
+    if ($result->mode == KW_DJAMBI_MODE_FRIENDLY && in_array($result->status, DjambiGameManager::getStatuses(FALSE, TRUE, FALSE, FALSE))
+    && isset($allowed[KW_DJAMBI_MODE_FRIENDLY])) {
+      unset($allowed[KW_DJAMBI_MODE_FRIENDLY]);
+      if ($redirect) {
+        $force_redirect = TRUE;
+        break;
+      }
+    }
+    if (empty($allowed)) {
+      break;
+    }
+  }
+  // Si partie en cours : redirection
+  if ($force_redirect) {
+    if ($result->mode == KW_DJAMBI_MODE_SANDBOX) {
+      drupal_set_message(t("You have already begun a !game on !date. This game does not seem to be finished : switching back to the last played move of the game.",
+      array("!date" => format_date($result->created),
+      "!game" => _kw_djambi_get_translatable_messages($result->mode))
+      ), 'warning');
+    }
+    elseif ($result->mode == KW_DJAMBI_MODE_FRIENDLY)  {
+      drupal_set_message(t("You are already involved in a !game which is in a recruiting phase : you cannot create a new game.",
+      array("!game" => _kw_djambi_get_translatable_messages($result->mode))
+      ), 'warning');
+    }
+    drupal_goto("node/" . $result->nid);
+  }
+  else {
+    return $allowed;
+  }
+}
+
+/**
+ * Fixe le temps de conservation d'une partie
+ * @param string $mode
+ */
+function _djambi_node_autodelete_time($mode = 'std') {
+  if ($mode == 'no_autodelete') {
+    return 0;
+  }
+  if ($mode == 'extended') {
+    return time() + 60 * 60 * 24 * 365;
+  }
+  else {
+    return time() + 60 * 60 * 24;
+  }
+}

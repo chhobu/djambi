@@ -1,18 +1,18 @@
 <?php
-function _kw_djambi_check_flood() {
+function _djambi_captcha_check_flood() {
   if (!flood_is_allowed('registration', 5)) {
     drupal_set_message(t('Too many registration failures : you are not allowed to register now.'), 'error');
     drupal_access_denied();
-    die;
+    die();
   }
 }
 
-function kw_djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
+function djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
   global $user;
   if ($user->uid > 0) {
     return;
   }
-  _kw_djambi_check_flood();
+  _djambi_captcha_check_flood();
   form_load_include($form_state, 'inc', 'kw_djambi', 'kw_djambi.form');
   if (!empty($form_state['kw_djambi']['selected_piece']) && !$form_state['kw_djambi']['change_turn']) {
     $piece = $form_state['kw_djambi']['selected_piece'];
@@ -22,22 +22,20 @@ function kw_djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
     if (isset($form_state['kw_djambi']['change_turn'])) {
       unset($form_state['kw_djambi']);
     }
-    $grid = new DjambiBattlefield($form_state['saved_grid']);
-    $grid->play();
+    $game = DjambiGameManager::loadGame($form_state['saved_grid'])->play();
+    $grid = $game->getBattlefield();
   }
   else {
-    $grid = new DjambiBattlefield(array(
-      'mode' => KW_DJAMBI_MODE_TRAINING,
-      'disposition' => '2mini',
-      'savable' => FALSE,
+    $players_data = array(
       'computers' => array(
         2 => 'DjambiIADummy'
-      ),
-      'is_new' => TRUE,
-    ));
+      )
+    );
+    $game = DjambiGameManager::createGame(KW_DJAMBI_MODE_TRAINING, '2mini', $players_data);
+    $grid = $game->getBattlefield();
     $grid->setOption('turns_before_draw_proposal', -1);
     $grid->setInfo('interface', 'minimal');
-    $grid->play();
+    $game->play();
   }
   _kw_djambi_build_game_form($form, $form_state, $grid, array(
     'show_rules' => FALSE,
@@ -55,7 +53,7 @@ function kw_djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
     $form['grid']['retry'] = array(
         '#type' => 'submit',
         '#limit_validation_errors' => array(),
-        '#submit' => array('kw_djambi_captcha_retry_submit'),
+        '#submit' => array('djambi_captcha_retry_submit'),
         '#value' => t('Try again...'),
         '#weight' => -19
     );
@@ -65,10 +63,10 @@ function kw_djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
       '#markup' => $game_status_msg
   );
   $form['grid']['#weight'] = 1;
-  $form['#validate'][] = 'kw_djambi_captcha_registration_validate';
+  $form['#validate'][] = 'djambi_captcha_registration_validate';
 }
 
-function kw_djambi_captcha_registration_validate($form, &$form_state) {
+function djambi_captcha_registration_validate($form, &$form_state) {
   $errors = FALSE;
   $clicked_button_family = $form_state['clicked_button']['#array_parents'][0];
   if (!isset($form_state['kw_djambi']['result'])) {
@@ -90,11 +88,11 @@ function kw_djambi_captcha_registration_validate($form, &$form_state) {
     }
   }
   if ($errors) {
-    _kw_djambi_check_flood();
+    _djambi_captcha_check_flood();
   }
 }
 
-function kw_djambi_captcha_retry_submit($form, &$form_state) {
+function djambi_captcha_retry_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
   unset($form_state['saved_grid']);
   unset($form_state['kw_djambi']);
