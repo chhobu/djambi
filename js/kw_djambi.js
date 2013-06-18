@@ -12,7 +12,7 @@
         clearInterval(panelInterval);
       }
       panelInterval = setInterval(function() {
-        $link = $('.refresh-my-djambi-panel a')
+        $link = $('.refresh-my-djambi-panel a');
         if ($link.length > 0) {
           $link.click();
         }

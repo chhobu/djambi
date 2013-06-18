@@ -340,6 +340,7 @@ function _djambi_node_list_user_games($nid = 0) {
   $elements = array();
   $cookie = _kw_djambi_cookie();
   $auto_refresh = FALSE;
+  $playing = FALSE;
   drupal_add_css(drupal_get_path('module', 'kw_djambi').'/kw_djambi.css', array('every_page' => TRUE));
   // Détection d'une partie en cours
   if ($nid > 0) {
@@ -359,17 +360,21 @@ function _djambi_node_list_user_games($nid = 0) {
       $grid = FALSE;
     }
   }
+
   if ($grid) {
     $nid = $grid->getInfo('nid');
     $user_faction = $grid->getGameManager()->getUserFaction($user->uid, _kw_djambi_cookie());
-    if ($user_faction && $grid->getMode() != KW_DJAMBI_MODE_SANDBOX && !$grid->isFinished()) {
-      $elements['playing'] = array(
+    if ($user_faction && !$grid->isFinished()) {
+      $playing = TRUE;
+      if (!in_array($grid->getMode(), array(KW_DJAMBI_MODE_SANDBOX, KW_DJAMBI_MODE_TRAINING))) {
+        $elements['playing'] = array(
             '#markup' => '<div class="active-game" id="DjambiActiveGameInfo" data-grid="' . $grid->getId() . '" '
                 . 'data-status="'.$grid->getStatus().'" data-user-faction="' . $user_faction->getId() . '">' . t('You are playing the !faction side in this game.', array(
                 '!faction' => '<span class="faction ' . $user_faction->getClass() . '">'
                 . _kw_djambi_get_translatable_messages($user_faction->getName()) . '</span>'
           )) . '</div>'
         );
+      }
     }
   }
   // Liste des parties en cours
@@ -469,7 +474,7 @@ function _djambi_node_list_user_games($nid = 0) {
   if (!empty($games)) {
     $elements['games'] = array(
         '#markup' => '<div class="other-games">'
-          . '<p>' . (!empty($elements['playing']) ? format_plural(count($games), "You are also involved in 1 other pending game :", "You are also involdved in @count other pending games :") :
+          . '<p>' . ($playing ? format_plural(count($games), "You are also involved in 1 other pending game :", "You are also involdved in @count other pending games :") :
               format_plural(count($games), "You are currently involved in 1 pending game :", "You are currently involved in @count pending games :")) . '</p>'
           . theme('item_list', array('items' => $games))
           . '</div>',
@@ -488,11 +493,15 @@ function _djambi_node_list_user_games($nid = 0) {
         '#weight' => 1
     );
   }
+  $refresh_link = 'djambi/refresh/my-games-panel/' . ($grid ? $grid->getInfo('nid') : 0);
+  $parameters = drupal_get_query_parameters($_GET, array());
   // Lien de création de partie (si autorisé)
   if (empty($elements['playing']) && node_access('create', 'djambi')) {
     $allowed_new_games = _djambi_node_check_user_already_playing($user, DjambiGameManager::getModes(), $cookie, FALSE);
     $links = array();
-    if (!empty($allowed_new_games)) {
+
+    $current_page = $parameters['q'] == $refresh_link ? $parameters['destination'] : $parameters['q'];
+    if (!empty($allowed_new_games) && $current_page != 'node/add/djambi') {
       $links['add-djambi-game'] = array(
         'title' => t('Play a new Djambi game'),
         'href' => 'djambi',
@@ -503,10 +512,11 @@ function _djambi_node_list_user_games($nid = 0) {
   }
   drupal_add_js(drupal_get_path('module', 'kw_djambi') . '/js/kw_djambi.js',
       array('every_page' => TRUE));
+  drupal_add_library('system', 'drupal.ajax');
   $links['refresh-my-djambi-panel'] = array(
     'title' => t('Refresh'),
-    'href' => 'djambi/refresh/my-games-panel/' . ($grid ? $grid->getId() : 0),
-    'query' => array('destination'  => isset($_GET['destination']) ? $_GET['destination'] : $_GET['q']),
+    'href' => $refresh_link,
+    'query' => array('destination'  => isset($parameters['destination']) ? $parameters['destination'] : $parameters['q']),
     'attributes' => array('rel' => 'nofollow', 'class' => array('use-ajax', $auto_refresh ? 'do-auto-refresh' : 'no-auto-refresh'))
   );
   if (!empty($links)) {
