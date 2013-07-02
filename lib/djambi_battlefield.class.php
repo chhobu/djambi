@@ -686,35 +686,78 @@ class DjambiBattlefield {
     if (!empty($moves)) {
       foreach ($moves as $key => $move) {
         if ($move['time'] > $version) {
-          if ($move['type'] == 'move' || !isset($move['acting_faction'])) {
-            $faction_id = $move['target_faction'];
-          }
-          else {
-            $faction_id = $move['acting_faction'];
-          }
-          $acting_faction = $this->getFactionById($faction_id);
-          if ($acting_faction) {
-            $changing_cells[$move['from']] = $acting_faction->getClass();
-            $changing_cells[$move['to']] = $acting_faction->getClass();
-            $new_move = array(
-                'location' => $move['to'],
-                'origin' => $move['from'],
-                'order' => $move['turn'] + 1,
-                'faction' => $acting_faction->getClass(),
-                'animation' => $move['type'] . ':' . $move['to'],
-            );
-            if (!is_null($description_function) && function_exists($description_function)) {
-              $new_move['description'] = call_user_func_array($description_function, array($move, $this));
-            }
+          $new_move = $this->returnMoveData($move, TRUE, $description_function, $changing_cells);
+          if (!empty($new_move)) {
             $new_moves[] = $new_move;
           }
         }
       }
     }
-    $return['show_moves'] = $show_moves;
-    $return['changing_cells'] = $changing_cells;
-    $return['moves'] = $new_moves;
-    return $return;
+    return array('show_moves' => $show_moves, 'changing_cells' => $changing_cells, 'moves' => $new_moves);
+  }
+
+  public function returnPastMoveData($turn_id, $show_moves, $description_function = NULL) {
+    $moves = $this->getMoves();
+    $animated_moves = array();
+    $changing_cells = array();
+    $past_moves = array();
+    if (!empty($moves)) {
+      $i = 0;
+      foreach ($moves as $move) {
+        if ($move['turn'] == $turn_id) {
+          $past_move = $this->returnMoveData($move, $show_moves, $description_function, $changing_cells);
+          if (!empty($past_move)) {
+            $animated_moves['moves'][$i] = $move;
+            $animated_moves['pieces'][$move['target']][] = $i;
+            $past_moves[$i++] = $past_move;
+          }
+        }
+      }
+    }
+    return array('animations' => $animated_moves, 'changing_cells' => $changing_cells, 'moves' => $past_moves);
+  }
+
+  public function returnShowableMoveData($showable_turns, $description_function = NULL) {
+    $moves = $this->getMoves();
+    $last_moves = array();
+    $changing_cells = array();
+    foreach ($moves as $move_key => $move) {
+      if (in_array($move['turn'], $showable_turns)) {
+        $last_move = $this->returnMoveData($move, TRUE, $description_function, $changing_cells);
+        if (!empty($last_move)) {
+          $last_moves[] = $last_move;
+        }
+      }
+    }
+    return array('changing_cells' => $changing_cells, 'moves' => $last_moves);
+  }
+
+  private function returnMoveData($move, $show_moves, $description_function, &$changing_cells) {
+    $new_move = array();
+    if ($move['type'] == 'move' || !isset($move['acting_faction'])) {
+      $faction_id = $move['target_faction'];
+    }
+    else {
+      $faction_id = $move['acting_faction'];
+    }
+    $acting_faction = $this->getFactionById($faction_id);
+    if ($acting_faction) {
+      $changing_cells[$move['from']] = $acting_faction->getClass();
+      $changing_cells[$move['to']] = $acting_faction->getClass();
+      $new_move = array(
+          'location' => $move['to'],
+          'origin' => $move['from'],
+          'order' => $move['turn'] + 1,
+          'faction' => $acting_faction->getId(),
+          'faction_class' => $acting_faction->getClass(),
+          'animation' => $move['type'] . ':' . $move['to'],
+          'hidden' => !$show_moves
+      );
+      if (!is_null($description_function) && function_exists($description_function)) {
+        $new_move['description'] = call_user_func_array($description_function, array($move, $this));
+      }
+    }
+    return $new_move;
   }
 
   private function rebuildFactionsControls($summary) {

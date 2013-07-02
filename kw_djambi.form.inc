@@ -80,8 +80,15 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
   if (!empty($nid)) {
     $attributes['data-nid'] = $nid;
   }
-  if (isset($form_state['autoplay']) && $form_state['autoplay']) {
-    $attributes['class'][] = 'autoplay';
+  if ($replay) {
+    if (isset($form_state['autoplay']) && $form_state['autoplay']) {
+      $attributes['class'][] = 'autoplay';
+    }
+    if (isset($form_state['pause'])) {
+      $attributes['class'][] = 'paused';
+      unset($form_state['pause']);
+    }
+    $attributes['class'][] = 'animated';
   }
   $form['#prefix'] = '<div id="' . $grid_id . '">';
   $form['#suffix'] = '</div>';
@@ -194,8 +201,7 @@ function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $curr
     }
     $form['grid']['factions'][$faction->getId()]['label'] = array(
         '#type' => 'item',
-        '#title' => '<span class="faction ' . $faction->getClass() . '">'
-        . _kw_djambi_get_translatable_messages($faction->getName()) . '</span>',
+        '#title' => theme('djambi_faction_name', array('faction' => $faction)),
         '#markup' => $faction->getStatus() == KW_DJAMBI_USER_EMPTY_SLOT ?
         t('Empty') : theme('username', array('account' => user_load($faction->getUserDataItem('uid'))))
     );
@@ -281,7 +287,7 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
       asort($showable_turns);
       $last_move = min($showable_turns);
     }
-    $form['grid']['showable_turns'] = array(
+    $form['grid']['controls']['showable_turns'] = array(
         '#type' => 'value',
         '#value' => $showable_turns
     );
@@ -368,15 +374,15 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
         '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback')
     );
   }
-  $form['grid']['show_help'] = array(
+  $form['grid']['controls']['show_help'] = array(
       '#type' => 'value',
       '#value' => !empty($form_state['show_help']) ? TRUE : FALSE
   );
-  $form['grid']['show_replay'] = array(
+  $form['grid']['controls']['show_replay'] = array(
       '#type' => 'value',
       '#value' => !empty($form_state['show_replay']) ? $form_state['show_replay'] : FALSE
   );
-  $form['grid']['show_moves'] = array(
+  $form['grid']['controls']['show_moves'] = array(
       '#type' => 'value',
       '#value' => !empty($form_state['show_moves']) ? $form_state['show_moves'] : $show_moves
   );
@@ -442,15 +448,13 @@ function _kw_djambi_build_part_draw_proposal(&$form, DjambiBattlefield $grid, Dj
         '#prefix' => '<div class="container-inline">',
         '#suffix' => '</div>',
         '#markup' => t('!faction side', array('!faction' =>
-            "<span class='faction " . $faction->getClass() . "'>"
-            . _kw_djambi_get_translatable_messages($faction->getName()) . "</span>")),
+            theme('djambi_faction_name', array('faction' => $faction)))),
         '#weight' => -10,
     );
     $form['actions']['explain'] = array(
         '#type' => 'markup',
         '#markup' => t("A peace proposal has been made by !faction side. What is your answer ?",
-            array('!faction' => "<span class='faction " . $peacemonger->getClass() . "'>"
-                . _kw_djambi_get_translatable_messages($peacemonger->getName()) . "</span>"))
+            array('!faction' => theme('djambi_faction_name', array('faction' => $peacemonger))))
     );
     $form['actions']['accept_peace'] = array(
         '#type' => 'submit',
@@ -619,9 +623,7 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, DjambiBattle
           '#title' => t('Now playing') . ' : ',
           '#prefix' => '<div class="container-inline">',
           '#suffix' => '</div>',
-          '#markup' => t('!faction side', array('!faction' =>
-              "<span class='faction " . $faction->getClass() . "'>"
-              . _kw_djambi_get_translatable_messages($faction->getName()) . "</span>")),
+          '#markup' => t('!faction side', array('!faction' => theme('djambi_faction_name', array('faction' => $faction)))),
           '#weight' => -10,
           '#description' => theme('item_list', array('items' => $descriptions))
       );
@@ -696,7 +698,7 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
       }
       $form["pieces"]["movable"][$selected_piece->getId()]["#attributes"]["class"][] = "selected";
       $phase_text = t("The !piece is selected. Choose now its destination case, or select another piece to move.",
-          array("!piece" => "<span class='piece " . $selected_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($selected_piece) . "</span>")
+          array("!piece" => theme('djambi_piece_name', array('piece' => $selected_piece)))
       );
   }
   // Résultat du déplacement
@@ -731,8 +733,8 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
         }
         $phase_text = t('Your !piece has killed the !victim, select now the case where you victim will rest in peace.',
             array(
-                '!piece' => '<span class="piece ' . $selected_piece->getType() . '">' . _kw_djambi_get_full_piece_name($selected_piece) . '</span>',
-                '!victim' => '<span class="piece ' . $victim_piece->getType() . '">' . _kw_djambi_get_full_piece_name($victim_piece) . '</span>'
+                '!piece' => theme('djambi_piece_name', array('piece' => $selected_piece)),
+                '!victim' => theme('djambi_piece_name', array('piece' => $victim_piece))
             ));
       }
       // Cas 2 : placement d'une pièce tuée déplacée
@@ -760,7 +762,7 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
           );
         }
         $phase_text = t("Your !piece has exhumed an old dead piece, select now its new burial place.", array(
-            "!piece" => "<span class='piece " . $selected_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($selected_piece) . "</span>"
+            "!piece" => theme('djambi_piece_name', array('piece' => $selected_piece))
         ));
       }
       // Cas 3 : placement d'une pièce manipulée
@@ -792,8 +794,8 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
         }
         $phase_text = t("Your !diplomat is manipulating the !piece, select now the destination case for your subjucated victim.",
             array(
-                "!diplomat" => "<span class='piece " . $selected_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($selected_piece) . "</span>",
-                "!piece" => "<span class='piece " . $manipulated_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($manipulated_piece) . "</span>"
+                "!diplomat" => theme('djambi_piece_name', array('piece' => $selected_piece)),
+                "!piece" => theme('djambi_piece_name', array('piece' => $manipulated_piece))
             ));
       }
       // Cas 4 : sélection de la victime d'un reportage
@@ -822,7 +824,7 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
           );
         }
         $phase_text = t("Your !reporter has to choose beetween several victims...",
-            array("!reporter" => "<span class='piece " . $selected_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($selected_piece) . "</span>"));
+            array("!reporter" => theme('djambi_piece_name', array('piece' => $selected_piece))));
       }
       // Cas 5 : évacuation du trône
       elseif ($current_interaction["type"] == "throne_evacuation") {
@@ -851,7 +853,7 @@ function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattl
           );
         }
         $phase_text = t("Your !piece is not allowed to stay here. Run away !",
-            array("!piece" => "<span class='piece " . $selected_piece->getType() . "'>" . _kw_djambi_get_full_piece_name($selected_piece) . "</span>"));
+            array("!piece" => theme('djambi_piece_name', array('piece' => $selected_piece))));
       }
   }
   // Attente du mouvement...
@@ -1181,16 +1183,17 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
     $winners = array();
     foreach ($winners_array as $winner) {
       $faction = $grid->getFactionById($winner);
-      $winners[] = '<span class="faction ' . $faction->getClass() . '">'
-      . _kw_djambi_get_translatable_messages($faction->getName()) . '</span>'
+      $winners[] = theme('djambi_faction_name', array('faction' => $faction))
       . (!empty($players[$winner]) ? ' ' . $players[$winner] : '');
     }
     $rows[] = array(
         'data' => array(
-            array('data' => count($winners) == 1 ? t('Great Beloved Ruler of Djambi') : t("No winner in this game... Last standing teams :"),
-                'header' => TRUE),
-            array('data' => '<span class="icon evil">' .t('!pieces', array(
-                '!pieces' => implode(', ', $winners))) . '</span>'
+            array(
+               'data' => count($winners) == 1 ? t('Great Beloved Ruler of Djambi') : t("No winner in this game... Last standing teams :"),
+               'header' => TRUE),
+            array(
+               'data' => t('!pieces', array('!pieces' => implode(', ', $winners))),
+               'class' => array('icon', 'light', 'evil')
             )
         ));
     $ranking_array = array();
@@ -1199,12 +1202,13 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
         continue;
       }
       $faction = $grid->getFactionById($side);
-      $ranking_array[] = '<span class="icon ' . ($rank == 2 ? 'confused' : 'sad') . '">' . t('Rank !rank :  !side', array(
-          '!rank' => $rank,
-          '!side' => '<span class="faction ' . $faction->getClass() . '">'
-          . _kw_djambi_get_translatable_messages($faction->getName()) . '</span>'
-          . (!empty($players[$side]) ? ' ' . $players[$side] : '')
-      )) . '</span>';
+      $ranking_array[] = array(
+          'data' =>  t('Rank !rank :  !side', array(
+            '!rank' => $rank,
+            '!side' => theme('djambi_faction_name', array('faction' => $faction)) . (!empty($players[$side]) ? ' ' . $players[$side] : '')
+          )),
+          'class' => array('icon', 'light', ($rank == 2 ? 'confused' : 'sad'))
+      );
     }
     if (!empty($ranking_array)) {
       $rows[] = array(
@@ -1409,12 +1413,11 @@ function _kw_djambi_stats_get_winners($grid, $price, $stats, $type = 'piece', $o
   foreach ($winners as $winner) {
     if ($type == 'piece') {
       $piece = $grid->getPieceById($winner);
-      $winners_string_array[] = '<span class="piece ' . $piece->getType() . ' ' . $piece->getFaction()->getClass() . '">' . _kw_djambi_get_full_piece_name($piece) . '</span>';
+      $winners_string_array[] = theme('djambi_piece_name', array('piece' => $piece, 'use_faction_class' => TRUE));
     }
     elseif ($type == 'faction') {
       $faction = $grid->getFactionById($winner);
-      $winners_string_array[] = '<span class="faction ' . $faction->getClass() . '">'
-      . _kw_djambi_get_translatable_messages($faction->getName()) . '</span>';
+      $winners_string_array[] = theme('djambi_faction_name', array('faction' => $faction));
     }
   }
   return $winners_string_array;
@@ -1636,6 +1639,7 @@ function kw_djambi_game_form_show_moves_submit($form, &$form_state) {
   global $user;
   $form_state['rebuild'] = TRUE;
   $form_state['show_moves'] = !$form_state['values']['show_moves'];
+  $form_state['pause'] = TRUE;
   if ($user->uid == 0 || isset($_SESSION['djambi']['show_moves'])) {
     $_SESSION['djambi']['show_moves'] = !$form_state['values']['show_moves'];
   }
@@ -1667,6 +1671,7 @@ function kw_djambi_game_form_replay_submit($form, &$form_state) {
   $back_to_live = FALSE;
   if ($form_state['clicked_button']['#name'] == 'ui-replay-pause') {
     $form_state['autoplay'] = FALSE;
+    $form_state['pause'] = TRUE;
     return;
   }
   if ($form_state['clicked_button']['#name'] == 'ui-replay-autoplay') {

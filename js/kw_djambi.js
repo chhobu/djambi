@@ -105,9 +105,10 @@
           });
         });
         // Récapitulatif des parties : déplacement des pièces
-        if ($djambigrid.hasClass('animated')) {
+        if ($djambi.hasClass('animated')) {
           i = 0;
           $piece = $djambigrid.find('.piece[data-animation-'+i+']');
+          paused = $djambi.hasClass('paused');
           if($piece.length > 0) {
             $djambigrid.find('.changes .order').hide();
             while($piece.length > 0) {
@@ -138,9 +139,9 @@
                   $obj.css({'position':'relative', 'z-index':'1'}).animate({
                     top: newPositions.top - currentPositions.top + marginTop, 
                     left: newPositions.left - currentPositions.left
-                  }, {duration: 2000});
+                  }, {duration: paused ? 0 : 2000});
                 }
-              }, i * 2000 + 500, $piece);
+              }, paused ? 0 : i * 2000 + 500, $piece);
               i++;
               $piece = $djambigrid.find('.piece[data-animation-'+i+']');
             }
@@ -228,7 +229,7 @@
                 move = result.moves[i];
                 $cell = $djambigrid.find('.cell[data-coord="'+move.location+'"]');
                 $cell.prepend("<div class='changes'></div>");
-                new_html = "<div class='change " + move.faction + "' data-order='" + i + "'>";
+                new_html = "<div class='change " + move.faction_class + "' data-order='" + i + "'>";
                 if (result.show_moves) {
                   new_html += "<span class='order'>" + move.order + "</span><div class='description'>" + move.description + "</div>";
                 }
@@ -243,7 +244,7 @@
               for(cell in result.changing_cells) {
                 $djambigrid.find('.cell[data-coord="'+cell+'"]').addClass('past-move ' + result.changing_cells[cell]);
               }
-              $djambigrid.addClass('animated');
+              $djambi.addClass('animated');
               ends = launchAnimations(false);
               refreshTimeout = setTimeout(function() {
                 $('.djambi .refresh-button').show().attr('value', Drupal.t('Refreshing...')).mousedown();

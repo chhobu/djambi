@@ -73,7 +73,7 @@ function djambi_captcha_registration_validate($form, &$form_state) {
     form_set_error('grid', t("Computer is still alive !"));
     if (!empty($form_state['values']['name']) && $clicked_button_family != 'grid') {
       watchdog('djambi', 'User !name (!mail) tried to register without finishing Djambi game validation.',
-      array('!name' => $form_state['values']['name'], '!mail' => $form_state['values']['mail']), WATCHDOG_WARNING);
+      array('!name' => $form_state['values']['name'], '!mail' => $form_state['values']['mail']), WATCHDOG_NOTICE);
       flood_register_event('registration', 3600);
       $errors = TRUE;
     }
@@ -82,7 +82,7 @@ function djambi_captcha_registration_validate($form, &$form_state) {
     form_set_error('grid', t("You are not smart enough to register."));
     if (!empty($form_state['values']['name']) && $clicked_button_family != 'grid') {
       watchdog('djambi', 'User !name (!mail) failed succeeding in Djambi game registration validation.',
-      array('!name' => $form_state['values']['name'], '!mail' => $form_state['values']['mail']), WATCHDOG_WARNING);
+      array('!name' => $form_state['values']['name'], '!mail' => $form_state['values']['mail']), WATCHDOG_NOTICE);
       flood_register_event('registration', 3600);
       $errors = TRUE;
     }

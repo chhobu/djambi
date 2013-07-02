@@ -388,9 +388,9 @@ function djambi_node_js() {
   return array(
       'check_update' => array(
           'callback'     => 'djambi_node_check_update',
-          'includes'     => array('common'),
+          'includes'     => array('common', 'theme'),
           'dependencies' => array('user', 'kw_djambi'),
-          'bootstrap'    => DRUPAL_BOOTSTRAP_SESSION,
+          'bootstrap'    => DRUPAL_BOOTSTRAP_FULL,
           'page_arguments'  => array()
       ),
   );
