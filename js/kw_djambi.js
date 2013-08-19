@@ -339,7 +339,9 @@
                 $(this).parents(".cell").removeClass("unselectable with-selected-piece");
                 $grid.removeClass("dragging");
                 var $tds = $grid.find(".cell");
-                $tds.each(function() {$(this).removeClass("selectable").droppable("destroy");});
+                $tds.each(function() {
+                  if ($(this).hasClass('selectable')) {$(this).removeClass("selectable").droppable("destroy");}
+                });
                 if($(this).data("destination") != null) {
                   $(this).parents("form").find("input[name='piece_destination']").val($(this).data("destination"));
                   $pieces.draggable("destroy").children("a").addClass("moved");

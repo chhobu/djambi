@@ -327,15 +327,15 @@ function _kw_djambi_format_ping_infos($ping_time) {
       array('!time' => format_date($ping_time, 'short')));
   $ping_interval = time() - $ping_time;
   if ($ping_interval < 60) {
-    $ping['status'] = 'OK';
+    $ping['status'] = t('OK');
     $ping['class'] = 'ok';
   }
   elseif ($ping_interval < 60 * 5) {
-    $ping['status'] = 'Warning';
+    $ping['status'] = t('Warning');
     $ping['class'] = 'warning';
   }
   else {
-    $ping['status'] = 'Failed !';
+    $ping['status'] = t('Failed !');
     $ping['class'] = 'error';
   }
   return $ping;
