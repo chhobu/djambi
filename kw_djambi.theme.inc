@@ -451,7 +451,7 @@ function theme_djambi_recruiting_phase($variables) {
   $header = array(
     0 => array('data' => t('Faction')),
     1 => array('data' => t('User')),
-    2 => array('data' => t('IP address')),
+    //2 => array('data' => t('IP address')),
     3 => array('data' => t('Ping')),
     4 => array('data' => t('Waiting time')),
     5 => array('data' => t('Action'))
@@ -475,7 +475,7 @@ function theme_djambi_recruiting_phase($variables) {
       0 => array('data' => $form['factions'][$id]['label']['#title']),
       1 => array('data' => $form['factions'][$id]['label']['#markup'] .
           (isset($form['factions'][$id]['infos']) && $form['factions'][$id]['infos']['#value']['me'] ? ' ('. t('Me !') . ')' : '')),
-      2 => array('data' => $ip),
+      //2 => array('data' => $ip),
       3 => array('data' => $ping_array['status'], 'class' => array($ping_array['class'], 'ping-info'),
             'title' => $ping_array['title']),
       4 => array('data' => $joined, 'class' => array('joined')),
