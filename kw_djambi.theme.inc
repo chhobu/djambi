@@ -311,7 +311,7 @@ function theme_djambi_players_table($variables) {
   $pheader['sides'] = array('data' => t('Sides'), 'scope' => 'col');
   $pheader['players'] = array('data' => t('Players'), 'scope' => 'col');
   if ($grid->getMode() == KW_DJAMBI_MODE_FRIENDLY) {
-    $pheader['ip'] = array('data' => t('IP address'), 'scope' => 'col');
+    //$pheader['ip'] = array('data' => t('IP address'), 'scope' => 'col');
     $pheader['ping'] = array('data' => t('Ping'), 'scope' => 'col');
   }
   $pheader['status'] = array('data' => t('Status'), 'scope' => 'col');

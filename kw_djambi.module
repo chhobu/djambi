@@ -445,6 +445,8 @@ function _kw_djambi_get_full_piece_name(DjambiPiece $piece) {
 /**
  * Génère un message de description d'un mouvement à partir des données enregistrées
  *   dans la base.
+ * @param array $move
+ * @param DjambiBattlefield $grid
  */
 function _kw_djambi_describe_move($move, $grid) {
   $msg = NULL;
@@ -462,6 +464,7 @@ function _kw_djambi_describe_move($move, $grid) {
   }
   elseif ($move["type"] == "murder") {
     $victim = $piece;
+    /* @var $responsable DjambiPiece */
     $responsable = $grid->getPieceById($move["acting"]);
     if ($piece && $responsable) {
       $msg = t("!victim has been killed by !piece. The crime took place in !origin, and the victim body was found in !destination.", array(
