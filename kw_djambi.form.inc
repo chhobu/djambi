@@ -1,4 +1,13 @@
 <?php
+/**
+ * @file
+ * Contient les fonctions de gestion du formulaire principal de Djambi
+ *   (grille de jeu).
+ */
+
+/**
+ * Génère le formulaire de jeu de Djambi.
+ */
 function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $grid, $options = NULL) {
   global $user;
   $user->djookie = _kw_djambi_cookie();
@@ -14,7 +23,8 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
   if (isset($options['show_stats'])) {
     $show_stats = $options['show_stats'];
   }
-  $current_user_faction = $grid->getGameManager()->getUserFaction($user->uid, $user->djookie);
+  $current_user_faction = $grid->getGameManager()
+    ->getUserFaction($user->uid, $user->djookie);
   if ($grid->isFinished() && !empty($current_user_faction)) {
     $form_state['kw_djambi']['result'] = $current_user_faction->getStatus();
   }
@@ -25,15 +35,21 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
   else {
     $replay = FALSE;
   }
-  if (!$replay && !$grid->isFinished() && !in_array($grid->getMode(), array(KW_DJAMBI_MODE_SANDBOX, KW_DJAMBI_MODE_TRAINING))
-    && !is_null($current_user_faction)) {
-    $user_data = $grid->getGameManager()->updateUserInfos($current_user_faction->getUserData(),
+  if (!$replay && !$grid->isFinished() && !in_array($grid->getMode(), array(
+      KW_DJAMBI_MODE_SANDBOX,
+      KW_DJAMBI_MODE_TRAINING,
+    ))
+    && !is_null($current_user_faction)
+  ) {
+    $user_data = $grid->getGameManager()
+      ->updateUserInfos($current_user_faction->getUserData(),
       $current_user_faction->getUserDataItem('djuid'));
     $current_user_faction->updateUserData($user_data);
   }
   $faction = $grid->getPlayingFaction();
-  $is_user_playing_current_faction = !$faction ? FALSE : $grid->getGameManager()->checkUserPlayingFaction($user->uid, $user->djookie, $faction);
-  // Inclusion du Javascript et du CSS
+  $is_user_playing_current_faction = !$faction ? FALSE : $grid->getGameManager()
+    ->checkUserPlayingFaction($user->uid, $user->djookie, $faction);
+  // Inclusion du Javascript et du CSS :
   if ($grid->isPending() && $is_user_playing_current_faction) {
     drupal_add_library('system', 'ui.core');
     drupal_add_library('system', 'ui.widget');
@@ -41,15 +57,15 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
     drupal_add_library('system', 'ui.draggable');
     drupal_add_library('system', 'ui.droppable');
   }
-  $form['#attached']['css'][] = drupal_get_path('module', 'kw_djambi').'/kw_djambi.css';
-  $form['#attached']['js'][] = drupal_get_path('module', 'kw_djambi').'/js/kw_djambi.js';
+  $form['#attached']['css'][] = drupal_get_path('module', 'kw_djambi') . '/kw_djambi.css';
+  $form['#attached']['js'][] = drupal_get_path('module', 'kw_djambi') . '/js/kw_djambi.js';
   $ajax_settings = array(
-      'callback' => 'kw_djambi_ajax_callback',
-      'wrapper' => 'DjambiContainer' . $grid->getId(),
-      'effect' => 'none',
-      'method' => 'replace',
+    'callback' => 'kw_djambi_ajax_callback',
+    'wrapper' => 'DjambiContainer' . $grid->getId(),
+    'effect' => 'none',
+    'method' => 'replace',
   );
-  // Création de l'ossature du formulaire
+  // Création de l'ossature du formulaire :
   $do_refresh = 'no';
   if (!$grid->isFinished() && !$replay) {
     if ($grid->isNotBegin()) {
@@ -67,14 +83,14 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
   }
   $grid_id = 'DjambiContainer' . $grid->getId();
   $attributes = array(
-      'id' => 'DjambiGridFieldset' . $grid->getId(),
-      'class' => array('djambi'),
-      'data-version' => $grid->getInfo('changed'),
-      'data-status' => $grid->getStatus(),
-      'data-refresh' => $do_refresh,
-      'data-user-faction' => (!empty($current_user_faction) ? $current_user_faction->getId() : '0'),
-      'data-user-status' => (!empty($current_user_faction) ? $current_user_faction->getStatus() : '0'),
-      'data-turn' => $grid->getCurrentTurnId()
+    'id' => 'DjambiGridFieldset' . $grid->getId(),
+    'class' => array('djambi'),
+    'data-version' => $grid->getInfo('changed'),
+    'data-status' => $grid->getStatus(),
+    'data-refresh' => $do_refresh,
+    'data-user-faction' => (!empty($current_user_faction) ? $current_user_faction->getId() : '0'),
+    'data-user-status' => (!empty($current_user_faction) ? $current_user_faction->getStatus() : '0'),
+    'data-turn' => $grid->getCurrentTurnId(),
   );
   $nid = $grid->getInfo('nid');
   if (!empty($nid)) {
@@ -100,25 +116,25 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
     $title = t('Unnumeroted Djambi grid');
   }
   $form['grid'] = array(
-      '#type' => 'fieldset',
-      '#title' => $title,
-      '#weight' => 0,
-      '#prefix' => '<div ' . drupal_attributes($attributes) . '>',
-      '#suffix' => '</div>',
-      '#grid' => $grid,
-      '#theme' => $grid->isNotBegin() ? 'djambi_recruiting_phase' : 'djambi_grid'
+    '#type' => 'fieldset',
+    '#title' => $title,
+    '#weight' => 0,
+    '#prefix' => '<div ' . drupal_attributes($attributes) . '>',
+    '#suffix' => '</div>',
+    '#grid' => $grid,
+    '#theme' => $grid->isNotBegin() ? 'djambi_recruiting_phase' : 'djambi_grid',
   );
   if ($do_refresh != 'no') {
-      $form['grid']['controls']['refresh'] = array(
-          '#type' => 'submit',
-          '#attributes' => array('class' => array('refresh-button')),
-          '#value' => t('Refresh'),
-          '#ajax' => $ajax_settings,
-          '#weight' => 99,
-          '#submit' => array('kw_djambi_game_form_refresh_submit'),
-          '#name' => 'ui-refresh',
-          '#limit_validation_errors' => array()
-      );
+    $form['grid']['controls']['refresh'] = array(
+      '#type' => 'submit',
+      '#attributes' => array('class' => array('refresh-button')),
+      '#value' => t('Refresh'),
+      '#ajax' => $ajax_settings,
+      '#weight' => 99,
+      '#submit' => array('kw_djambi_game_form_refresh_submit'),
+      '#name' => 'ui-refresh',
+      '#limit_validation_errors' => array(),
+    );
   }
   if ($show_log) {
     $form['options'] = array(
@@ -131,9 +147,9 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
   }
   if ($show_stats && !$grid->isNotBegin()) {
     $form['stats'] = array(
-        '#type' => 'fieldset',
-        '#title' => $grid->getStatus() == KW_DJAMBI_STATUS_FINISHED ? t('Stats and awards') : t('Stats'),
-        '#weight' => 5
+      '#type' => 'fieldset',
+      '#title' => $grid->getStatus() == KW_DJAMBI_STATUS_FINISHED ? t('Stats and awards') : t('Stats'),
+      '#weight' => 5,
     );
   }
   if ($show_log) {
@@ -142,7 +158,7 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
       '#title' => $grid->isNotBegin() ? t('Recruitment log') : t('Treachery log'),
       '#weight' => 10,
       '#collapsible' => TRUE,
-      '#collapsed' => FALSE
+      '#collapsed' => FALSE,
     );
   }
   // Recrutement des joueurs...
@@ -150,15 +166,15 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
     _kw_djambi_build_part_recruiting($form, $grid, $current_user_faction, $ajax_settings);
   }
   else {
-    // Contrôle de l'affichage de l'aide et des derniers mouvements
-    _kw_djambi_build_part_move_controls($form, $form_state, $grid, $faction);
+    // Contrôle de l'affichage de l'aide et des derniers mouvements :
+    _kw_djambi_build_part_move_controls($form, $form_state, $grid);
   }
   // Affichage du récapitulatif des règles
   if ($show_rules) {
     _kw_djambi_build_part_rules($form, $grid);
   }
   if (!isset($form_state['show_replay']) && $grid->isPending()) {
-    // Interface de réponse sur proposition de partie nulle
+    // Interface de réponse sur proposition de partie nulle :
     if ($faction && $grid->getStatus() == KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
       _kw_djambi_build_part_draw_proposal($form['grid'], $grid, $faction, $ajax_settings, $is_user_playing_current_faction);
     }
@@ -167,63 +183,75 @@ function _kw_djambi_build_game_form(&$form, &$form_state, DjambiBattlefield $gri
       _kw_djambi_build_part_pieces_controls($form['grid'], $form_state, $grid, $faction, $ajax_settings);
     }
     elseif (!$faction->isHumanControlled()) {
-      _kw_djambi_build_part_computer_actions($form, $form_state, $grid, $faction, $ajax_settings);
+      _kw_djambi_build_part_computer_actions($form, $ajax_settings);
     }
   }
-  // Log des événements
+  // Log des événements :
   if ($show_log && !empty($form['log'])) {
     _kw_djambi_build_part_log($form, $form_state, $grid);
   }
-  // Afichage des stats
+  // Afichage des stats :
   if ($show_stats && !empty($form['stats'])) {
     _kw_djambi_build_part_stats($form, $grid);
   }
-  // Ajout des conteneurs si besoin
+  // Ajout des conteneurs si besoin :
   if (isset($form['grid']['controls'])) {
     $form['grid']['controls']['#type'] = 'container';
     $form['grid']['controls']['#attributes'] = array('class' => array('controls'));
     $form['grid']['controls']['#weight'] = 10;
   }
-  // Redirection
+  // Redirection :
   $form["#action"] = "#DjambiGrid" . $grid->getId();
 }
 
+/**
+ * Interface d'attente de nouveaux joueurs.
+ *
+ * @param array $form
+ *   Formulaire Drupal
+ * @param DjambiBattlefield $grid
+ *   Grille de Djambi
+ * @param DjambiPoliticalFaction $current_user_faction
+ *   Camp de l'utilisateur courant
+ * @param array $ajax_settings
+ *   Configuration AJAX commune au formulaire courant
+ */
 function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $current_user_faction, $ajax_settings) {
   global $user;
   $allow_anonymous = $grid->getOption('allow_anonymous_players');
   $reject = FALSE;
   $form['grid']['factions'] = array(
-      '#type' => 'container'
+    '#type' => 'container',
   );
+  /* @var $faction DjambiPoliticalFaction */
   foreach ($grid->getFactions() as $faction) {
     if ($faction->getStatus() == KW_DJAMBI_USER_VASSALIZED) {
       continue;
     }
     $form['grid']['factions'][$faction->getId()]['label'] = array(
-        '#type' => 'item',
-        '#title' => theme('djambi_faction_name', array('faction' => $faction)),
-        '#markup' => $faction->getStatus() == KW_DJAMBI_USER_EMPTY_SLOT ?
-        t('Empty') : theme('username', array('account' => user_load($faction->getUserDataItem('uid'))))
+      '#type' => 'item',
+      '#title' => theme('djambi_faction_name', array('faction' => $faction)),
+      '#markup' => $faction->getStatus() == KW_DJAMBI_USER_EMPTY_SLOT ? t('Empty') : theme('username', array('account' => user_load($faction->getUserDataItem('uid')))),
     );
     if ($faction->getStatus() != KW_DJAMBI_USER_EMPTY_SLOT) {
       $form['grid']['factions'][$faction->getId()]['infos'] = array(
-          '#type' => 'value',
-          '#value' => array(
-              'ip' => $faction->getUserDataItem('ip'),
-              'ping' => $faction->getUserDataItem('ping'),
-              'joined' => $faction->getUserDataItem('joined'),
-              'djuid' => $faction->getUserDataItem('djuid'),
-              'me' => !is_null($current_user_faction) && $current_user_faction->getId() == $faction->getId() ? TRUE : FALSE
-          )
+        '#type' => 'value',
+        '#value' => array(
+          'ip' => $faction->getUserDataItem('ip'),
+          'ping' => $faction->getUserDataItem('ping'),
+          'joined' => $faction->getUserDataItem('joined'),
+          'djuid' => $faction->getUserDataItem('djuid'),
+          'me' => !is_null($current_user_faction) && $current_user_faction->getId() == $faction->getId() ? TRUE : FALSE,
+        ),
       );
     }
     if (!is_null($current_user_faction) && $faction->getId() == $current_user_faction->getId()) {
       $form['grid']['factions'][$faction->getId()]['action'] = array(
-          '#type' => 'submit',
-          '#name' => 'action',
-          '#id' => 'action-leave-game',
-          '#value' => t('Leave game'),
-          '#submit' => array('kw_djambi_game_form_cancel_participation_submit'),
+        '#type' => 'submit',
+        '#name' => 'action',
+        '#id' => 'action-leave-game',
+        '#value' => t('Leave game'),
+        '#submit' => array('kw_djambi_game_form_cancel_participation_submit'),
       );
     }
     elseif ($faction->getStatus() == KW_DJAMBI_USER_EMPTY_SLOT) {
@@ -234,7 +262,7 @@ function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $curr
           '#id' => 'action-play-' . $faction->getId(),
           '#value' => !is_null($current_user_faction) ? t('Play this side') : t('Join this game'),
           '#submit' => array('kw_djambi_game_form_participate_submit'),
-          '#ajax' => $ajax_settings
+          '#ajax' => $ajax_settings,
         );
       }
       else {
@@ -246,13 +274,16 @@ function _kw_djambi_build_part_recruiting(&$form, DjambiBattlefield $grid, $curr
     $form['grid']['reject'] = array(
       '#markup' => "<div class='messages warning'>" . t('Only registered players can join this game. Please !login or !register.', array(
           '!login' => l(t('login to your account'), 'user/login'),
-          '!register' => l(t('create a new account'), 'user/register')
-       )) . "</div>"
+          '!register' => l(t('create a new account'), 'user/register'),
+        )) . "</div>",
     );
   }
 }
 
-function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlefield $grid, $faction) {
+/**
+ * Construit la partie contrôle des mouvements du formulaire grille de Djambi.
+ */
+function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlefield $grid) {
   global $user;
   $current_turn_id = $grid->getCurrentTurnId();
   $show_moves = $grid->isPending();
@@ -272,12 +303,13 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
     $faction_turns = array();
     foreach ($turns as $turn_key => $turn) {
       if (!empty($turn['end']) && ($turn['turn'] == $turns[$current_turn_id]['turn'] || (
-          $turn['turn'] == $turns[$current_turn_id]['turn'] - 1 && $turn['turn_scheme'] >= $turns[$current_turn_id]['turn_scheme']))) {
+            $turn['turn'] == $turns[$current_turn_id]['turn'] - 1 && $turn['turn_scheme'] >= $turns[$current_turn_id]['turn_scheme']))
+      ) {
         $faction_turns[$turn['side']][$turn_key] = $turn_key;
       }
     }
     if (!empty($faction_turns)) {
-      foreach ($faction_turns as $faction_key => $turn) {
+      foreach ($faction_turns as $turn) {
         $factions = count($faction_turns);
         if (count($turn) > $factions) {
           $turn = array_slice($turn, -$factions, $factions, TRUE);
@@ -288,28 +320,28 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
       $last_move = min($showable_turns);
     }
     $form['grid']['controls']['showable_turns'] = array(
-        '#type' => 'value',
-        '#value' => $showable_turns
+      '#type' => 'value',
+      '#value' => $showable_turns,
     );
   }
   $ui_buttons = array(
-      '#type' => 'submit',
-      '#limit_validation_errors' => array(array('showable_turns')),
-      '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback')
+    '#type' => 'submit',
+    '#limit_validation_errors' => array(array('showable_turns')),
+    '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback'),
   );
   if (!isset($form_state['show_replay'])) {
     if ($grid->isFinished()) {
       $form['grid']['controls']['replay'] = array_merge($ui_buttons, array(
-          '#name' => 'ui-replay',
-          '#value' => '<< ' . t('Review this game'),
-          '#submit' => array('kw_djambi_game_form_replay_submit'),
+        '#name' => 'ui-replay',
+        '#value' => '<< ' . t('Review this game'),
+        '#submit' => array('kw_djambi_game_form_replay_submit'),
       ));
     }
     $form['grid']['controls']['previous_turn'] = array_merge($ui_buttons, array(
-       '#name' => 'ui-replay-backward',
-       '#value' => '< ' . ($grid->isFinished() ? t('Show previous move') : t('Show previous moves')),
-       '#submit' => array('kw_djambi_game_form_replay_submit'),
-       '#disabled' => $current_turn_id > 0 ? FALSE : TRUE
+      '#name' => 'ui-replay-backward',
+      '#value' => '< ' . ($grid->isFinished() ? t('Show previous move') : t('Show previous moves')),
+      '#submit' => array('kw_djambi_game_form_replay_submit'),
+      '#disabled' => $current_turn_id > 0 ? FALSE : TRUE,
     ));
   }
   else {
@@ -318,227 +350,272 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, DjambiBattlef
         '#name' => 'ui-replay-begin',
         '#value' => '<< ' . t('Go back to the first move'),
         '#submit' => array('kw_djambi_game_form_replay_submit'),
-        '#disabled' => $form_state['show_replay'] > 0 ? FALSE : TRUE
+        '#disabled' => $form_state['show_replay'] > 0 ? FALSE : TRUE,
       ));
     }
     $form['grid']['controls']['previous_turn'] = array_merge($ui_buttons, array(
-        '#name' => 'ui-replay-backward',
-        '#value' => '< ' . t('Show previous move'),
-        '#submit' => array('kw_djambi_game_form_replay_submit'),
-        '#disabled' => $form_state['show_replay'] > $last_move ? FALSE : TRUE
+      '#name' => 'ui-replay-backward',
+      '#value' => '< ' . t('Show previous move'),
+      '#submit' => array('kw_djambi_game_form_replay_submit'),
+      '#disabled' => $form_state['show_replay'] > $last_move ? FALSE : TRUE,
     ));
     $form['grid']['controls']['pause'] = array_merge($ui_buttons, array(
-        '#name' => 'ui-replay-pause',
-        '#value' =>  '|| ' . t('Pause'),
-        '#submit' => array('kw_djambi_game_form_replay_submit'),
-        '#attributes' => array('style' => 'display:none')
+      '#name' => 'ui-replay-pause',
+      '#value' => '|| ' . t('Pause'),
+      '#submit' => array('kw_djambi_game_form_replay_submit'),
+      '#attributes' => array('style' => 'display:none'),
     ));
     $form['grid']['controls']['autoplay'] = array_merge($ui_buttons, array(
-        '#name' => 'ui-replay-autoplay',
-        '#value' => '|> ' . t('Auto-play'),
-        '#submit' => array('kw_djambi_game_form_replay_submit'),
-        '#attributes' => array('style' => 'display:none'),
-        '#disabled' => (($grid->isPending() && $current_turn_id - 1 <= $form_state['show_replay']) ||
-            ($grid->isFinished() && $current_turn_id <= $form_state['show_replay']) ? TRUE : FALSE)
+      '#name' => 'ui-replay-autoplay',
+      '#value' => '|> ' . t('Auto-play'),
+      '#submit' => array('kw_djambi_game_form_replay_submit'),
+      '#attributes' => array('style' => 'display:none'),
+      '#disabled' => (($grid->isPending() && $current_turn_id - 1 <= $form_state['show_replay']) ||
+        ($grid->isFinished() && $current_turn_id <= $form_state['show_replay']) ? TRUE : FALSE),
     ));
     $form['grid']['controls']['next_turn'] = array_merge($ui_buttons, array(
-        '#name' => 'ui-replay-forward',
-        '#value' => t('Show next move') . ' >',
-        '#submit' => array('kw_djambi_game_form_replay_submit'),
-        '#disabled' => (($grid->isPending() && $current_turn_id - 1 <= $form_state['show_replay']) ||
-            ($grid->isFinished() && $current_turn_id <= $form_state['show_replay']) ? TRUE : FALSE)
+      '#name' => 'ui-replay-forward',
+      '#value' => t('Show next move') . ' >',
+      '#submit' => array('kw_djambi_game_form_replay_submit'),
+      '#disabled' => (($grid->isPending() && $current_turn_id - 1 <= $form_state['show_replay']) ||
+        ($grid->isFinished() && $current_turn_id <= $form_state['show_replay']) ? TRUE : FALSE),
     ));
     $form['grid']['controls']['last_turn'] = array_merge($ui_buttons, array(
-        '#name' => 'ui-replay-end',
-        '#value' => $grid->isPending() ? t('Go back to current turn') . ' >>' : t('Go back to final positions') . ' >>',
-        '#submit' => array('kw_djambi_game_form_replay_submit'),
+      '#name' => 'ui-replay-end',
+      '#value' => $grid->isPending() ? t('Go back to current turn') . ' >>' : t('Go back to final positions') . ' >>',
+      '#submit' => array('kw_djambi_game_form_replay_submit'),
     ));
   }
   if ($grid->isPending() || isset($form_state['show_replay'])) {
     $form['grid']['controls']['show_moves_button'] = array(
-        '#type' => 'submit',
-        '#name' => 'ui-show-move',
-        '#value' => $show_moves ? '- ' . t('Hide last moves descriptions') : '+ ' . t('Show last moves descriptions'),
-        '#limit_validation_errors' => array(array('show_moves')),
-        '#submit' => array('kw_djambi_game_form_show_moves_submit'),
-        '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback')
+      '#type' => 'submit',
+      '#name' => 'ui-show-move',
+      '#value' => $show_moves ? '- ' . t('Hide last moves descriptions') : '+ ' . t('Show last moves descriptions'),
+      '#limit_validation_errors' => array(array('show_moves')),
+      '#submit' => array('kw_djambi_game_form_show_moves_submit'),
+      '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback'),
     );
   }
   if ($grid->isPending() && !isset($form_state['show_replay'])) {
     $form['grid']['controls']['show_help_button'] = array(
-        '#type' => 'submit',
-        '#name' => 'ui-show-help',
-        '#value' => '(?) ' . (!empty($form_state['show_help']) ? t('Hide help') : t('Show help')),
-        '#limit_validation_errors' => array(),
-        '#submit' => array('kw_djambi_game_form_show_help_submit'),
-        '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback')
+      '#type' => 'submit',
+      '#name' => 'ui-show-help',
+      '#value' => '(?) ' . (!empty($form_state['show_help']) ? t('Hide help') : t('Show help')),
+      '#limit_validation_errors' => array(),
+      '#submit' => array('kw_djambi_game_form_show_help_submit'),
+      '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback'),
     );
   }
   $form['grid']['controls']['show_help'] = array(
-      '#type' => 'value',
-      '#value' => !empty($form_state['show_help']) ? TRUE : FALSE
+    '#type' => 'value',
+    '#value' => !empty($form_state['show_help']) ? TRUE : FALSE,
   );
   $form['grid']['controls']['show_replay'] = array(
-      '#type' => 'value',
-      '#value' => !empty($form_state['show_replay']) ? $form_state['show_replay'] : FALSE
+    '#type' => 'value',
+    '#value' => !empty($form_state['show_replay']) ? $form_state['show_replay'] : FALSE,
   );
   $form['grid']['controls']['show_moves'] = array(
-      '#type' => 'value',
-      '#value' => !empty($form_state['show_moves']) ? $form_state['show_moves'] : $show_moves
+    '#type' => 'value',
+    '#value' => !empty($form_state['show_moves']) ? $form_state['show_moves'] : $show_moves,
   );
 }
 
+/**
+ * Construit la partie règles du jeu du formulaire grille de Djambi.
+ */
 function _kw_djambi_build_part_rules(&$form, DjambiBattlefield $grid) {
-  $options = DjambiGameManager::getOptionsInfo();
+  $options_store = $grid->getGameManager()->getOptionsStore();
   $rules_rows = array();
   $nb_rule = $nb_option = 1;
+  $options = array_merge(DjambiGameOptionGameplayElement::listItems($options_store), DjambiGameOptionRuleVariant::listItems($options_store));
+  /* @var DjambiGameOption $option */
   foreach ($options as $key => $option) {
-    if ($option['type'] == 'rule_variant' || $option['type'] == 'game_option') {
-      if (isset($option['modes']) && !in_array($grid->getMode(), $option['modes'])) {
-        continue;
+    $modes = $option->getModes();
+    if (!empty($modes) && !in_array($grid->getMode(), $modes)) {
+      continue;
+    }
+    $value = $grid->getOption($key);
+    $choices = $option->getChoices();
+    if (is_array($choices) && !empty($choices[$value])) {
+      if ($option->getType() == 'rule_variant') {
+        $title = t('Rule variant #!number',
+          array('!number' => str_pad($nb_rule++, 2, '0', STR_PAD_LEFT)));
       }
-      $value = $grid->getOption($key);
-      if (!empty($option['choices'][$value])) {
-        if ($option['type'] == 'rule_variant') {
-          $title = t('Rule variant #!number', array('!number' => str_pad($nb_rule++, 2, '0', STR_PAD_LEFT)));
-        }
-        elseif ($option['type'] == 'game_option') {
-          $title = t('Game option #!number', array('!number' => str_pad($nb_option++, 2, '0', STR_PAD_LEFT)));
-        }
-        else {
-          $title = $option['type'];
-        }
-        $rules_rows[] = array(
-            array('data' =>
-                '<span class="' . str_replace(array('_', ' '), '-', $option['type']) . '">'
-                . $title . '</span> - <strong>'
-                . (!empty($option['title']) ? _kw_djambi_get_translatable_messages($option['title']) : NULL)
-                . '</strong>'),
-            array('class' => array('description'), 'data' => _kw_djambi_get_translatable_messages($option['choices'][$value], array('!value' => $value)))
-        );
+      elseif ($option->getType() == 'game_option') {
+        $title = t('Game option #!number',
+          array('!number' => str_pad($nb_option++, 2, '0', STR_PAD_LEFT)));
       }
+      else {
+        $title = $option->getType();
+      }
+      $replacements = array('_', ' ');
+      $title_option = $option->getTitle();
+      $rules_rows[] = array(
+        array(
+          'data' => '<span class="' . str_replace($replacements, '-', $option->getType()) . '">'
+          . $title . '</span> - <strong>'
+          . (!empty($title_option) ? _kw_djambi_get_translatable_messages($title_option) : NULL)
+          . '</strong>',
+        ),
+        array(
+          'class' => array('description'),
+          'data' => _kw_djambi_get_translatable_messages($choices[$value], array('!value' => $value)),
+        ),
+      );
     }
   }
   if (!empty($rules_rows)) {
     $rules_header = array(
-        array('data' => 'Label'),
-        array('data' => 'Value')
+      array('data' => 'Label'),
+      array('data' => 'Value'),
     );
-    $form['options']['table'] = array('#markup' => theme('table', array('rows' => $rules_rows, 'header' => $rules_header)));
+    $form['options']['table'] = array(
+      '#markup' => theme('table', array(
+        'rows' => $rules_rows,
+        'header' => $rules_header,
+      )),
+    );
   }
 }
 
+/**
+ * Construit la partie négociations de paix du formulaire grille de Djambi.
+ */
 function _kw_djambi_build_part_draw_proposal(&$form, DjambiBattlefield $grid, DjambiPoliticalFaction $faction, $ajax_settings, $is_user_playing_current_faction) {
-  $form['actions'] = array(
-      '#type' => 'fieldset',
-      '#title' => t('Actions'),
-      '#weight' => 20
-  );
   $factions = $grid->getFactions();
+  /* @var $side DjambiPoliticalFaction */
   foreach ($factions as $side) {
     if ($side->getDrawStatus() == 1) {
       $peacemonger = $side;
       break;
     }
   }
+  if (!isset($peacemonger)) {
+    return;
+  }
+  $form['actions'] = array(
+    '#type' => 'fieldset',
+    '#title' => t('Actions'),
+    '#weight' => 20,
+  );
   if ($is_user_playing_current_faction) {
     $form['actions']['descriptions'] = array(
-        '#type' => 'item',
-        '#title' => t('Now playing') . ' : ',
-        '#prefix' => '<div class="container-inline">',
-        '#suffix' => '</div>',
-        '#markup' => t('!faction side', array('!faction' =>
-            theme('djambi_faction_name', array('faction' => $faction)))),
-        '#weight' => -10,
+      '#type' => 'item',
+      '#title' => t('Now playing') . ' : ',
+      '#prefix' => '<div class="container-inline">',
+      '#suffix' => '</div>',
+      '#markup' => t('!faction side', array(
+        '!faction' =>
+          theme('djambi_faction_name', array('faction' => $faction)),
+      )),
+      '#weight' => -10,
     );
     $form['actions']['explain'] = array(
-        '#type' => 'markup',
-        '#markup' => t("A peace proposal has been made by !faction side. What is your answer ?",
-            array('!faction' => theme('djambi_faction_name', array('faction' => $peacemonger))))
+      '#type' => 'markup',
+      '#markup' => t("A peace proposal has been made by !faction side. What is your answer ?",
+        array('!faction' => theme('djambi_faction_name', array('faction' => $peacemonger)))),
     );
     $form['actions']['accept_peace'] = array(
-        '#type' => 'submit',
-        '#name' => 'action',
-        '#id' => 'action-accept-peace',
-        '#value' => t("OK, end this game with a draw and stay good friends."),
-        '#submit' => array('kw_djambi_game_form_accept_peace_submit'),
-        '#ajax' => $ajax_settings
+      '#type' => 'submit',
+      '#name' => 'action',
+      '#id' => 'action-accept-peace',
+      '#value' => t("OK, end this game with a draw and stay good friends."),
+      '#submit' => array('kw_djambi_game_form_accept_peace_submit'),
+      '#ajax' => $ajax_settings,
     );
     $form['actions']['reject_peace'] = array(
-        '#type' => 'submit',
-        '#name' => 'action',
-        '#id' => 'action-reject-peace',
-        '#value' => t("No way, I am sure to win this game."),
-        '#submit' => array('kw_djambi_game_form_reject_peace_submit'),
-        '#ajax' => $ajax_settings
+      '#type' => 'submit',
+      '#name' => 'action',
+      '#id' => 'action-reject-peace',
+      '#value' => t("No way, I am sure to win this game."),
+      '#submit' => array('kw_djambi_game_form_reject_peace_submit'),
+      '#ajax' => $ajax_settings,
     );
   }
   else {
     $form['actions']['explain'] = array(
-        '#type' => 'markup',
-        '#markup' => t("A peace proposal has been made by !faction side. Waiting for !current side answer...",
-            array('!faction' => _kw_djambi_get_translatable_messages($peacemonger->getName()),
-                '!current' => _kw_djambi_get_translatable_messages($faction->getName())))
+      '#type' => 'markup',
+      '#markup' => t("A peace proposal has been made by !faction side. Waiting for !current side answer...",
+        array(
+          '!faction' => _kw_djambi_get_translatable_messages($peacemonger->getName()),
+          '!current' => _kw_djambi_get_translatable_messages($faction->getName()),
+        )),
     );
   }
 }
 
-function _kw_djambi_build_part_computer_actions(&$form, &$form_state, DjambiBattlefield $grid, DjambiPoliticalFaction $faction, $ajax_settings) {
+/**
+ * Construit la partie actions de l'IA du formulaire grille de Djambi.
+ */
+function _kw_djambi_build_part_computer_actions(&$form, $ajax_settings) {
   $form['grid']['computer-actions'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('Actions'),
-        '#weight' => 20
+    '#type' => 'fieldset',
+    '#title' => t('Actions'),
+    '#weight' => 20,
   );
   $form['grid']['computer-actions']['computer-hurry'] = array(
-        '#type' => 'submit',
-        '#value' => t('Hurry computer move'),
-        '#submit' => array('kw_djambi_game_form_refresh_submit'),
-        '#name' => 'ui-computer-refresh',
-        '#limit_validation_errors' => array(),
-        '#ajax' => $ajax_settings
+    '#type' => 'submit',
+    '#value' => t('Hurry computer move'),
+    '#submit' => array('kw_djambi_game_form_refresh_submit'),
+    '#name' => 'ui-computer-refresh',
+    '#limit_validation_errors' => array(),
+    '#ajax' => $ajax_settings,
   );
 }
 
+/**
+ * Renvoie la partie actions de l'utilisateur du formulaire grille de Djambi.
+ */
 function _kw_djambi_build_part_player_actions(&$form, &$form_state, DjambiBattlefield $grid, DjambiPoliticalFaction $faction, $ajax_settings) {
   $actions = array();
   $descriptions = array();
-  // Annulation de sélection d'une pièce
-  if (!empty($form_state["kw_djambi"]) && in_array($form_state["kw_djambi"]["phase"], array('move_interactions', 'piece_destination'))) {
+  // Annulation de sélection d'une pièce :
+  if (!empty($form_state["kw_djambi"]) && in_array($form_state["kw_djambi"]["phase"], array(
+      'move_interactions',
+      'piece_destination',
+    ))
+  ) {
     $actions['cancel_selection'] = array(
-        '#type' => 'submit',
-        '#name' => 'action',
-        '#id' => 'action-cancel-selection',
-        '#value' => t('Cancel piece selection'),
-        '#limit_validation_errors' => array(),
-        '#submit' => array('kw_djambi_game_form_cancel_selection_submit'),
-        '#ajax' => $ajax_settings
+      '#type' => 'submit',
+      '#name' => 'action',
+      '#id' => 'action-cancel-selection',
+      '#value' => t('Cancel piece selection'),
+      '#limit_validation_errors' => array(),
+      '#submit' => array('kw_djambi_game_form_cancel_selection_submit'),
+      '#ajax' => $ajax_settings,
     );
   }
-  // Annulation d'un mouvement
-  elseif (in_array($grid->getMode(), array(KW_DJAMBI_MODE_SANDBOX, KW_DJAMBI_MODE_TRAINING)) && count($grid->getTurns()) > 1) {
+  // Annulation d'un mouvement :
+  elseif (in_array($grid->getMode(), array(
+      KW_DJAMBI_MODE_SANDBOX,
+      KW_DJAMBI_MODE_TRAINING,
+    )) && count($grid->getTurns()) > 1
+  ) {
     $actions['cancel_last_turn'] = array(
-        '#type' => 'submit',
-        '#name' => 'action',
-        '#id' => 'action-cancel-move',
-        '#value' => t('Cancel last move'),
-        '#limit_validation_errors' => array(),
-        '#submit' => array('kw_djambi_game_form_cancel_last_turn_submit'),
-        '#ajax' => $ajax_settings
+      '#type' => 'submit',
+      '#name' => 'action',
+      '#id' => 'action-cancel-move',
+      '#value' => t('Cancel last move'),
+      '#limit_validation_errors' => array(),
+      '#submit' => array('kw_djambi_game_form_cancel_last_turn_submit'),
+      '#ajax' => $ajax_settings,
     );
   }
-  // Passer son tour
+  // Passer son tour :
   $allowed_skip_turns = $grid->getOption('allowed_skipped_turns_per_user');
   if ($allowed_skip_turns == -1 || $allowed_skip_turns > $faction->getSkippedTurns()) {
     if (empty($form_state['kw_djambi']['selected_piece'])) {
       $actions['skip_turn'] = array(
-          '#type' => 'submit',
-          '#name' => 'action',
-          '#id' => 'action-skip-turn',
-          '#value' => $allowed_skip_turns == -1 ? t('Skip turn') : t('Skip turn (!nb of !max already skipped)', array(
-              '!nb' => $faction->getSkippedTurns(), '!max' => $allowed_skip_turns)),
-          '#submit' => array('kw_djambi_game_form_skip_turn_submit'),
-          '#limit_validation_errors' => array(),
-          '#ajax' => $ajax_settings
+        '#type' => 'submit',
+        '#name' => 'action',
+        '#id' => 'action-skip-turn',
+        '#value' => $allowed_skip_turns == -1 ? t('Skip turn') : t('Skip turn (!nb of !max already skipped)', array(
+            '!nb' => $faction->getSkippedTurns(),
+            '!max' => $allowed_skip_turns,
+          )),
+        '#submit' => array('kw_djambi_game_form_skip_turn_submit'),
+        '#limit_validation_errors' => array(),
+        '#ajax' => $ajax_settings,
       );
     }
     if ($allowed_skip_turns == -1) {
@@ -546,21 +623,21 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, DjambiBattle
     }
     else {
       $descriptions[] = format_plural($allowed_skip_turns, 'You can only skip your turn 1 time.',
-          'You can skip your turn only @count times');
+        'You can skip your turn only @count times');
     }
   }
-  // Proposer une nulle
+  // Proposer une nulle :
   $draw_proposal_delay = $grid->getOption('turns_before_draw_proposal');
   $turns = $grid->getTurns();
   if ($draw_proposal_delay != -1 && $faction->getLastDrawProposal() + $draw_proposal_delay <= $turns[$grid->getCurrentTurnId()]['turn']) {
     $actions['draw_proposal'] = array(
-        '#type' => 'submit',
-        '#name' => 'action',
-        '#id' => 'action-ask-draw',
-        '#value' => t('Ask for a draw'),
-        '#limit_validation_errors' => array(),
-        '#submit' => array('kw_djambi_game_form_draw_proposal_submit'),
-        '#ajax' => $ajax_settings
+      '#type' => 'submit',
+      '#name' => 'action',
+      '#id' => 'action-ask-draw',
+      '#value' => t('Ask for a draw'),
+      '#limit_validation_errors' => array(),
+      '#submit' => array('kw_djambi_game_form_draw_proposal_submit'),
+      '#ajax' => $ajax_settings,
     );
     if ($draw_proposal_delay > 1) {
       $descriptions[] = t('You can ask for a draw every !nb turns', array('!nb' => $draw_proposal_delay));
@@ -572,305 +649,316 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, DjambiBattle
   }
   else {
     $descriptions[] = t('You cannot ask for a draw before turn !turn.',
-        array('!turn' => ($faction->getLastDrawProposal() + $draw_proposal_delay)));
+      array('!turn' => ($faction->getLastDrawProposal() + $draw_proposal_delay)));
   }
-  // Abandonner
+  // Abandonner :
   $actions['withdrawal'] = array(
-      '#type' => 'submit',
-      '#name' => 'action',
-      '#id' => 'action-withdraw',
-      '#value' => t('Withdraw'),
-      '#limit_validation_errors' => array(),
-      '#submit' => array('kw_djambi_game_form_withdraw_submit'),
-      '#ajax' => $ajax_settings
+    '#type' => 'submit',
+    '#name' => 'action',
+    '#id' => 'action-withdraw',
+    '#value' => t('Withdraw'),
+    '#limit_validation_errors' => array(),
+    '#submit' => array('kw_djambi_game_form_withdraw_submit'),
+    '#ajax' => $ajax_settings,
   );
-  // Retour après abandon
+  // Retour après abandon :
   if ($grid->getOption('rule_comeback') == 'allowed' && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+    /* @var $withdrawn_faction DjambiPoliticalFaction */
     foreach ($grid->getFactions() as $withdrawn_faction) {
       if ($withdrawn_faction->canComeBackAfterWithdraw()) {
         $actions['comeback']['comeback_' . $withdrawn_faction->getId()] = array(
-            '#type' => 'submit',
-            '#name' => 'action',
-            '#id' => 'action-allow-comeback' . $withdrawn_faction->getId(),
-            '#value' => t('Allow !faction side to come back in the game', array(
-                '!faction' => _kw_djambi_get_translatable_messages($withdrawn_faction->getName()))),
-            '#submit' => array('kw_djambi_game_form_comeback_submit'),
-            '#limit_validation_errors' => array(),
-            '#ajax' => $ajax_settings,
-            '#weight' => 10
+          '#type' => 'submit',
+          '#name' => 'action',
+          '#id' => 'action-allow-comeback' . $withdrawn_faction->getId(),
+          '#value' => t('Allow !faction side to come back in the game', array(
+            '!faction' => _kw_djambi_get_translatable_messages($withdrawn_faction->getName()),
+          )),
+          '#submit' => array('kw_djambi_game_form_comeback_submit'),
+          '#limit_validation_errors' => array(),
+          '#ajax' => $ajax_settings,
+          '#weight' => 10,
         );
       }
     }
     if (isset($actions['comeback'])) {
       $actions['comeback']['separator'] = array(
-          '#markup' => '<hr />'
+        '#markup' => '<hr />',
       );
     }
   }
-  // Regroupement des actions dans un fieldset
+  // Regroupement des actions dans un fieldset :
   if (!empty($actions) || !empty($descriptions)) {
     $form['grid']['actions'] = array(
-        '#type' => 'fieldset',
-        '#title' => t('Actions'),
-        '#weight' => 20
+      '#type' => 'fieldset',
+      '#title' => t('Actions'),
+      '#weight' => 20,
     );
     foreach ($actions as $key => $value) {
       $form['grid']['actions'][$key] = $value;
     }
     if (!empty($descriptions)) {
       $form['grid']['actions']['descriptions'] = array(
-          '#type' => 'item',
-          '#title' => t('Now playing') . ' : ',
-          '#prefix' => '<div class="container-inline">',
-          '#suffix' => '</div>',
-          '#markup' => t('!faction side', array('!faction' => theme('djambi_faction_name', array('faction' => $faction)))),
-          '#weight' => -10,
-          '#description' => theme('item_list', array('items' => $descriptions))
+        '#type' => 'item',
+        '#title' => t('Now playing') . ' : ',
+        '#prefix' => '<div class="container-inline">',
+        '#suffix' => '</div>',
+        '#markup' => t('!faction side', array('!faction' => theme('djambi_faction_name', array('faction' => $faction)))),
+        '#weight' => -10,
+        '#description' => theme('item_list', array('items' => $descriptions)),
       );
     }
   }
 }
 
+/**
+ * Construit la partie contrôle des pièces du formulaire grille de Djambi.
+ */
 function _kw_djambi_build_part_pieces_controls(&$form, &$form_state, DjambiBattlefield $grid, DjambiPoliticalFaction $faction, $ajax_settings) {
   $phase_text = NULL;
   // Par défaut : phase de sélection des pièces
   if (empty($form_state['kw_djambi'])) {
     $form_state['kw_djambi'] = array(
-        'phase' => 'piece_selection'
+      'phase' => 'piece_selection',
     );
   }
-  // Sélection des pièces
+  // Sélection des pièces :
   $image_path = base_path() . drupal_get_path('module', 'kw_djambi') . '/img/';
   $image_extension = '.png';
   $piece_selection_phases = array('piece_selection', 'piece_destination');
   if (in_array($form_state['kw_djambi']['phase'], $piece_selection_phases)) {
-      /* @var $piece DjambiPiece */
-      foreach($faction->getControlledPieces() as $key => $piece) {
-        if ($piece->isMovable()) {
-          $form['pieces']['movable'][$piece->getId()] = array(
-              '#type' => 'image_button',
-              '#return_value' => $piece->getId(),
-              '#src' => $image_path . $piece->getImage() . $image_extension,
-              '#name' => 'selection-' .$piece->getId(),
-              '#id' => 'selection-' .$piece->getId(),
-              '#attributes' => array(
-                  'alt' => t('Move !piece', array('!piece' => _kw_djambi_get_translatable_messages($piece->getLongname()))),
-                  'data-grid-button' => 'selection'
-              ),
-              '#limit_validation_errors' => array(),
-              '#validate' => array('kw_djambi_game_form_validate'),
-              '#submit' => array('kw_djambi_game_form_submit'),
-              '#ajax' => $ajax_settings
-          );
-        }
-      }
-      $form['piece_destination'] = array(
-          '#type' => 'hidden',
-          '#value' => ''
-      );
-  }
-  // Destination des pièces
-  if ($form_state['kw_djambi']['phase'] == 'piece_destination') {
-      /* @var $selected_piece DjambiPiece */
-      $selected_piece = $form_state['kw_djambi']['selected_piece'];
-      $form['pieces']['destination']['#selected_piece_id'] = $selected_piece->getId();
-      $reachable_cells = $selected_piece->getAllowableMoves();
-      foreach ($reachable_cells as $key => $cell_key) {
-        $alt_text = t('Move the !piece here (!case).', array(
-            '!piece' => _kw_djambi_get_full_piece_name($selected_piece), '!case' => $cell_key
-        ));
-        $form['pieces']['destination']['cell-' . $cell_key] = array(
-            '#type' => 'image_button',
-            '#name' => 'target-' . $cell_key,
-            '#id' => 'target-' . $cell_key,
-            '#return_value' => $cell_key,
-            '#src' => base_path() . drupal_get_path('module', 'kw_djambi') . '/img/apply.png',
-            '#attributes' => array(
-                'alt' => $alt_text,
-                'title' => $alt_text,
-                'data-grid-button' => 'destination'
-             ),
-             '#limit_validation_errors' => array(),
-            '#validate' => array('kw_djambi_game_form_validate'),
-            '#submit' => array('kw_djambi_game_form_submit'),
-            '#ajax' => $ajax_settings
+    /* @var $piece DjambiPiece */
+    foreach ($faction->getControlledPieces() as $piece) {
+      if ($piece->isMovable()) {
+        $form['pieces']['movable'][$piece->getId()] = array(
+          '#type' => 'image_button',
+          '#return_value' => $piece->getId(),
+          '#src' => $image_path . $piece->getImage() . $image_extension,
+          '#name' => 'selection-' . $piece->getId(),
+          '#id' => 'selection-' . $piece->getId(),
+          '#attributes' => array(
+            'alt' => t('Move !piece', array('!piece' => _kw_djambi_get_translatable_messages($piece->getLongname()))),
+            'data-grid-button' => 'selection',
+          ),
+          '#limit_validation_errors' => array(),
+          '#validate' => array('kw_djambi_game_form_validate'),
+          '#submit' => array('kw_djambi_game_form_submit'),
+          '#ajax' => $ajax_settings,
         );
       }
-      $form["pieces"]["movable"][$selected_piece->getId()]["#attributes"]["class"][] = "selected";
-      $phase_text = t("The !piece is selected. Choose now its destination case, or select another piece to move.",
-          array("!piece" => theme('djambi_piece_name', array('piece' => $selected_piece)))
-      );
+    }
+    $form['piece_destination'] = array(
+      '#type' => 'hidden',
+      '#value' => '',
+    );
   }
-  // Résultat du déplacement
+  // Destination des pièces :
+  if ($form_state['kw_djambi']['phase'] == 'piece_destination') {
+    /* @var $selected_piece DjambiPiece */
+    $selected_piece = $form_state['kw_djambi']['selected_piece'];
+    $form['pieces']['destination']['#selected_piece_id'] = $selected_piece->getId();
+    $reachable_cells = $selected_piece->getAllowableMovesNames();
+    foreach ($reachable_cells as $cell_key) {
+      $alt_text = t('Move the !piece here (!case).', array(
+        '!piece' => _kw_djambi_get_full_piece_name($selected_piece),
+        '!case' => $cell_key,
+      ));
+      $form['pieces']['destination']['cell-' . $cell_key] = array(
+        '#type' => 'image_button',
+        '#name' => 'target-' . $cell_key,
+        '#id' => 'target-' . $cell_key,
+        '#return_value' => $cell_key,
+        '#src' => base_path() . drupal_get_path('module', 'kw_djambi') . '/img/apply.png',
+        '#attributes' => array(
+          'alt' => $alt_text,
+          'title' => $alt_text,
+          'data-grid-button' => 'destination',
+        ),
+        '#limit_validation_errors' => array(),
+        '#validate' => array('kw_djambi_game_form_validate'),
+        '#submit' => array('kw_djambi_game_form_submit'),
+        '#ajax' => $ajax_settings,
+      );
+    }
+    $form["pieces"]["movable"][$selected_piece->getId()]["#attributes"]["class"][] = "selected";
+    $phase_text = t("The !piece is selected. Choose now its destination case, or select another piece to move.",
+      array("!piece" => theme('djambi_piece_name', array('piece' => $selected_piece)))
+    );
+  }
+  // Résultat du déplacement :
   elseif ($form_state['kw_djambi']['phase'] == 'move_interactions') {
-      $current_interaction = current($form_state['kw_djambi']['interactions']);
-      $selected_piece = $form_state['kw_djambi']['selected_piece'];
-      // Cas 1 : placement d'une pièce tuée
-      if ($current_interaction['type'] == 'murder') {
-        $form['pieces']['murder']['#selected_piece_id'] = $selected_piece->getId();
-        $victim_piece = $current_interaction['target'];
-        $free_cells = $grid->getFreeCells($victim_piece, FALSE, TRUE);
-        foreach ($free_cells as $cell) {
-          $alt_text = t('Bury !piece in !case', array(
-              '!piece' => _kw_djambi_get_full_piece_name($victim_piece), '!case' => $cell
-          ));
-          $form['pieces']['murder']['cell-' . $cell] = array(
-              '#type' => 'image_button',
-              '#name' => 'target-' . $cell,
-              '#id' => 'target-' . $cell,
-              '#return_value' => $cell,
-              '#src' => base_path() . drupal_get_path('module', 'kw_djambi') . '/img/flag_black.png',
-              '#attributes' => array(
-                  'alt' => $alt_text,
-                  'title' => $alt_text,
-                  'data-grid-button' => 'interaction'
-              ),
-              '#limit_validation_errors' => array(),
-              '#validate' => array('kw_djambi_game_form_validate'),
-              '#submit' => array('kw_djambi_game_form_submit'),
-              '#ajax' => $ajax_settings
-          );
-        }
-        $phase_text = t('Your !piece has killed the !victim, select now the case where you victim will rest in peace.',
-            array(
-                '!piece' => theme('djambi_piece_name', array('piece' => $selected_piece)),
-                '!victim' => theme('djambi_piece_name', array('piece' => $victim_piece))
-            ));
-      }
-      // Cas 2 : placement d'une pièce tuée déplacée
-      elseif ($current_interaction["type"] == "necromobility") {
-        $form["pieces"]["necromobility"]["#selected_piece_id"] = $selected_piece->getId();
-        $victim_piece = $current_interaction["target"];
-        $free_cells = $grid->getFreeCells($victim_piece);
-        foreach ($free_cells as $cell) {
-          $alt_text = t("Move the dead piece to case !case.", array("!case" => $cell));
-          $form["pieces"]["necromobility"]["cell-" . $cell] = array(
-              "#type" => "image_button",
-              '#name' => 'target-' . $cell,
-              '#id' => 'target-' . $cell,
-              "#return_value" => $cell,
-              "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/flag_black.png",
-              '#attributes' => array(
-                  'alt' => $alt_text,
-                  'title' => $alt_text,
-                  'data-grid-button' => 'interaction'
-              ),
-              '#limit_validation_errors' => array(),
-              '#validate' => array('kw_djambi_game_form_validate'),
-              '#submit' => array('kw_djambi_game_form_submit'),
-              '#ajax' => $ajax_settings
-          );
-        }
-        $phase_text = t("Your !piece has exhumed an old dead piece, select now its new burial place.", array(
-            "!piece" => theme('djambi_piece_name', array('piece' => $selected_piece))
+    $current_interaction = current($form_state['kw_djambi']['interactions']);
+    /* @var $selected_piece DjambiPiece */
+    $selected_piece = $form_state['kw_djambi']['selected_piece'];
+    // Cas 1 : placement d'une pièce tuée
+    if ($current_interaction['type'] == 'murder') {
+      $form['pieces']['murder']['#selected_piece_id'] = $selected_piece->getId();
+      $victim_piece = $current_interaction['target'];
+      $free_cells = $grid->getFreeCells($victim_piece, FALSE, TRUE);
+      foreach ($free_cells as $cell) {
+        $alt_text = t('Bury !piece in !case', array(
+          '!piece' => _kw_djambi_get_full_piece_name($victim_piece),
+          '!case' => $cell,
         ));
+        $form['pieces']['murder']['cell-' . $cell] = array(
+          '#type' => 'image_button',
+          '#name' => 'target-' . $cell,
+          '#id' => 'target-' . $cell,
+          '#return_value' => $cell,
+          '#src' => base_path() . drupal_get_path('module', 'kw_djambi') . '/img/flag_black.png',
+          '#attributes' => array(
+            'alt' => $alt_text,
+            'title' => $alt_text,
+            'data-grid-button' => 'interaction',
+          ),
+          '#limit_validation_errors' => array(),
+          '#validate' => array('kw_djambi_game_form_validate'),
+          '#submit' => array('kw_djambi_game_form_submit'),
+          '#ajax' => $ajax_settings,
+        );
       }
-      // Cas 3 : placement d'une pièce manipulée
-      elseif ($current_interaction["type"] == "manipulation") {
-        $manipulated_piece = $current_interaction["target"];
-        $form["pieces"]["manipulation"]["#selected_piece_id"] = $selected_piece->getId();
-        $form["pieces"]["manipulation"]["#target_piece_id"] = $manipulated_piece->getId();
-        $free_cells = $grid->getFreeCells($manipulated_piece);
-        foreach ($free_cells as $cell) {
-          $alt_text = t("Move manipulated !piece to !case", array(
-              "!piece" => _kw_djambi_get_full_piece_name($manipulated_piece), "!case" => $cell
-          ));
-          $form["pieces"]["manipulation"]["cell-" . $cell] = array(
-              "#type" => "image_button",
-              '#name' => 'target-' . $cell,
-              '#id' => 'target-' . $cell,
-              "#return_value" => $cell,
-              "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/note2.png",
-              '#attributes' => array(
-                  'alt' => $alt_text,
-                  'title' => $alt_text,
-                  'data-grid-button' => 'interaction'
-              ),
-              '#limit_validation_errors' => array(),
-              '#validate' => array('kw_djambi_game_form_validate'),
-              '#submit' => array('kw_djambi_game_form_submit'),
-              '#ajax' => $ajax_settings
-          );
-        }
-        $phase_text = t("Your !diplomat is manipulating the !piece, select now the destination case for your subjucated victim.",
-            array(
-                "!diplomat" => theme('djambi_piece_name', array('piece' => $selected_piece)),
-                "!piece" => theme('djambi_piece_name', array('piece' => $manipulated_piece))
-            ));
+      $phase_text = t('Your !piece has killed the !victim, select now the case where you victim will rest in peace.',
+        array(
+          '!piece' => theme('djambi_piece_name', array('piece' => $selected_piece)),
+          '!victim' => theme('djambi_piece_name', array('piece' => $victim_piece)),
+        ));
+    }
+    // Cas 2 : placement d'une pièce tuée déplacée :
+    elseif ($current_interaction["type"] == "necromobility") {
+      $form["pieces"]["necromobility"]["#selected_piece_id"] = $selected_piece->getId();
+      /* @var $victim_piece DjambiPiece */
+      $victim_piece = $current_interaction["target"];
+      $free_cells = $grid->getFreeCells($victim_piece);
+      foreach ($free_cells as $cell) {
+        $alt_text = t("Move the dead piece to case !case.", array("!case" => $cell));
+        $form["pieces"]["necromobility"]["cell-" . $cell] = array(
+          "#type" => "image_button",
+          '#name' => 'target-' . $cell,
+          '#id' => 'target-' . $cell,
+          "#return_value" => $cell,
+          "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/flag_black.png",
+          '#attributes' => array(
+            'alt' => $alt_text,
+            'title' => $alt_text,
+            'data-grid-button' => 'interaction',
+          ),
+          '#limit_validation_errors' => array(),
+          '#validate' => array('kw_djambi_game_form_validate'),
+          '#submit' => array('kw_djambi_game_form_submit'),
+          '#ajax' => $ajax_settings,
+        );
       }
-      // Cas 4 : sélection de la victime d'un reportage
-      elseif ($current_interaction["type"] == "reportage") {
-        $form["pieces"]["reportage"]["#selected_piece_id"] = $selected_piece->getId();
-        foreach ($current_interaction["victims"] as $victim) {
-          $position = DjambiBattlefield::locateCell($victim->getPosition());
-          $alt_text = t("Lauch an inquiry on !piece", array(
-              "!piece" => _kw_djambi_get_full_piece_name($victim)
-          ));
-          $form["pieces"]["reportage"]["cell-" . $position] = array(
-              "#type" => "image_button",
-              '#name' => 'target-' . $position,
-              '#id' => 'target-' . $position,
-              "#return_value" => $position,
-              "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/flag_black.png",
-              '#attributes' => array(
-                  'alt' => $alt_text,
-                  'title' => $alt_text,
-                  'data-grid-button' => 'interaction'
-              ),
-              '#limit_validation_errors' => array(),
-              '#validate' => array('kw_djambi_game_form_validate'),
-              '#submit' => array('kw_djambi_game_form_submit'),
-              '#ajax' => $ajax_settings
-          );
-        }
-        $phase_text = t("Your !reporter has to choose beetween several victims...",
-            array("!reporter" => theme('djambi_piece_name', array('piece' => $selected_piece))));
+      $phase_text = t("Your !piece has exhumed an old dead piece, select now its new burial place.", array(
+        "!piece" => theme('djambi_piece_name', array('piece' => $selected_piece)),
+      ));
+    }
+    // Cas 3 : placement d'une pièce manipulée :
+    elseif ($current_interaction["type"] == "manipulation") {
+      /* @var $manipulated_piece DjambiPiece */
+      $manipulated_piece = $current_interaction["target"];
+      $form["pieces"]["manipulation"]["#selected_piece_id"] = $selected_piece->getId();
+      $form["pieces"]["manipulation"]["#target_piece_id"] = $manipulated_piece->getId();
+      $free_cells = $grid->getFreeCells($manipulated_piece);
+      foreach ($free_cells as $cell) {
+        $alt_text = t("Move manipulated !piece to !case", array(
+          "!piece" => _kw_djambi_get_full_piece_name($manipulated_piece),
+          "!case" => $cell,
+        ));
+        $form["pieces"]["manipulation"]["cell-" . $cell] = array(
+          "#type" => "image_button",
+          '#name' => 'target-' . $cell,
+          '#id' => 'target-' . $cell,
+          "#return_value" => $cell,
+          "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/note2.png",
+          '#attributes' => array(
+            'alt' => $alt_text,
+            'title' => $alt_text,
+            'data-grid-button' => 'interaction',
+          ),
+          '#limit_validation_errors' => array(),
+          '#validate' => array('kw_djambi_game_form_validate'),
+          '#submit' => array('kw_djambi_game_form_submit'),
+          '#ajax' => $ajax_settings,
+        );
       }
-      // Cas 5 : évacuation du trône
-      elseif ($current_interaction["type"] == "throne_evacuation") {
-        $form["pieces"]["throne_evacuation"]["#selected_piece_id"] = $selected_piece->getId();
-        $selected_piece->buildAllowableMoves(FALSE);
-        foreach ($selected_piece->getAllowableMoves() as $key => $position) {
-          $alt_text = t("Move your !piece to !case", array(
-              "!piece" => _kw_djambi_get_full_piece_name($selected_piece),
-              "!case" => $position
-          ));
-          $form["pieces"]["throne_evacuation"]["cell-" . $position] = array(
-              "#type" => "image_button",
-              '#name' => 'target-' . $position,
-              '#id' => 'target-' . $position,
-              "#return_value" => $position,
-              "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/apply.png",
-              '#attributes' => array(
-                  'alt' => $alt_text,
-                  'title' => $alt_text,
-                  'data-grid-button' => 'interaction'
-              ),
-              '#limit_validation_errors' => array(),
-              '#validate' => array('kw_djambi_game_form_validate'),
-              '#submit' => array('kw_djambi_game_form_submit'),
-              '#ajax' => $ajax_settings
-          );
-        }
-        $phase_text = t("Your !piece is not allowed to stay here. Run away !",
-            array("!piece" => theme('djambi_piece_name', array('piece' => $selected_piece))));
+      $phase_text = t("Your !diplomat is manipulating the !piece, select now the destination case for your subjucated victim.",
+        array(
+          "!diplomat" => theme('djambi_piece_name', array('piece' => $selected_piece)),
+          "!piece" => theme('djambi_piece_name', array('piece' => $manipulated_piece)),
+        ));
+    }
+    // Cas 4 : sélection de la victime d'un reportage :
+    elseif ($current_interaction["type"] == "reportage") {
+      $form["pieces"]["reportage"]["#selected_piece_id"] = $selected_piece->getId();
+      /* @var $victim DjambiPiece */
+      foreach ($current_interaction["victims"] as $victim) {
+        $position = $victim->getPosition()->getName();
+        $alt_text = t("Lauch an inquiry on !piece", array(
+          "!piece" => _kw_djambi_get_full_piece_name($victim),
+        ));
+        $form["pieces"]["reportage"]["cell-" . $position] = array(
+          "#type" => "image_button",
+          '#name' => 'target-' . $position,
+          '#id' => 'target-' . $position,
+          "#return_value" => $position,
+          "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/flag_black.png",
+          '#attributes' => array(
+            'alt' => $alt_text,
+            'title' => $alt_text,
+            'data-grid-button' => 'interaction',
+          ),
+          '#limit_validation_errors' => array(),
+          '#validate' => array('kw_djambi_game_form_validate'),
+          '#submit' => array('kw_djambi_game_form_submit'),
+          '#ajax' => $ajax_settings,
+        );
       }
+      $phase_text = t("Your !reporter has to choose beetween several victims...",
+        array("!reporter" => theme('djambi_piece_name', array('piece' => $selected_piece))));
+    }
+    // Cas 5 : évacuation du trône :
+    elseif ($current_interaction["type"] == "throne_evacuation") {
+      $form["pieces"]["throne_evacuation"]["#selected_piece_id"] = $selected_piece->getId();
+      $selected_piece->buildAllowableMoves(FALSE);
+      foreach ($selected_piece->getAllowableMovesNames() as $position) {
+        $alt_text = t("Move your !piece to !case", array(
+          "!piece" => _kw_djambi_get_full_piece_name($selected_piece),
+          "!case" => $position,
+        ));
+        $form["pieces"]["throne_evacuation"]["cell-" . $position] = array(
+          "#type" => "image_button",
+          '#name' => 'target-' . $position,
+          '#id' => 'target-' . $position,
+          "#return_value" => $position,
+          "#src" => base_path() . drupal_get_path("module", "kw_djambi") . "/img/apply.png",
+          '#attributes' => array(
+            'alt' => $alt_text,
+            'title' => $alt_text,
+            'data-grid-button' => 'interaction',
+          ),
+          '#limit_validation_errors' => array(),
+          '#validate' => array('kw_djambi_game_form_validate'),
+          '#submit' => array('kw_djambi_game_form_submit'),
+          '#ajax' => $ajax_settings,
+        );
+      }
+      $phase_text = t("Your !piece is not allowed to stay here. Run away !",
+        array("!piece" => theme('djambi_piece_name', array('piece' => $selected_piece))));
+    }
   }
   // Attente du mouvement...
   elseif ($form_state["kw_djambi"]["phase"] == "piece_selection") {
-      $phase_text = t("It's your turn. Select a movable piece in the grid...");
+    $phase_text = t("It's your turn. Select a movable piece in the grid...");
   }
   if (!empty($phase_text)) {
     $form["textes"]["phase"] = array(
-        "#type" => "markup",
-        "#markup" => $phase_text
+      "#type" => "markup",
+      "#markup" => $phase_text,
     );
   }
 }
 
 /**
- * Renvoie une liste d'événements survenus lors d'une partie
- * @param DjambiBattlefield $grid
+ * Renvoie une liste d'événements survenus lors d'une partie.
  */
 function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid) {
   $html = '';
@@ -878,6 +966,7 @@ function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid
   $live_logs = FALSE;
   $show_logs = array();
   $turns = $grid->getTurns();
+  $current_turn_id = 0;
   if ($grid->isPending() || $grid->isNotBegin()) {
     $current_turn_id = isset($turns[$grid->getCurrentTurnId()]) ? $turns[$grid->getCurrentTurnId()]['turn'] : 0;
     $detailed_log = TRUE;
@@ -898,47 +987,49 @@ function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid
       'num' => array('data' => t("#"), 'scope' => 'col'),
       'time' => array('data' => t('Time'), 'scope' => 'col'),
       'type' => array('data' => t('Type'), 'scope' => 'col'),
-      'event' => array('data' => t('Event'), 'scope' => 'col')
+      'event' => array('data' => t('Event'), 'scope' => 'col'),
     );
   }
   else {
     $header = array(
-        'num' => array('data' => t("Turn"), 'scope' => 'col'),
-        'time' => array('data' => t('Time'), 'scope' => 'col'),
-        'event' => array('data' => t('Event'), 'scope' => 'col')
+      'num' => array('data' => t("Turn"), 'scope' => 'col'),
+      'time' => array('data' => t('Time'), 'scope' => 'col'),
+      'event' => array('data' => t('Event'), 'scope' => 'col'),
     );
   }
   if ($grid->isFinished()) {
     $header['view'] = array('data' => t('Actions'));
   }
   $buttons = array(
-      '#type' => 'submit',
-      '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback'),
-      '#value' => t('Watch'),
-      '#submit' => array('kw_djambi_game_form_replay_submit')
+    '#type' => 'submit',
+    '#ajax' => array('callback' => 'kw_djambi_ajax_grid_callback'),
+    '#value' => t('Watch'),
+    '#submit' => array('kw_djambi_game_form_replay_submit'),
   );
   $log_id = 'DjambiLog' . $grid->getId();
   $form['log']['container'] = array(
-      '#type' => 'container',
-      '#prefix' => '<div id="' . $log_id . '">',
-      '#suffix' => '</div>',
-      '#theme' => 'djambi_log'
+    '#type' => 'container',
+    '#prefix' => '<div id="' . $log_id . '">',
+    '#suffix' => '</div>',
+    '#theme' => 'djambi_log',
   );
   $form['log']['container']['buttons'] = array(
-      '#type' => 'actions'
+    '#type' => 'actions',
   );
   $logs = array();
   $times = array();
-  $factions = array();
   if ($detailed_log) {
-    foreach ($grid->getMoves() as $key => $move) {
+    foreach ($grid->getMoves() as $move) {
       if (!in_array($turns[$move['turn']]['turn'], $show_logs)) {
         continue;
       }
       $msg = _kw_djambi_describe_move($move, $grid);
       if (!empty($msg)) {
         $log = array();
-        $log['num'] = array('data' => ($move['turn'] + 1), 'class' => array('txtright', 'faction', 'num'));
+        $log['num'] = array(
+          'data' => ($move['turn'] + 1),
+          'class' => array('txtright', 'faction', 'num'),
+        );
         $log['time'] = array('data' => format_date($move['time'], 'short'));
         $log['type'] = _kw_djambi_get_translatable_messages($move['type']);
         $faction = $grid->getFactionById($log['type'] == 'move' || empty($move['acting_faction']) ? $move['target_faction'] : $move['acting_faction']);
@@ -950,7 +1041,7 @@ function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid
         if (isset($header['view'])) {
           if (!isset($form['log']['container']['buttons']['move-view-' . $move['turn']])) {
             $form['log']['container']['buttons']['move-view-' . $move['turn']] = array_merge($buttons, array(
-              '#name' => 'ui-move-view-' .$move['turn']
+              '#name' => 'ui-move-view-' . $move['turn'],
             ));
             $log['view'] = '[move-view-' . $move['turn'] . ']';
           }
@@ -963,16 +1054,22 @@ function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid
       }
     }
   }
-  foreach ($grid->getEvents() as $key => $event) {
+  foreach ($grid->getEvents() as $event) {
     if ((!$detailed_log && $event['type'] != 'event') || ($detailed_log && !empty($turns) && !in_array($turns[$event['turn']]['turn'], $show_logs))) {
       continue;
     }
     $log = array();
     if ($detailed_log) {
-      $log['num'] = array('data' => $event['turn'] + 1, 'class' => array('txtright', 'num'));
+      $log['num'] = array(
+        'data' => $event['turn'] + 1,
+        'class' => array('txtright', 'num'),
+      );
     }
     else {
-      $log['num'] = array('data' => t('Turn #!turn', array('!turn' => $turns[$event['turn']]['turn'])), 'class' => array('txtright', 'num'));
+      $log['num'] = array(
+        'data' => t('Turn #!turn', array('!turn' => $turns[$event['turn']]['turn'])),
+        'class' => array('txtright', 'num'),
+      );
     }
     $log['time'] = array('data' => format_date($event['time'], 'short'));
     if ($detailed_log) {
@@ -996,9 +1093,9 @@ function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid
     if (isset($header['view'])) {
       if ($event['type'] == 'event' && !isset($form['log']['container']['buttons']['move-view-' . $event['turn']])) {
         $form['log']['container']['buttons']['move-view-' . $event['turn']] = array_merge($buttons, array(
-            '#name' => 'ui-move-view-' .$event['turn']
+          '#name' => 'ui-move-view-' . $event['turn'],
         ));
-        $log['view'] = '[move-view-' .$event['turn'] . ']';
+        $log['view'] = '[move-view-' . $event['turn'] . ']';
       }
       else {
         $log['view'] = '-';
@@ -1035,45 +1132,49 @@ function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid
       if ($live_logs) {
         krsort($logs[$turn]);
       }
-      $html .= theme('table', array('header' => $header, 'rows' => $logs[$turn],
+      $html .= theme('table', array(
+        'header' => $header,
+        'rows' => $logs[$turn],
         'attributes' => array('class' => array('djambilog')),
-        'caption' => $turn > 0 ? t('Turn #!turn events log', array('!turn' => $turn)) : t("Early game events log")
+        'caption' => $turn > 0 ? t('Turn #!turn events log', array('!turn' => $turn)) : t("Early game events log"),
       ));
     }
   }
   else {
-    $html .= theme('table', array('header' => $header, 'rows' => $logs,
-        'attributes' => array('class' => array('djambilog')),
-        'caption' => t("List of major events that marred this game")
+    $html .= theme('table', array(
+      'header' => $header,
+      'rows' => $logs,
+      'attributes' => array('class' => array('djambilog')),
+      'caption' => t("List of major events that marred this game"),
     ));
   }
   $form['log']['container']['history'] = array(
-      '#type' => 'markup',
-      '#markup' => $html
+    '#type' => 'markup',
+    '#markup' => $html,
   );
   $form['log']['container']['actions'] = array(
-      '#type' => 'actions'
+    '#type' => 'actions',
   );
   $ajax_log_settings = array(
-      'callback' => 'kw_djambi_ajax_log_callback'
+    'callback' => 'kw_djambi_ajax_log_callback',
   );
   if ($grid->isPending()) {
     if ($live_logs) {
       $form['log']['container']['actions']['view_full'] = array(
-          '#name' => 'ui-log-full',
-          '#type' => 'submit',
-          '#value' => t("View all turns log"),
-          '#submit' => array('kw_djambi_game_form_log_submit'),
-          '#ajax' => $ajax_log_settings
+        '#name' => 'ui-log-full',
+        '#type' => 'submit',
+        '#value' => t("View all turns log"),
+        '#submit' => array('kw_djambi_game_form_log_submit'),
+        '#ajax' => $ajax_log_settings,
       );
     }
     elseif ($current_turn_id > 2) {
       $form['log']['container']['actions']['view_less'] = array(
-          '#name' => 'ui-log-less',
-          '#type' => 'submit',
-          '#value' => t("View last turns log"),
-          '#submit' => array('kw_djambi_game_form_log_submit'),
-          '#ajax' => $ajax_log_settings
+        '#name' => 'ui-log-less',
+        '#type' => 'submit',
+        '#value' => t("View last turns log"),
+        '#submit' => array('kw_djambi_game_form_log_submit'),
+        '#ajax' => $ajax_log_settings,
       );
     }
   }
@@ -1084,7 +1185,7 @@ function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid
         '#type' => 'submit',
         '#value' => t("View detailed log"),
         '#submit' => array('kw_djambi_game_form_log_submit'),
-        '#ajax' => $ajax_log_settings
+        '#ajax' => $ajax_log_settings,
       );
     }
     elseif (!$grid->isNotBegin()) {
@@ -1093,16 +1194,14 @@ function _kw_djambi_build_part_log(&$form, &$form_state, DjambiBattlefield $grid
         '#type' => 'submit',
         '#value' => t("View major events log"),
         '#submit' => array('kw_djambi_game_form_log_submit'),
-        '#ajax' => $ajax_log_settings
+        '#ajax' => $ajax_log_settings,
       );
     }
   }
 }
 
 /**
- * Génère les tableaux de statistiques
- * @param DjambiBattlefield $grid
- * @return multitype:Ambigous <An, string>
+ * Génère les tableaux de statistiques.
  */
 function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
   $items = array();
@@ -1113,13 +1212,18 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
   if (empty($factions)) {
     return;
   }
+  $stop_status = array(
+    KW_DJAMBI_USER_VASSALIZED,
+    KW_DJAMBI_USER_EMPTY_SLOT,
+  );
+  /* @var $faction DjambiPoliticalFaction */
   foreach ($factions as $faction) {
-    if (in_array($faction->getStatus(), array(KW_DJAMBI_USER_VASSALIZED, KW_DJAMBI_USER_EMPTY_SLOT))) {
+    if (in_array($faction->getStatus(), $stop_status)) {
       continue;
     }
     if ($grid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
       $username = theme('username', array('account' => user_load($faction->getUserDataItem('uid'))))
-      . ($faction->getUserDataItem('uid') == 0 ? ' (' . $faction->getUserDataItem('ip') . ')' : '');
+        . ($faction->getUserDataItem('uid') == 0 ? ' (' . $faction->getUserDataItem('ip') . ')' : '');
       $players[$faction->getId()] = $username;
     }
     $ranking[$faction->getId()] = $faction->getRanking();
@@ -1136,12 +1240,12 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
       @$stats['throne'][$turn['side']]++;
     }
   }
-  foreach ($grid->getMoves() as $key => $move) {
+  foreach ($grid->getMoves() as $move) {
     if ($move['type'] == 'move') {
       $cells = $grid->getCells();
       $distance = max(
-          abs($cells[$move['from']]['x'] - $cells[$move['to']]['x']),
-          abs($cells[$move['from']]['y'] - $cells[$move['to']]['y']));
+        abs($cells[$move['from']]->getX() - $cells[$move['to']]->getY()),
+        abs($cells[$move['from']]->getY() - $cells[$move['to']]->getX()));
       @$stats['mobility'][$move['target']] += $distance;
       @$stats['moves']['turns'][$move['target_faction']]++;
       @$stats['moves']['distance'][$move['target_faction']] += $distance;
@@ -1157,7 +1261,8 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
         $target = $grid->getPieceById($move['target']);
         if ($target) {
           $stats['pulitzer'][$move['acting']] = isset($stats['pulitzer'][$move['acting']]) ? $stats['pulitzer'][$move['acting']] : 0;
-          $stats['pulitzer'][$move['acting']] += $target->getDescription()->getValue();
+          $stats['pulitzer'][$move['acting']] += $target->getDescription()
+            ->getValue();
         }
       }
     }
@@ -1170,8 +1275,8 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
   }
   if ($grid->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
     $header = array(
-        array('data' => t('Award')),
-        array('data' => t('Awarded to'))
+      array('data' => t('Award')),
+      array('data' => t('Awarded to')),
     );
     $rows = array();
     $winners_array = array();
@@ -1184,18 +1289,20 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
     foreach ($winners_array as $winner) {
       $faction = $grid->getFactionById($winner);
       $winners[] = theme('djambi_faction_name', array('faction' => $faction))
-      . (!empty($players[$winner]) ? ' ' . $players[$winner] : '');
+        . (!empty($players[$winner]) ? ' ' . $players[$winner] : '');
     }
     $rows[] = array(
-        'data' => array(
-            array(
-               'data' => count($winners) == 1 ? t('Great Beloved Ruler of Djambi') : t("No winner in this game... Last standing teams :"),
-               'header' => TRUE),
-            array(
-               'data' => t('!pieces', array('!pieces' => implode(', ', $winners))),
-               'class' => array('icon', 'light', 'evil')
-            )
-        ));
+      'data' => array(
+        array(
+          'data' => count($winners) == 1 ? t('Great Beloved Ruler of Djambi') : t("No winner in this game... Last standing teams :"),
+          'header' => TRUE,
+        ),
+        array(
+          'data' => t('!pieces', array('!pieces' => implode(', ', $winners))),
+          'class' => array('icon', 'light', 'evil'),
+        ),
+      ),
+    );
     $ranking_array = array();
     foreach ($ranking as $side => $rank) {
       if (empty($rank) || $rank == $win_rank) {
@@ -1203,193 +1310,256 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
       }
       $faction = $grid->getFactionById($side);
       $ranking_array[] = array(
-          'data' =>  t('Rank !rank :  !side', array(
-            '!rank' => $rank,
-            '!side' => theme('djambi_faction_name', array('faction' => $faction)) . (!empty($players[$side]) ? ' ' . $players[$side] : '')
-          )),
-          'class' => array('icon', 'light', ($rank == 2 ? 'confused' : 'sad'))
+        'data' => t('Rank !rank :  !side', array(
+          '!rank' => $rank,
+          '!side' => theme('djambi_faction_name', array('faction' => $faction)) . (!empty($players[$side]) ? ' ' . $players[$side] : ''),
+        )),
+        'class' => array('icon', 'light', ($rank == 2 ? 'confused' : 'sad')),
       );
     }
     if (!empty($ranking_array)) {
       $rows[] = array(
-          'data' => array(
-              array('data' => t('Ashamed loser opponents'), 'header' => TRUE),
-              array('data' => theme('item_list', array('items' => $ranking_array)))
-          )
+        'data' => array(
+          array('data' => t('Ashamed loser opponents'), 'header' => TRUE),
+          array('data' => theme('item_list', array('items' => $ranking_array))),
+        ),
       );
     }
     if (!empty($stats['mobility']) && max($stats['mobility']) > 1) {
-      $move =
       $rows[] = array(
-          'data' => array(
-              array('data' => t('Sarkozy Price of hyper-activity'), 'header' => TRUE),
-              array('data' => t('!pieces, with !nb cases crossed', array(
-                  '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'mobility', $stats)),
-                  '!nb' => max($stats['mobility'])))
-              )
-          ));
+        'data' => array(
+          array(
+            'data' => t('Sarkozy Price of hyper-activity'),
+            'header' => TRUE,
+          ),
+          array(
+            'data' => t('!pieces, with !nb cases crossed', array(
+              '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'mobility', $stats)),
+              '!nb' => max($stats['mobility']),
+            )),
+          ),
+        ),
+      );
     }
     if (!empty($stats['terminator']) && max($stats['terminator']) > 1) {
       $rows[] = array(
-          'data' => array(
-              array('data' => t('Agent 47 Price of most efficient dirty work cleaner'), 'header' => TRUE),
-              array('data' => t('!pieces, with !nb victims', array(
-                  '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'terminator', $stats)),
-                  '!nb' => max($stats['terminator'])))
-              )
-          ));
+        'data' => array(
+          array(
+            'data' => t('Agent 47 Price of most efficient dirty work cleaner'),
+            'header' => TRUE,
+          ),
+          array(
+            'data' => t('!pieces, with !nb victims', array(
+              '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'terminator', $stats)),
+              '!nb' => max($stats['terminator']),
+            )),
+          ),
+        ),
+      );
     }
     if (!empty($stats['necromobility'])) {
       $nmove = max($stats['necromobility']);
       $rows[] = array(
-          'data' => array(
-              array('data' => t('Pope Formose Price of best dead exhumation specialist'), 'header' => TRUE),
-              array('data' => format_plural($nmove, '!pieces, with !nb exhumation', '!pieces, with !nb exhumations', array(
-                  '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'necromobility', $stats, 'faction')),
-                  '!nb' => $nmove)))
-          ));
+        'data' => array(
+          array(
+            'data' => t('Pope Formose Price of best dead exhumation specialist'),
+            'header' => TRUE,
+          ),
+          array(
+            'data' => format_plural($nmove, '!pieces, with !nb exhumation', '!pieces, with !nb exhumations', array(
+              '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'necromobility', $stats, 'faction')),
+              '!nb' => $nmove,
+            )),
+          ),
+        ),
+      );
     }
     if (!empty($stats['manipulation'])) {
       $manipulations = max($stats['manipulation']);
       $rows[] = array(
-          'data' => array(
-              array('data' => t('Machiavelli Price of political manipulation'), 'header' => TRUE),
-              array('data' => format_plural($manipulations, '!pieces, with !nb manipulated piece', '!pieces, with !nb manipulated pieces', array(
-                  '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'manipulation', $stats, 'faction')),
-                  '!nb' => $manipulations))
-              )
-          ));
+        'data' => array(
+          array(
+            'data' => t('Machiavelli Price of political manipulation'),
+            'header' => TRUE,
+          ),
+          array(
+            'data' => format_plural($manipulations, '!pieces, with !nb manipulated piece', '!pieces, with !nb manipulated pieces', array(
+              '!pieces' => implode(', ', _kw_djambi_stats_get_winners($grid, 'manipulation', $stats, 'faction')),
+              '!nb' => $manipulations,
+            )),
+          ),
+        ),
+      );
     }
     if (!empty($stats['peace']) && min($stats['peace']) < 2) {
       $rows[] = array(
-          'data' => array(
-              array('data' => t('Nobel Price of peace'), 'header' => TRUE),
-              array('data' => implode(', ', _kw_djambi_stats_get_winners($grid, 'peace', $stats, 'faction', 'min')))
-          ));
+        'data' => array(
+          array('data' => t('Nobel Price of peace'), 'header' => TRUE),
+          array(
+            'data' => implode(', ', _kw_djambi_stats_get_winners($grid, 'peace', $stats, 'faction', 'min')),
+          ),
+        ),
+      );
     }
     if (!empty($stats['pulitzer'])) {
-      $scandals = max($stats['pulitzer']);
       $rows[] = array(
-          'data' => array(
-              array('data' => t('Pulitzer Price'), 'header' => TRUE),
-              array('data' => implode(', ', _kw_djambi_stats_get_winners($grid, 'pulitzer', $stats)))
-          ));
+        'data' => array(
+          array('data' => t('Pulitzer Price'), 'header' => TRUE),
+          array(
+            'data' => implode(', ', _kw_djambi_stats_get_winners($grid, 'pulitzer', $stats)),
+          ),
+        ),
+      );
     }
-    $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => t('Table of honours')));
+    $items[] = theme('table', array(
+      'header' => $header,
+      'rows' => $rows,
+      'caption' => t('Table of honours'),
+    ));
   }
-  // Tableau des victimes
+  // Tableau des victimes :
   $header = array();
   $header['Sides'] = array('data' => t('Sides'));
   $rows = array();
   $global_total = array(
-      'Sides' => array('data' => 'Total', 'header' => TRUE),
+    'Sides' => array('data' => 'Total', 'header' => TRUE),
   );
   $global_total_data = 0;
-  foreach ($factions as $key => $faction) {
-    if (in_array($faction->getStatus(), array(KW_DJAMBI_USER_EMPTY_SLOT, KW_DJAMBI_USER_VASSALIZED))) {
+  $stop_status = array(
+    KW_DJAMBI_USER_EMPTY_SLOT,
+    KW_DJAMBI_USER_VASSALIZED,
+  );
+  foreach ($factions as $faction) {
+
+    if (in_array($faction->getStatus(), $stop_status)) {
       continue;
     }
     $header[$faction->getId()] = array(
-        'data' => '<abbr title="' . t('!faction deaths', array('!faction' => _kw_djambi_get_translatable_messages($faction->getName())))
-          .'">' . $faction->getId() . '†</abbr>',
-        'class' => array($faction->getClass(), 'faction', 'stats')
+      'data' => '<abbr title="' . t('!faction deaths', array('!faction' => _kw_djambi_get_translatable_messages($faction->getName())))
+      . '">' . $faction->getId() . '†</abbr>',
+      'class' => array($faction->getClass(), 'faction', 'stats'),
     );
     $row = array();
     $row['Sides'] = array(
-        'class' => array($faction->getClass(), 'faction'),
-        'data' => t('!faction murders', array('!faction' =>
-            _kw_djambi_get_translatable_messages($faction->getName()))),
-        'header' => TRUE);
+      'class' => array($faction->getClass(), 'faction'),
+      'data' => t('!faction murders', array(
+        '!faction' => _kw_djambi_get_translatable_messages($faction->getName()),
+      )),
+      'header' => TRUE,
+    );
     $total = 0;
-    foreach ($factions as $subkey => $subfaction) {
-      if (in_array($subfaction->getStatus(), array(KW_DJAMBI_USER_EMPTY_SLOT, KW_DJAMBI_USER_VASSALIZED))) {
+    /* @var $subfaction DjambiPoliticalFaction */
+    foreach ($factions as $subfaction) {
+      if (in_array($subfaction->getStatus(), array(
+        KW_DJAMBI_USER_EMPTY_SLOT,
+        KW_DJAMBI_USER_VASSALIZED,
+      ))
+      ) {
         continue;
       }
       $murders = isset($stats['murders'][$faction->getId()][$subfaction->getId()]) ?
-      $stats['murders'][$faction->getId()][$subfaction->getId()] : 0;
+        $stats['murders'][$faction->getId()][$subfaction->getId()] : 0;
       $total += $murders;
       $std_row = array('data' => $murders, 'class' => array('number'));
       if ($grid->getOption('rule_canibalism') == 'yes' || $grid->getOption('rule_press_liberty') == 'foxnews') {
         $row[$subfaction->getId()] = $std_row;
       }
       else {
-        $row[$subfaction->getId()] = ($faction->getId() != $subfaction->getId()) ? $std_row
-        : array('data' => '-', 'class' => array('locked'));
+        $row[$subfaction->getId()] = ($faction->getId() != $subfaction->getId()) ? $std_row : array('data' => '-', 'class' => array('locked'));
       }
       if (!isset($global_total[$subfaction->getId()])) {
         $global_total[$subfaction->getId()] = array(
-            'data' => 0,
-            'class' => array('total', 'number')
+          'data' => 0,
+          'class' => array('total', 'number'),
         );
       }
       $global_total[$subfaction->getId()]['data'] += $murders;
     }
-    $row['Total'] = array('data' => $total, 'class' => array('total', 'number'));
+    $row['Total'] = array(
+      'data' => $total,
+      'class' => array('total', 'number'),
+    );
     $global_total_data += $total;
     $rows[] = $row;
   }
-  $global_total['Total'] = array('data' => $global_total_data, 'class' => array('number'));
+  $global_total['Total'] = array(
+    'data' => $global_total_data,
+    'class' => array('number'),
+  );
   $rows[] = array('data' => $global_total, 'class' => array('total'));
   $header['Total'] = array('data' => t('Total'));
-  $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => t('Table of dead pieces')));
-  // Tableau des déplacements
+  $items[] = theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'caption' => t('Table of dead pieces'),
+  ));
+  // Tableau des déplacements :
   $header = array(
-      0 => array('data' => t('Sides')),
-      6 =>  array('data' => t('Status')),
-      1 =>  array('data' => t('Moves')),
-      2 =>  array('data' => t('Distance')),
-      3 =>  array('data' => t('Rule length')),
-      4 =>  array('data' => t('Play time')),
-      5 =>  array('data' => '<abbr title="'. t("Average turn duration") .'">' . t('Avg t.d.') . '</abbr>')
+    0 => array('data' => t('Sides')),
+    6 => array('data' => t('Status')),
+    1 => array('data' => t('Moves')),
+    2 => array('data' => t('Distance')),
+    3 => array('data' => t('Rule length')),
+    4 => array('data' => t('Play time')),
+    5 => array('data' => '<abbr title="' . t("Average turn duration") . '">' . t('Avg t.d.') . '</abbr>'),
   );
   $rows = array();
   $total = array(
-      'class' => array('total'),
-      'data' => array(
-          0 => array('data' => 'Total'),
-          6 => array('data' => _kw_djambi_get_translatable_messages($grid->getStatus())),
-          1 => array('data' => 0, 'class' => array('number')),
-          2 => array('data' => 0, 'class' => array('number')),
-          3 => array('data' => 0, 'class' => array('number')),
-          4 => array('data' => 0, 'class' => array('number')),
-          5 => array('data' => '-', 'class' => array('number'))
-      )
+    'class' => array('total'),
+    'data' => array(
+      0 => array('data' => 'Total'),
+      6 => array('data' => _kw_djambi_get_translatable_messages($grid->getStatus())),
+      1 => array('data' => 0, 'class' => array('number')),
+      2 => array('data' => 0, 'class' => array('number')),
+      3 => array('data' => 0, 'class' => array('number')),
+      4 => array('data' => 0, 'class' => array('number')),
+      5 => array('data' => '-', 'class' => array('number')),
+    ),
   );
   foreach ($factions as $faction) {
-    if (in_array($faction->getStatus(), array(KW_DJAMBI_USER_EMPTY_SLOT, KW_DJAMBI_USER_VASSALIZED))) {
+    if (in_array($faction->getStatus(), array(
+      KW_DJAMBI_USER_EMPTY_SLOT,
+      KW_DJAMBI_USER_VASSALIZED,
+    ))
+    ) {
       continue;
     }
     $row = array();
     $row[0] = array(
-        'data' => t('!faction', array('!faction' =>
-            _kw_djambi_get_translatable_messages($faction->getName()))),
-        'class' => array($faction->getClass(), 'faction', 'stats'),
-        'header' => TRUE
+      'data' => t('!faction', array(
+        '!faction' => _kw_djambi_get_translatable_messages($faction->getName()),
+      )),
+      'class' => array($faction->getClass(), 'faction', 'stats'),
+      'header' => TRUE,
     );
     $row[6] = array('data' => _kw_djambi_get_translatable_messages($faction->getStatus()));
     $row[1] = array(
-        'data' => !empty($stats['moves']['turns'][$faction->getId()]) ? $stats['moves']['turns'][$faction->getId()] : 0,
-        'class' => 'number');
+      'data' => !empty($stats['moves']['turns'][$faction->getId()]) ? $stats['moves']['turns'][$faction->getId()] : 0,
+      'class' => 'number',
+    );
     $total['data'][1]['data'] += $row[1]['data'];
     $row[2] = array(
-        'data' => !empty($stats['moves']['distance'][$faction->getId()]) ? $stats['moves']['distance'][$faction->getId()] : 0,
-        'class' => 'number');
+      'data' => !empty($stats['moves']['distance'][$faction->getId()]) ? $stats['moves']['distance'][$faction->getId()] : 0,
+      'class' => 'number',
+    );
     $total['data'][2]['data'] += $row[2]['data'];
     $row[3] = array(
-        'data' => !empty($stats['throne'][$faction->getId()]) ? $stats['throne'][$faction->getId()] : 0,
-        'class' => 'number');
+      'data' => !empty($stats['throne'][$faction->getId()]) ? $stats['throne'][$faction->getId()] : 0,
+      'class' => 'number',
+    );
     $total['data'][3]['data'] += $row[3]['data'];
     $row[4] = array(
-        'data' => !empty($stats['playtime'][$faction->getId()]) ?
-        _kw_djambi_get_duration($stats['playtime'][$faction->getId()]) : 0,
-        'class' => 'number');
+      'data' => !empty($stats['playtime'][$faction->getId()]) ? _kw_djambi_get_duration($stats['playtime'][$faction->getId()]) : 0,
+      'class' => 'number',
+    );
     if (isset($stats['playtime'][$faction->getId()])) {
       $total['data'][4]['data'] += $stats['playtime'][$faction->getId()];
     }
     $row[5] = array(
-        'data' => !empty($stats['playtime'][$faction->getId()]) && !empty($stats['moves']['turns'][$faction->getId()]) ?
-        _kw_djambi_get_duration($stats['playtime'][$faction->getId()] / $stats['moves']['turns'][$faction->getId()]) : '-',
-        'class' => 'number');
+      'data' => !empty($stats['playtime'][$faction->getId()]) && !empty($stats['moves']['turns'][$faction->getId()]) ?
+      _kw_djambi_get_duration($stats['playtime'][$faction->getId()] / $stats['moves']['turns'][$faction->getId()]) : '-',
+      'class' => 'number',
+    );
     $rows[] = $row;
   }
   if ($total['data'][1]['data'] > 0) {
@@ -1397,23 +1567,32 @@ function _kw_djambi_build_part_stats(&$form, DjambiBattlefield $grid) {
   }
   $total['data'][4]['data'] = _kw_djambi_get_duration($total['data'][4]['data']);
   $rows[] = $total;
-  $items[] = theme('table', array('header' => $header, 'rows' => $rows, 'caption' => t('Table of moves')));
+  $items[] = theme('table', array(
+    'header' => $header,
+    'rows' => $rows,
+    'caption' => t('Table of moves'),
+  ));
   $form['stats']['items'] = array(
-        '#markup' => theme('item_list', array('items' => $items, 'attributes' => array('class' => array('stats'))))
+    '#markup' => theme('item_list', array(
+      'items' => $items,
+      'attributes' => array('class' => array('stats')),
+    )),
   );
 }
 
 /**
- * Fonction d'aide à la génération des statistiques
- * Détermine le vainqueur d'un prix
+ * Aide à la génération des statistiques : détermine le vainqueur d'un prix.
  */
-function _kw_djambi_stats_get_winners($grid, $price, $stats, $type = 'piece', $order = 'max') {
+function _kw_djambi_stats_get_winners(DjambiBattlefield $grid, $price, $stats, $type = 'piece', $order = 'max') {
   $winners = array_keys($stats[$price], $order == 'min' ? min($stats[$price]) : max($stats[$price]));
   $winners_string_array = array();
   foreach ($winners as $winner) {
     if ($type == 'piece') {
       $piece = $grid->getPieceById($winner);
-      $winners_string_array[] = theme('djambi_piece_name', array('piece' => $piece, 'use_faction_class' => TRUE));
+      $winners_string_array[] = theme('djambi_piece_name', array(
+        'piece' => $piece,
+        'use_faction_class' => TRUE,
+      ));
     }
     elseif ($type == 'faction') {
       $faction = $grid->getFactionById($winner);
@@ -1424,11 +1603,12 @@ function _kw_djambi_stats_get_winners($grid, $price, $stats, $type = 'piece', $o
 }
 
 /**
-* Soumission de formulaire : chargement des logs complets
-*/
+ * Soumission de formulaire : chargement des logs complets.
+ */
 function kw_djambi_game_form_log_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
   $clicked_button = $form_state['clicked_button'];
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $form_state['djambi_logs'] = array();
   if ($clicked_button['#name'] == 'ui-log-full') {
@@ -1439,16 +1619,17 @@ function kw_djambi_game_form_log_submit($form, &$form_state) {
 }
 
 /**
- * Fonction appelée après une requête Ajax : regénération du formulaire de jeu
+ * Fonction appelée après une requête Ajax : regénération du formulaire de jeu.
  */
 function kw_djambi_ajax_callback($form, $form_state) {
   return $form;
 }
 
 /**
- * Fonction appelée après une requête Ajax : rechargement uniquement de la grille
+ * Rechargement AJAX uniquement de la grille.
  */
 function kw_djambi_ajax_grid_callback($form, $form_state) {
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $commands = array();
   $commands[] = ajax_command_replace('#DjambiGridFieldset' . $grid->getId(), drupal_render($form['grid']));
@@ -1457,9 +1638,10 @@ function kw_djambi_ajax_grid_callback($form, $form_state) {
 }
 
 /**
- * Fonction appelée après une requête Ajax : chargement des logs
+ * Fonction appelée après une requête Ajax : chargement des logs.
  */
 function kw_djambi_ajax_log_callback($form, $form_state) {
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $selector = '#DjambiLog' . $grid->getId();
   $commands = array();
@@ -1469,40 +1651,38 @@ function kw_djambi_ajax_log_callback($form, $form_state) {
 }
 
 /**
- * Soumission du formulaire de jeu
+ * Soumission du formulaire de jeu.
  */
 function kw_djambi_game_form_submit($form, &$form_state) {
   $change_turn = FALSE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $form_state['rebuild'] = TRUE;
   switch ($form_state['kw_djambi']['phase']) {
-    case('interaction_result') :
+    case('interaction_result'):
       $interaction = current($form_state['kw_djambi']['interactions']);
+      /* @var $piece DjambiPiece */
       $piece = $form_state['kw_djambi']['selected_piece'];
+      $grid = $piece->getBattlefield();
       if ($interaction['type'] == 'murder') {
         $victim_piece = $interaction['target'];
-        $piece->kill($victim_piece, $form_state['kw_djambi']['selected_interaction']);
-        $grid = $piece->getBattlefield();
+        $piece->kill($victim_piece, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
       }
       elseif ($interaction['type'] == 'necromobility') {
         $victim_piece = $interaction['target'];
-        $piece->necromove($victim_piece, $form_state['kw_djambi']['selected_interaction']);
-        $grid = $piece->getBattlefield();
+        $piece->necromove($victim_piece, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
       }
       elseif ($interaction['type'] == 'manipulation') {
         $manipulated_piece = $interaction['target'];
-        $piece->manipulate($manipulated_piece, $form_state['kw_djambi']['selected_interaction']);
-        $grid = $piece->getBattlefield();
+        $piece->manipulate($manipulated_piece, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
       }
       elseif ($interaction['type'] == 'reportage') {
         $cells = $piece->getBattlefield()->getCells();
-        $victim = $cells[$form_state['kw_djambi']['selected_interaction']]['occupant'];
-        $piece->kill($victim, $form_state['kw_djambi']['selected_interaction']);
-        $grid = $piece->getBattlefield();
+        $victim = $cells[$form_state['kw_djambi']['selected_interaction']]->getOccupant();
+        $piece->kill($victim, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
       }
       elseif ($interaction['type'] == 'throne_evacuation') {
-        $piece->evacuate($form_state['kw_djambi']['selected_interaction']);
-        $grid = $piece->getBattlefield();
+        $piece->evacuate($grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
       }
       $interaction_key = key($form_state['kw_djambi']['interactions']);
       unset($form_state['kw_djambi']['interactions'][$interaction_key]);
@@ -1514,12 +1694,12 @@ function kw_djambi_game_form_submit($form, &$form_state) {
         $form_state['kw_djambi']['phase'] = 'move_interactions';
       }
       break;
-    case('move_result') :
+
+    case('move_result'):
       /* @var $piece DjambiPiece */
       $piece = $form_state['kw_djambi']['selected_piece'];
-      $move_results = $piece->move($form_state['kw_djambi']['selected_destination']);
       $grid = $piece->getBattlefield();
-      $form_state['kw_djambi']['selected_piece'] = $piece;
+      $move_results = $piece->move($grid->findCellByName($form_state['kw_djambi']['selected_destination']));
       if (!empty($move_results)) {
         $form_state['kw_djambi']['phase'] = 'move_interactions';
         $form_state['kw_djambi']['interactions'] = $move_results;
@@ -1528,9 +1708,9 @@ function kw_djambi_game_form_submit($form, &$form_state) {
         $change_turn = TRUE;
       }
       break;
+
   }
   if ($change_turn) {
-    /* @var $grid DjambiBattlefield */
     $grid->changeTurn();
     _kw_djambi_save_game($grid, $form_state);
   }
@@ -1538,7 +1718,7 @@ function kw_djambi_game_form_submit($form, &$form_state) {
 }
 
 /**
- * Soumission de formulaire : annulation de la sélection d'une pièce
+ * Soumission de formulaire : annulation de la sélection d'une pièce.
  */
 function kw_djambi_game_form_cancel_selection_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
@@ -1548,21 +1728,23 @@ function kw_djambi_game_form_cancel_selection_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton d'annulation du dernier tour du jeu
+ * Soumission du bouton d'annulation du dernier tour du jeu.
  */
 function kw_djambi_game_form_cancel_last_turn_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
   $form_state['kw_djambi']['change_turn'] = TRUE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $grid->cancelLastTurn();
   _kw_djambi_save_game($grid, $form_state);
 }
 
 /**
- * Soumission du bouton "passer son tour"
+ * Soumission du bouton "passer son tour".
  */
 function kw_djambi_game_form_skip_turn_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->skipTurn();
@@ -1571,10 +1753,11 @@ function kw_djambi_game_form_skip_turn_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Abandonner la partie"
+ * Soumission du bouton "Abandonner la partie".
  */
 function kw_djambi_game_form_withdraw_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->withdraw();
@@ -1584,10 +1767,11 @@ function kw_djambi_game_form_withdraw_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Revenir dans la partie"
+ * Soumission du bouton "Revenir dans la partie".
  */
 function kw_djambi_game_form_comeback_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $clicked_button = $form_state['clicked_button']['#parents'][0];
   $id = substr($clicked_button, strpos($clicked_button, '_') + 1);
@@ -1598,10 +1782,11 @@ function kw_djambi_game_form_comeback_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Proposer une partie nulle"
+ * Soumission du bouton "Proposer une partie nulle".
  */
 function kw_djambi_game_form_draw_proposal_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->callForADraw();
@@ -1610,10 +1795,11 @@ function kw_djambi_game_form_draw_proposal_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Accepter une partie nulle"
+ * Soumission du bouton "Accepter une partie nulle".
  */
 function kw_djambi_game_form_accept_peace_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->acceptDraw();
@@ -1622,10 +1808,11 @@ function kw_djambi_game_form_accept_peace_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Refuser une partie nulle"
+ * Soumission du bouton "Refuser une partie nulle".
  */
 function kw_djambi_game_form_reject_peace_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   $faction->rejectDraw();
@@ -1633,7 +1820,7 @@ function kw_djambi_game_form_reject_peace_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Afficher/cacher les boutons derniers déplacements"
+ * Soumission du bouton "Afficher/cacher les boutons derniers déplacements".
  */
 function kw_djambi_game_form_show_moves_submit($form, &$form_state) {
   global $user;
@@ -1650,7 +1837,7 @@ function kw_djambi_game_form_show_moves_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Afficher l'aide"
+ * Soumission du bouton "Afficher l'aide".
  */
 function kw_djambi_game_form_show_help_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
@@ -1663,10 +1850,11 @@ function kw_djambi_game_form_show_help_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Revoir la partie"
+ * Soumission du bouton "Revoir la partie".
  */
 function kw_djambi_game_form_replay_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $back_to_live = FALSE;
   if ($form_state['clicked_button']['#name'] == 'ui-replay-pause') {
@@ -1711,7 +1899,8 @@ function kw_djambi_game_form_replay_submit($form, &$form_state) {
   }
   else {
     if (($grid->isFinished() && $form_state['show_replay'] < $grid->getCurrentTurnId())
-    || ($grid->isPending() && $form_state['show_replay'] < $grid->getCurrentTurnId() - 1)) {
+      || ($grid->isPending() && $form_state['show_replay'] < $grid->getCurrentTurnId() - 1)
+    ) {
       $form_state['show_replay']++;
     }
     else {
@@ -1724,10 +1913,11 @@ function kw_djambi_game_form_replay_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Actualiser"
+ * Soumission du bouton "Actualiser".
  */
 function kw_djambi_game_form_refresh_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $faction = $grid->getPlayingFaction();
   if ($faction) {
@@ -1745,11 +1935,12 @@ function kw_djambi_game_form_refresh_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Rejoindre une partie"
+ * Soumission du bouton "Rejoindre une partie".
  */
 function kw_djambi_game_form_participate_submit($form, &$form_state) {
   global $user;
   $form_state['kw_djambi']['change_turn'] = TRUE;
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   $gm = $grid->getGameManager();
   if (!is_null($gm)) {
@@ -1762,17 +1953,20 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
   $allow_anonymous = $grid->getOption('allow_anonymous_players');
   if (!$allow_anonymous && $user->uid == 0) {
     drupal_set_message(t('Only registered players can join this game. Please !login or !register.', array(
-          '!login' => l(t('login to your account'), 'user/login'),
-          '!register' => l(t('create a new account'), 'user/register')
+      '!login' => l(t('login to your account'), 'user/login'),
+      '!register' => l(t('create a new account'), 'user/register'),
     )), 'error');
     return;
   }
   $clicked_button = $form_state['clicked_button'];
   $faction_id = $clicked_button['#array_parents'][2];
   $nb_empty_factions = 0;
+  /* @var $faction DjambiPoliticalFaction */
   foreach ($grid->getFactions() as $faction) {
     if ($faction->getId() != $faction_id) {
-      if ($grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $faction)) {
+      if ($grid->getGameManager()
+        ->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $faction)
+      ) {
         $faction->setStatus(KW_DJAMBI_USER_EMPTY_SLOT);
       }
       if ($faction->getStatus() == KW_DJAMBI_USER_EMPTY_SLOT) {
@@ -1785,14 +1979,18 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
     $faction->setStatus(KW_DJAMBI_USER_READY);
     $user_data = $faction->getUserData();
     $user_data['joined'] = time();
-    $grid->getGameManager()->updateUserInfos($user_data, $faction->getUserDataItem('djuid'), TRUE);
+    $grid->getGameManager()
+      ->updateUserInfos($user_data, $faction->getUserDataItem('djuid'), TRUE);
     if ($nb_empty_factions == 0) {
       $grid->setStatus(KW_DJAMBI_STATUS_PENDING);
     }
-    $grid->logEvent('info', 'NEW_TEAM', array('faction1' => $faction->getId(),
-        '!user_id' => $user->uid, '!user_ip' => ip_address()));
+    $grid->logEvent('info', 'NEW_TEAM', array(
+      'faction1' => $faction->getId(),
+      '!user_id' => $user->uid,
+      '!user_ip' => ip_address(),
+    ));
     drupal_set_message(t('You are now playing the !color team.',
-        array('!color' => _kw_djambi_get_translatable_messages($faction->getName()))));
+      array('!color' => _kw_djambi_get_translatable_messages($faction->getName()))));
     _kw_djambi_save_game($grid, $form_state);
   }
   else {
@@ -1801,15 +1999,19 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
 }
 
 /**
- * Soumission du bouton "Quitter la partie"
+ * Soumission du bouton "Quitter la partie".
  */
 function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
+  /* @var $grid DjambiBattlefield */
   $grid = $form['grid']['#grid'];
   if ($grid->getStatus() == KW_DJAMBI_STATUS_RECRUITING) {
     global $user;
     $nb_playing_factions = 0;
+    /* @var $faction DjambiPoliticalFaction */
     foreach ($grid->getFactions() as $faction) {
-      if ($grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $faction)) {
+      if ($grid->getGameManager()
+        ->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $faction)
+      ) {
         $faction->setStatus(KW_DJAMBI_USER_EMPTY_SLOT);
       }
       if ($faction->getStatus() == KW_DJAMBI_USER_READY) {
@@ -1821,7 +2023,10 @@ function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
     }
     else {
       global $user;
-      $grid->logEvent('info', 'TEAM_EXIT', array('!user_id' => $user->uid, '!user_ip' => ip_address()));
+      $grid->logEvent('info', 'TEAM_EXIT', array(
+        '!user_id' => $user->uid,
+        '!user_ip' => ip_address(),
+      ));
       _kw_djambi_save_game($grid, $form_state);
     }
     drupal_set_message(t('You just left Djambi game #!nb', array('!nb' => $grid->getInfo('sequence'))));
@@ -1830,7 +2035,17 @@ function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
 }
 
 /**
- * Validation de la sélection d'une pièce
+ * Validation de la sélection d'une pièce.
+ *
+ * @param array $errors
+ *   Tableau associatif contenant les erreurs d'un formulaire
+ * @param string $piece_id
+ *   Identifiant d'une pièce
+ * @param DjambiBattlefield $grid
+ *   Grille de Djambi
+ *
+ * @return DjambiPiece
+ *   Renvoie la pièce sélectionnée si correct, FALSE sinon.
  */
 function kw_djambi_piece_selection_validate(&$errors, $piece_id, DjambiBattlefield $grid) {
   global $user;
@@ -1839,25 +2054,27 @@ function kw_djambi_piece_selection_validate(&$errors, $piece_id, DjambiBattlefie
   $faction = $grid->getPlayingFaction();
   if ($faction && !$grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $faction)) {
     $errors[] = array(
-        "location" => $piece_form_locator,
-        "msg" => t("You do not own the !faction pieces.", array("!faction",
-            _kw_djambi_get_translatable_messages($faction->getName())))
+      "location" => $piece_form_locator,
+      "msg" => t("You do not own the !faction pieces.", array(
+        "!faction",
+        _kw_djambi_get_translatable_messages($faction->getName()),
+      )),
     );
     return FALSE;
   }
   $pieces = $faction->getControlledPieces();
   if (!isset($pieces[$piece_id])) {
-    $errors[] =  array(
-        "location" => $piece_form_locator,
-        "msg" => t("Unrecognized piece.")
+    $errors[] = array(
+      "location" => $piece_form_locator,
+      "msg" => t("Unrecognized piece."),
     );
     return FALSE;
   }
   $piece = $pieces[$piece_id];
   if (!$piece->isMovable()) {
     $errors = array(
-        "location" => $piece_form_locator,
-        "msg" => t("The piece !piece cannot move currently.", array("!piece" => $piece->getLongname("t")))
+      "location" => $piece_form_locator,
+      "msg" => t("The piece !piece cannot be moved now.", array("!piece" => _kw_djambi_get_full_piece_name($piece))),
     );
   }
   if (!empty($errors)) {
@@ -1867,19 +2084,20 @@ function kw_djambi_piece_selection_validate(&$errors, $piece_id, DjambiBattlefie
 }
 
 /**
- * Validation des actions sur la grille de jeu
+ * Validation des actions sur la grille de jeu.
  */
 function kw_djambi_game_form_validate($form, &$form_state) {
   /* @var $grid DjambiBattlefield */
   $grid = $form['grid']["#grid"];
   $errors = array();
-  // Détection du bouton cliqué.
+  // Détection du bouton cliqué :
   $button = $form_state["triggering_element"];
   $type_button = isset($button["#array_parents"][2]) ? $button["#array_parents"][2] : NULL;
-  // Traitement des différents cas
+  // Traitement des différents cas :
   if ($type_button == "movable") {
     $piece = kw_djambi_piece_selection_validate($errors, $button["#return_value"], $grid);
     if ($piece && isset($form_state["kw_djambi"]["selected_piece"])) {
+      /* @var $selected_piece DjambiPiece */
       $selected_piece = $form_state["kw_djambi"]["selected_piece"];
       if ($piece->getId() == $selected_piece->getId()) {
         $piece = FALSE;
@@ -1943,7 +2161,7 @@ function kw_djambi_game_form_validate($form, &$form_state) {
       }
     }
     elseif ($current_interaction["type"] == "throne_evacuation" && $type_button == $current_interaction["type"]) {
-      $evacuation = kw_djambi_piece_evacuation_validate($errors, $grid, $selected_piece, $button["#return_value"], $button["#name"]);
+      $evacuation = kw_djambi_piece_evacuation_validate($errors, $selected_piece, $button["#return_value"], $button["#name"]);
       if ($evacuation) {
         $form_state["kw_djambi"]["phase"] = "interaction_result";
         $form_state["kw_djambi"]["selected_interaction"] = $button["#return_value"];
@@ -1958,50 +2176,52 @@ function kw_djambi_game_form_validate($form, &$form_state) {
 }
 
 /**
- * Validation du déplacement d'une pièce
+ * Validation du déplacement d'une pièce.
  */
 function kw_djambi_piece_destination_validate(&$errors, DjambiPiece $piece, $destination, $button_name) {
   $move = FALSE;
-  foreach($piece->getAllowableMoves() as $allowable_move) {
-    if($destination == $allowable_move) {
+  foreach ($piece->getAllowableMovesNames() as $allowable_move) {
+    if ($destination == $allowable_move) {
       $move = $destination;
       break;
     }
   }
   if (!$move && !is_null($button_name)) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("You are not allowed to move !piece into !case case.", array(
-            "!piece" => $piece->getLongname("t"), "!case" => $destination))
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("You are not allowed to move !piece into !case case.", array(
+        "!piece" => $piece->getLongname("t"),
+        "!case" => $destination,
+      )),
     );
   }
   return $move;
 }
 
 /**
- * Validation du meurtre d'une pièce
+ * Validation du meurtre d'une pièce.
  */
 function kw_djambi_piece_murder_validate(&$errors, DjambiBattlefield $grid, DjambiPiece $murderer, DjambiPiece $victim, $destination, $button_name) {
   if (!$victim->isAlive()) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("Your victim seems to be already dead.")
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("Your victim seems to be already dead."),
     );
     return FALSE;
   }
   $can_attack = $murderer->checkAttackingPossibility($victim);
   if (!$can_attack) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("You are not allowed to kill this piece.")
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("You are not allowed to kill this piece."),
     );
     return FALSE;
   }
   $free_cells = $grid->getFreeCells($victim);
   if (!in_array($destination, $free_cells)) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("You cannot place bury your victim here, case !case is unavailable.", array("!case" => $destination))
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("You cannot place bury your victim here, case !case is unavailable.", array("!case" => $destination)),
     );
     return FALSE;
   }
@@ -2009,37 +2229,37 @@ function kw_djambi_piece_murder_validate(&$errors, DjambiBattlefield $grid, Djam
 }
 
 /**
- * Validation du reportage sur une pièce
+ * Validation du reportage sur une pièce.
  */
 function kw_djambi_piece_reportage_validate(&$errors, DjambiBattlefield $grid, DjambiPiece $piece, $destination, $button_name) {
   $cells = $grid->getCells();
   if (!isset($cells[$destination])) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("The reportage location is totally incorrect.")
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("The reportage location is totally incorrect."),
     );
     return FALSE;
   }
-  if (empty($cells[$destination]["occupant"])) {
+  $occupant = $cells[$destination]->getOccupant();
+  if (empty($occupant)) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("There is nobody here (!case).", array("!case" => $destination))
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("There is nobody here (!case).", array("!case" => $destination)),
     );
     return FALSE;
   }
-  $occupant = $cells[$destination]["occupant"];
   if (!$occupant->isAlive()) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("Already dead, too late for a reportage.")
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("Already dead, too late for a reportage."),
     );
     return FALSE;
   }
   if ($grid->getOption('rule_press_liberty') == 'pravda'
-      && $occupant->getFaction()->getControl()->getId() == $piece->getFaction()->getControl()->getId()) {
+    && $occupant->getFaction()->getControl()->getId() == $piece->getFaction()->getControl()->getId()) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("It is not a good idea to make a reportage about your own team evil actions.")
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("It is not a good idea to make a reportage about your own team evil actions."),
     );
     return FALSE;
   }
@@ -2047,29 +2267,29 @@ function kw_djambi_piece_reportage_validate(&$errors, DjambiBattlefield $grid, D
 }
 
 /**
- * Validation de la manipulation d'une pièce
+ * Validation de la manipulation d'une pièce.
  */
 function kw_djambi_piece_manipulation_validate(&$errors, DjambiBattlefield $grid, DjambiPiece $diplomat, DjambiPiece $manipulated, $destination, $button_name) {
   if (!$manipulated->isAlive()) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("You cannot manipulate a dead piece (use a necromobil for this disgusting work).")
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("You cannot manipulate a dead piece (use a necromobil for this disgusting work)."),
     );
     return FALSE;
   }
   $can_manipulate = $diplomat->checkManipulatingPossibility($manipulated);
-  if(!$can_manipulate) {
+  if (!$can_manipulate) {
     $errors[] = array(
-        "location" => "pieces[destination][ " . $button_name,
-        "msg" => t("You cannot manipulate this piece.")
+      "location" => "pieces[destination][ " . $button_name,
+      "msg" => t("You cannot manipulate this piece."),
     );
     return FALSE;
   }
   $free_cells = $grid->getFreeCells($manipulated);
   if (!in_array($destination, $free_cells)) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("You cannot place the manipulated piece here, case !case is unavailable.", array("!case" => $destination))
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("You cannot place the manipulated piece here, case !case is unavailable.", array("!case" => $destination)),
     );
     return FALSE;
   }
@@ -2077,21 +2297,21 @@ function kw_djambi_piece_manipulation_validate(&$errors, DjambiBattlefield $grid
 }
 
 /**
- * Validation du déplacement d'un mort
+ * Validation du déplacement d'un mort.
  */
 function kw_djambi_piece_necromobility_validate(&$errors, DjambiBattlefield $grid, DjambiPiece $piece, $destination, $button_name) {
   if ($piece->isAlive()) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("This dead body is still breathing...")
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("This dead body is still breathing..."),
     );
     return FALSE;
   }
   $free_cells = $grid->getFreeCells($piece);
   if (!in_array($destination, $free_cells)) {
     $errors[] = array(
-        "location" => "pieces[destination][" . $button_name,
-        "msg" => t("You cannot place the dead piece here, case !case is unavailable.", array("!case" => $destination))
+      "location" => "pieces[destination][" . $button_name,
+      "msg" => t("You cannot place the dead piece here, case !case is unavailable.", array("!case" => $destination)),
     );
     return FALSE;
   }
@@ -2099,8 +2319,8 @@ function kw_djambi_piece_necromobility_validate(&$errors, DjambiBattlefield $gri
 }
 
 /**
- * Validation de l'évacuation d'un pion
+ * Validation de l'évacuation d'un pion.
  */
-function kw_djambi_piece_evacuation_validate(&$errors, DjambiBattlefield $grid, DjambiPiece $piece, $destination, $button_name) {
+function kw_djambi_piece_evacuation_validate(&$errors, DjambiPiece $piece, $destination, $button_name) {
   return kw_djambi_piece_destination_validate($errors, $piece, $destination, $button_name);
 }

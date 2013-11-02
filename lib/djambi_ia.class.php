@@ -1,7 +1,8 @@
 <?php
 class DjambiIA {
-  private $name,
-          $faction;
+  protected $name;
+  /* @var DjambiPoliticalFaction $faction */
+  protected $faction;
 
   public static function getDefaultIAClass() {
     return 'DjambiIADummy';
@@ -29,7 +30,6 @@ class DjambiIA {
 
   public function play() {
     $available_moves = array();
-    /* @var $piece DjambiPiece */
     foreach ($this->getFaction()->getControlledPieces() as $piece) {
       if ($piece->isMovable()) {
         foreach ($piece->getAllowableMoves() as $destination) {
@@ -45,28 +45,33 @@ class DjambiIA {
     }
     else {
       $move = $this->decideMove($available_moves);
+      /* @var DjambiPiece $piece */
       $piece = $move['piece'];
       $piece->move($move['destination']);
       foreach ($move['interactions'] as $interaction) {
         switch ($interaction['type']) {
-          case('manipulation') :
+          case('manipulation'):
             $destination = $this->decideManipulation($interaction['choices']);
             $piece->manipulate($interaction['target'], $destination);
             break;
-          case('necromobility') :
+
+          case('necromobility'):
             $destination = $this->decideDeadPlacement($interaction['choices']);
             $piece->necromove($interaction['target'], $destination);
             break;
-          case('reportage') :
+
+          case('reportage'):
             $victim_id = $this->decideReportage($interaction['choices']);
             $victim = $this->getBattlefield()->getPieceById($victim_id);
             $piece->kill($victim, $victim->getPosition());
             break;
-          case('murder') :
+
+          case('murder'):
             $destination = $this->decideDeadPlacement($interaction['choices']);
             $piece->kill($interaction['target'], $destination);
             break;
-          case('throne_evacuation') :
+
+          case('throne_evacuation'):
             $destination = $this->decideEvacuation($interaction['choices']);
             $piece->evacuate($destination);
             break;
@@ -79,30 +84,30 @@ class DjambiIA {
     $this->getBattlefield()->resetCells();
   }
 
-  private function decideMove($moves) {
+  protected function decideMove($moves) {
     return $moves[array_rand($moves, 1)];
   }
 
-  private function decideDeadPlacement($choices) {
+  protected function decideDeadPlacement($choices) {
     return $choices[array_rand($choices, 1)];
   }
 
-  private function decideReportage($choices) {
+  protected function decideReportage($choices) {
     return $choices[array_rand($choices, 1)];
   }
 
-  private function decideEvacuation($choices) {
+  protected function decideEvacuation($choices) {
     return $choices[array_rand($choices, 1)];
   }
 
-  private function decideManipulation($choices) {
+  protected function decideManipulation($choices) {
     return $choices[array_rand($choices, 1)];
   }
 
 }
 
 class DjambiIADummy extends DjambiIA {
-   public function __construct(DjambiPoliticalFaction $faction, $name = 'BetaBot') {
-     parent::__construct($faction, $name);
-   }
+  public function __construct(DjambiPoliticalFaction $faction, $name = 'BetaBot') {
+    parent::__construct($faction, $name);
+  }
 }

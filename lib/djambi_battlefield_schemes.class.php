@@ -1,16 +1,20 @@
 <?php
+/**
+ * Class DjambiBattlefieldScheme
+ */
 class DjambiBattlefieldScheme {
-  private $piece_scheme = array();
-  private $disposition;
-  private $rows;
-  private $cols;
-  private $special_cells;
-  private $sides;
-  private $allowable_dispositions = array('cardinal', 'hexagonal');
-  private $directions = array();
-  private $settings = array();
+  /* @var DjambiPieceDescription[] $pieceScheme */
+  protected $pieceScheme = array();
+  protected $disposition;
+  protected $rows;
+  protected $cols;
+  protected $specialCells;
+  protected $sides;
+  protected $allowableDispositions = array('cardinal', 'hexagonal');
+  protected $directions = array();
+  protected $settings = array();
 
-  public function __construct($settings) {
+  public function __construct($settings = NULL) {
     $cols = isset($settings['cols']) ? $settings['cols'] : 9;
     $rows = isset($settings['rows']) ? $settings['rows'] : 9;
     if (isset($settings['disposition']) && $settings['disposition'] == 'hexagonal') {
@@ -19,7 +23,7 @@ class DjambiBattlefieldScheme {
     else {
       $this->useStandardGrid($rows, $cols);
     }
-    $this->special_cells = isset($settings['special_cells']) ? $settings['special_cells'] : $this->special_cells;
+    $this->specialCells = isset($settings['special_cells']) ? $settings['special_cells'] : $this->specialCells;
     $this->setSettings($settings);
     $this->useStandardPieces();
     return $this;
@@ -57,20 +61,92 @@ class DjambiBattlefieldScheme {
   protected function useCardinalDirections($diagonals) {
     $directions = array();
     if (!$diagonals) {
-      $directions['N'] = array('x' => 0, 'y' => -1, 'diagonal' => FALSE, 'left' => 'W', 'right' => 'E');
-      $directions['E'] = array('x' => 1, 'y' => 0, 'diagonal' => FALSE, 'left' => 'N', 'right' => 'S');
-      $directions['S'] = array('x' => 0, 'y' => 1, 'diagonal' => FALSE, 'left' => 'E', 'right' => 'W');
-      $directions['W'] = array('x' => -1, 'y' => 0, 'diagonal' => FALSE, 'left' => 'S', 'right' => 'N');
+      $directions['N'] = array(
+        'x' => 0,
+        'y' => -1,
+        'diagonal' => FALSE,
+        'left' => 'W',
+        'right' => 'E',
+      );
+      $directions['E'] = array(
+        'x' => 1,
+        'y' => 0,
+        'diagonal' => FALSE,
+        'left' => 'N',
+        'right' => 'S',
+      );
+      $directions['S'] = array(
+        'x' => 0,
+        'y' => 1,
+        'diagonal' => FALSE,
+        'left' => 'E',
+        'right' => 'W',
+      );
+      $directions['W'] = array(
+        'x' => -1,
+        'y' => 0,
+        'diagonal' => FALSE,
+        'left' => 'S',
+        'right' => 'N',
+      );
     }
     else {
-      $directions['N'] = array('x' => 0, 'y' => -1, 'diagonal' => FALSE, 'left' => 'NW', 'right' => 'NE');
-      $directions['E'] = array('x' => 1, 'y' => 0, 'diagonal' => FALSE, 'left' => 'NE', 'right' => 'SE');
-      $directions['S'] = array('x' => 0, 'y' => 1, 'diagonal' => FALSE, 'left' => 'SE', 'right' => 'SW');
-      $directions['W'] = array('x' => -1, 'y' => 0, 'diagonal' => FALSE, 'left' => 'SW', 'right' => 'NW');
-      $directions['NE'] = array('x' => 1, 'y' => -1, 'diagonal' => TRUE, 'left' => 'N', 'right' => 'E');
-      $directions['SE'] = array('x' => 1, 'y' => 1, 'diagonal' => TRUE, 'left' => 'E', 'right' => 'S');
-      $directions['SW'] = array('x' => -1, 'y' => 1, 'diagonal' => TRUE, 'left' => 'S', 'right' => 'W');
-      $directions['NW'] = array('x' => -1, 'y' => -1, 'diagonal' => TRUE, 'left' => 'W', 'right' => 'N');
+      $directions['N'] = array(
+        'x' => 0,
+        'y' => -1,
+        'diagonal' => FALSE,
+        'left' => 'NW',
+        'right' => 'NE',
+      );
+      $directions['E'] = array(
+        'x' => 1,
+        'y' => 0,
+        'diagonal' => FALSE,
+        'left' => 'NE',
+        'right' => 'SE',
+      );
+      $directions['S'] = array(
+        'x' => 0,
+        'y' => 1,
+        'diagonal' => FALSE,
+        'left' => 'SE',
+        'right' => 'SW',
+      );
+      $directions['W'] = array(
+        'x' => -1,
+        'y' => 0,
+        'diagonal' => FALSE,
+        'left' => 'SW',
+        'right' => 'NW',
+      );
+      $directions['NE'] = array(
+        'x' => 1,
+        'y' => -1,
+        'diagonal' => TRUE,
+        'left' => 'N',
+        'right' => 'E',
+      );
+      $directions['SE'] = array(
+        'x' => 1,
+        'y' => 1,
+        'diagonal' => TRUE,
+        'left' => 'E',
+        'right' => 'S',
+      );
+      $directions['SW'] = array(
+        'x' => -1,
+        'y' => 1,
+        'diagonal' => TRUE,
+        'left' => 'S',
+        'right' => 'W',
+      );
+      $directions['NW'] = array(
+        'x' => -1,
+        'y' => -1,
+        'diagonal' => TRUE,
+        'left' => 'W',
+        'right' => 'N',
+      );
     }
     $this->directions = $directions;
     return $this;
@@ -78,20 +154,60 @@ class DjambiBattlefieldScheme {
 
   protected function useHexagonalDirections() {
     $directions = array(
-        'NE' => array('x' => 1, 'y' => -1, 'diagonal' => FALSE, 'left' => 'NW', 'right' => 'E', 'modulo_x' => TRUE),
-        'E' => array('x' => 1, 'y' => 0, 'diagonal' => FALSE, 'left' => 'NE', 'right' => 'SE'),
-        'SE' => array('x' => 1, 'y' => 1, 'diagonal' => FALSE, 'left' => 'E', 'right' => 'SW', 'modulo_x' => TRUE),
-        'SW' => array('x' => -1, 'y' => 1, 'diagonal' => FALSE, 'left' => 'SE', 'right' => 'W', 'modulo_x' => TRUE),
-        'W' => array('x' => -1, 'y' => 0, 'diagonal' => FALSE, 'left' => 'SW', 'right' => 'NW'),
-        'NW' => array('x' => -1, 'y' => -1, 'diagonal' => FALSE, 'left' => 'W', 'right' => 'NE', 'modulo_x' => TRUE)
+      'NE' => array(
+        'x' => 1,
+        'y' => -1,
+        'diagonal' => FALSE,
+        'left' => 'NW',
+        'right' => 'E',
+        'modulo_x' => TRUE,
+      ),
+      'E' => array(
+        'x' => 1,
+        'y' => 0,
+        'diagonal' => FALSE,
+        'left' => 'NE',
+        'right' => 'SE',
+      ),
+      'SE' => array(
+        'x' => 1,
+        'y' => 1,
+        'diagonal' => FALSE,
+        'left' => 'E',
+        'right' => 'SW',
+        'modulo_x' => TRUE,
+      ),
+      'SW' => array(
+        'x' => -1,
+        'y' => 1,
+        'diagonal' => FALSE,
+        'left' => 'SE',
+        'right' => 'W',
+        'modulo_x' => TRUE,
+      ),
+      'W' => array(
+        'x' => -1,
+        'y' => 0,
+        'diagonal' => FALSE,
+        'left' => 'SW',
+        'right' => 'NW',
+      ),
+      'NW' => array(
+        'x' => -1,
+        'y' => -1,
+        'diagonal' => FALSE,
+        'left' => 'W',
+        'right' => 'NE',
+        'modulo_x' => TRUE,
+      ),
     );
     $this->directions = $directions;
     return $this;
   }
 
   protected function addAllowableDispositions($disposition) {
-    if (!in_array($disposition, $this->allowable_dispositions)) {
-      $this->allowable_dispositions[] = $disposition;
+    if (!in_array($disposition, $this->allowableDispositions)) {
+      $this->allowableDispositions[] = $disposition;
       return TRUE;
     }
     else {
@@ -99,8 +215,8 @@ class DjambiBattlefieldScheme {
     }
   }
 
-  private function setDispostion($disposition) {
-    if (!in_array($disposition, $this->allowable_dispositions)) {
+  protected function setDispostion($disposition) {
+    if (!in_array($disposition, $this->allowableDispositions)) {
       throw new Exception('Unknown disposition');
     }
     else {
@@ -112,7 +228,7 @@ class DjambiBattlefieldScheme {
     return $this->disposition;
   }
 
-  private function setRows($nb) {
+  protected function setRows($nb) {
     if ($nb <= 0) {
       throw new Exception('Not enough rows');
     }
@@ -128,7 +244,7 @@ class DjambiBattlefieldScheme {
     return $this->rows;
   }
 
-  private function setCols($nb) {
+  protected function setCols($nb) {
     if ($nb <= 0) {
       throw new Exception('Not enough columns');
     }
@@ -145,12 +261,13 @@ class DjambiBattlefieldScheme {
   }
 
   protected function addPiece($class, $identifier, $start_scheme) {
+    /* @var DjambiPiece $piece */
     $piece = new $class($identifier, $start_scheme);
-    $this->piece_scheme[$piece->getShortname()] = $piece;
+    $this->pieceScheme[$piece->getShortname()] = $piece;
   }
 
   public function getPieceScheme() {
-    return $this->piece_scheme;
+    return $this->pieceScheme;
   }
 
   protected function addSide($start_origin) {
@@ -162,17 +279,14 @@ class DjambiBattlefieldScheme {
   }
 
   protected function addSpecialCell($type, $location) {
-    if (is_array($location)) {
-      $location = DjambiBattlefield::locateCell($location);
-    }
-    $this->special_cells[] = array(
-        'type' => $type,
-        'location' => $location
+    $this->specialCells[] = array(
+      'type' => $type,
+      'location' => $location,
     );
   }
 
   public function getSpecialCells() {
-    return $this->special_cells;
+    return $this->specialCells;
   }
 
   public function getDirections() {
@@ -201,8 +315,11 @@ class DjambiBattlefieldScheme {
   }
 }
 
+/**
+ * Class DjambiBattlefieldSchemeStandardGridWith4Sides
+ */
 class DjambiBattlefieldSchemeStandardGridWith4Sides extends DjambiBattlefieldScheme {
-  public function __construct($settings) {
+  public function __construct($settings = NULL) {
     $this->useStandardGrid(9, 9);
     $this->useStandardPieces();
     $this->addSide(array('x' => 1, 'y' => 9));
@@ -213,8 +330,11 @@ class DjambiBattlefieldSchemeStandardGridWith4Sides extends DjambiBattlefieldSch
   }
 }
 
+/**
+ * Class DjambiBattlefieldSchemeHexagonalGridWith3Sides
+ */
 class DjambiBattlefieldSchemeHexagonalGridWith3Sides extends DjambiBattlefieldScheme {
-  public function __construct($settings) {
+  public function __construct($settings = NULL) {
     $this->useHexagonalGrid(9, 9);
     $this->useStandardPieces();
     $this->addSpecialCell('disabled', array('x' => 1, 'y' => 1));
@@ -243,8 +363,11 @@ class DjambiBattlefieldSchemeHexagonalGridWith3Sides extends DjambiBattlefieldSc
   }
 }
 
+/**
+ * Class DjambiBattlefieldSchemeMiniGridWith2Sides
+ */
 class DjambiBattlefieldSchemeMiniGridWith2Sides extends DjambiBattlefieldScheme {
-  public function __construct($settings) {
+  public function __construct($settings = NULL) {
     $this->useStandardGrid(7, 7);
     $this->addPiece('DjambiPieceLeader', NULL, array('x' => 0, 'y' => 0));
     $this->addPiece('DjambiPieceMilitant', 1, array('x' => 1, 'y' => 0));
@@ -253,7 +376,11 @@ class DjambiBattlefieldSchemeMiniGridWith2Sides extends DjambiBattlefieldScheme 
       $surprise = $settings['surprise_piece'];
     }
     else {
-      $surprises = array('DjambiPieceAssassin', 'DjambiPieceReporter', 'DjambiPieceDiplomate');
+      $surprises = array(
+        'DjambiPieceAssassin',
+        'DjambiPieceReporter',
+        'DjambiPieceDiplomate',
+      );
       $surprise = $surprises[array_rand($surprises)];
       $settings['surprise_piece'] = $surprise;
     }

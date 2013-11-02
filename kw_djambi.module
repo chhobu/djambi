@@ -1,5 +1,9 @@
 <?php
-// $Id$
+/**
+ * @file
+ * Module kw_djambi : fichier principal, contenant les implémentations de hook
+ *   et des fonctions support.
+ */
 
 /**
  * Implements hook_theme().
@@ -7,61 +11,73 @@
 function kw_djambi_theme() {
   return array(
     'djambi_grid' => array(
-        'render element' => 'form',
-        'file' => 'kw_djambi.theme.inc'
+      'render element' => 'form',
+      'file' => 'kw_djambi.theme.inc',
     ),
     'djambi_recruiting_phase' => array(
-        'render element' => 'form',
-        'file' => 'kw_djambi.theme.inc'
+      'render element' => 'form',
+      'file' => 'kw_djambi.theme.inc',
     ),
     'djambi_log' => array(
-         'render element' => 'form',
-         'file' => 'kw_djambi.theme.inc'
+      'render element' => 'form',
+      'file' => 'kw_djambi.theme.inc',
     ),
     'djambi_piece_name' => array(
-        'variables' => array('piece' => NULL),
-        'file' => 'kw_djambi.theme.inc'
+      'variables' => array('piece' => NULL),
+      'file' => 'kw_djambi.theme.inc',
     ),
     'djambi_faction_name' => array(
-      'variables' => array('faction' => NULL, 'use_faction_class' => FALSE, 'use_control_class' => FALSE),
-      'file' => 'kw_djambi.theme.inc'
+      'variables' => array(
+        'faction' => NULL,
+        'use_faction_class' => FALSE,
+        'use_control_class' => FALSE,
+      ),
+      'file' => 'kw_djambi.theme.inc',
     ),
     'djambi_players_table' => array(
       'variables' => array('grid' => NULL),
-      'file' => 'kw_djambi.theme.inc'
+      'file' => 'kw_djambi.theme.inc',
     ),
     'djambi_grid_caption' => array(
-      'variables' => array('grid' => NULL, 'displayed_turn' => NULL, 'displayed_turn_id' => NULL, 'show_changes' => FALSE),
-      'file' => 'kw_djambi.theme.inc'
+      'variables' => array(
+        'grid' => NULL,
+        'displayed_turn' => NULL,
+        'displayed_turn_id' => NULL,
+        'show_changes' => FALSE,
+      ),
+      'file' => 'kw_djambi.theme.inc',
     ),
     'djambi_game_description' => array(
       'variables' => array('infos_lines' => NULL, 'grid' => NULL),
-      'file' => 'kw_djambi.theme.inc'
+      'file' => 'kw_djambi.theme.inc',
     ),
     'djambi_recent_events' => array(
       'variables' => array('grid' => NULL),
-      'file' => 'kw_djambi.theme.inc'
+      'file' => 'kw_djambi.theme.inc',
     ),
     'djambi_waiting_label' => array(
       'variables' => array('grid' => NULL, 'faction' => NULL),
-      'file' => 'kw_djambi.theme.inc'
+      'file' => 'kw_djambi.theme.inc',
     ),
     'hexagonal_grid' => array(
-        'variables' => array('rows' => array(), 'caption' => NULL, 'attributes' => array()),
-        'file' => 'kw_djambi.theme.inc'
+      'variables' => array(
+        'rows' => array(),
+        'caption' => NULL,
+        'attributes' => array(),
+      ),
+      'file' => 'kw_djambi.theme.inc',
     ),
   );
 }
 
 /**
- * Pré-traitement de l'affichage d'une grille de Djambi
- * @param unknown $variables
+ * Pré-traitement de l'affichage d'une grille de Djambi.
  */
 function kw_djambi_preprocess_djambi_grid(&$variables) {
   global $user;
   $form = $variables["form"];
   /* @var $grid DjambiBattlefield */
-  // Récupération de la grille
+  // Récupération de la grille.
   $grid = $form["#grid"];
   // Affichage du bloc événement ?
   $display_events = $grid->isPending();
@@ -69,16 +85,16 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
     $display_events = FALSE;
   }
   $variables['show_events'] = $display_events;
-  // Animation des derniers mouvements
+  // Animation des derniers mouvements :
   $show_changes = FALSE;
-  // Affichage des descriptions des derniers mouvements
+  // Affichage des descriptions des derniers mouvements :
   $show_moves = $form['controls']['show_moves']['#value'];
   // Affichage de l'aide ?
   $show_help = $form['controls']['show_help']['#value'];
   if ($show_help || isset($form['pieces'])) {
     $variables['helps'] = _kw_djambi_load_rule_nodes($grid);
   }
-  // Détermination de la phase de jeu
+  // Détermination de la phase de jeu :
   if (isset($form["pieces"])) {
     $children = element_children($form['pieces']);
     $current_form_action = 'piece_selection';
@@ -94,17 +110,18 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
     $current_form_action = NULL;
   }
   $variables['current_form_action'] = $current_form_action;
-  // Récupération des données concernant le tour de jeu
+  // Récupération des données concernant le tour de jeu :
   $turns = $grid->getTurns();
   $displayed_turn_id = $grid->getDisplayedTurnId();
   $current_turn_id = $grid->getCurrentTurnId();
   if (!empty($turns)) {
-    $displayed_turn = isset($turns[$displayed_turn_id]) ? $turns[$displayed_turn_id] : $turns[$current_turn_id];
+    $displayed_turn = isset($turns[$displayed_turn_id]) ?
+      $turns[$displayed_turn_id] : $turns[$current_turn_id];
   }
   else {
     $displayed_turn = 0;
   }
-  // Affichage des mouvements passés
+  // Affichage des mouvements passés :
   $past_moves = array();
   if ($displayed_turn_id <= $current_turn_id) {
     $show_changes = TRUE;
@@ -117,19 +134,26 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
     $described_moves = $grid->returnShowableMoveData($form['controls']['showable_turns']['#value'], '_kw_djambi_describe_move');
   }
   $variables['described_moves'] = $described_moves;
-  // En-tête dans le cas d'une grille classique
+  // En-tête dans le cas d'une grille classique.
   $header = array();
   $rows = array();
-  if ($grid->getScheme()->getDisposition() != 'hexagonal') {
+  if ($grid->getDisposition()->getScheme()->getDisposition() != 'hexagonal') {
     for ($i = 0; $i <= $grid->getDimensions(); $i++) {
-      $header[] = array("data" => DjambiBattlefield::intToAlpha($i), "class" => array("graduation"));
+      $header[] = array(
+        "data" => $i > 0 ? $grid->findCell($i, 1)->getColumnName() : '#',
+        "class" => array("graduation"),
+      );
       if ($i > 0) {
         $rows[$i] = array(
-            "data" => array(
-                0 => array("data" => $i, "header" => TRUE, "class" => array("graduation"))
+          "data" => array(
+            0 => array(
+              "data" => $i,
+              "header" => TRUE,
+              "class" => array("graduation"),
             ),
-            "no_striping" => TRUE,
-            "class" => array("no-hover")
+          ),
+          "no_striping" => TRUE,
+          "class" => array("no-hover"),
         );
       }
     }
@@ -145,8 +169,9 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
   if ($grid->getInfo('interface') != 'minimal') {
     $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
   }
-  // Cas d'une partie à joueur unique
+  // Cas d'une partie à joueur unique.
   if ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+    /* @var $random_faction DjambiPoliticalFaction */
     foreach ($grid->getFactions() as $random_faction) {
       if ($random_faction->getStatus() != KW_DJAMBI_USER_VASSALIZED) {
         break;
@@ -162,12 +187,12 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
     }
     $infos_lines[t('Player')] = t('!player, controlling all sides.', array('!player' => $player));
   }
-  // Cas d'une partie en cours : génération du tableau des joueurs
+  // Cas d'une partie en cours : génération du tableau des joueurs...
   elseif ($grid->isPending()) {
     $infos_lines[t('Players')] = theme('djambi_players_table', array('grid' => $grid));
   }
   if ($grid->isPending()) {
-    // Puis affichage de l'ordre de jeu
+    // Puis affichage de l'ordre de jeu.
     $play_order = $grid->getPlayOrder();
     $current_play_order = current($play_order);
     $now_playing_faction = $grid->getFactionById($current_play_order["side"]);
@@ -177,28 +202,33 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
     $playing_next_faction2 = $grid->getFactionById($next_play_order["side"]);
     $next_play_order = next($play_order);
     $playing_next_faction3 = $grid->getFactionById($next_play_order["side"]);
-    $infos_lines[t("Now playing")] = t("!color side", array("!color" =>
-        theme('djambi_faction_name', array('faction' => $now_playing_faction))
+    $infos_lines[t("Now playing")] = t("!color side", array(
+      "!color" =>
+        theme('djambi_faction_name', array('faction' => $now_playing_faction)),
     ));
     if ($grid->getStatus() != KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
       $infos_lines[t("Playing next")] = t("!color1 side, then !color2 side, then !color3 side", array(
-          "!color1" => theme('djambi_faction_name', array('faction' => $playing_next_faction1)),
-          "!color2" => theme('djambi_faction_name', array('faction' => $playing_next_faction2)),
-          "!color3" => theme('djambi_faction_name', array('faction' => $playing_next_faction3))
+        "!color1" => theme('djambi_faction_name', array('faction' => $playing_next_faction1)),
+        "!color2" => theme('djambi_faction_name', array('faction' => $playing_next_faction2)),
+        "!color3" => theme('djambi_faction_name', array('faction' => $playing_next_faction3)),
       ));
       if (isset($form["textes"]["phase"])) {
         $infos_lines[t("Current phase")] = $form["textes"]["phase"]["#markup"];
         unset($form["textes"]["phase"]);
       }
       elseif (!$show_changes) {
-        $infos_lines[t("Current phase")] = theme('djambi_waiting_label', array('faction' => $now_playing_faction, 'grid' => $grid));
+        $infos_lines[t("Current phase")] = theme('djambi_waiting_label', array(
+          'faction' => $now_playing_faction,
+          'grid' => $grid,
+        ));
       }
     }
-    // Cas particulier d'une négociation de paix
+    // Cas particulier d'une négociation de paix...
     else {
       $accepted = array();
       $waiting = array();
-      foreach($grid->getFactions() as $playing_faction) {
+      /* @var $playing_faction DjambiPoliticalFaction */
+      foreach ($grid->getFactions() as $playing_faction) {
         if (!$playing_faction->isAlive()) {
           continue;
         }
@@ -213,51 +243,58 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
           $waiting[] = $faction_name;
         }
       }
-      $infos_lines[t("Current phase")] = t("Draw asked by !faction side.", array('!faction' => $peacemonger));
+      if (!empty($peacemonger)) {
+        $infos_lines[t("Current phase")] = t("Draw asked by !faction side.", array('!faction' => $peacemonger));
+      }
       if (!empty($accepted)) {
         $infos_lines[t("Sides having accepted the draw")] = implode(', ', $accepted);
       }
       if (!empty($waiting)) {
         $infos_lines[t("Undecided sides")] = implode(', ', $waiting);
-        $last_change = $grid->getInfo('changed');
         if (!$grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $playing_faction)) {
-          $infos_lines[t("Pending decision")] = theme('djambi_waiting_label', array('faction' => $now_playing_faction, 'grid' => $grid));
+          $infos_lines[t("Pending decision")] = theme('djambi_waiting_label', array(
+            'faction' => $now_playing_faction,
+            'grid' => $grid,
+          ));
         }
       }
     }
   }
-  $variables['game_description'] = theme('djambi_game_description', array('infos_lines' => $infos_lines, 'grid' => $grid));
+  $variables['game_description'] = theme('djambi_game_description', array(
+    'infos_lines' => $infos_lines,
+    'grid' => $grid,
+  ));
 
-  // Affichage des derniers événements
+  // Affichage des derniers événements :
   $variables['events'] = theme('djambi_recent_events', array('grid' => $grid));
 
-  // Génération de la légende de la grille
+  // Génération de la légende de la grille :
   $variables['caption'] = theme('djambi_grid_caption', array(
-      'grid' => $grid,
-      'displayed_turn_id' => $displayed_turn_id,
-      'displayed_turn' => $displayed_turn,
-      'show_changes' => $show_changes
+    'grid' => $grid,
+    'displayed_turn_id' => $displayed_turn_id,
+    'displayed_turn' => $displayed_turn,
+    'show_changes' => $show_changes,
   ));
 
 }
 
 /**
  * Implements hook_node_view().
- * Effectue une substitution sur certains mots clés pourles contenus de type règle du jeu
+ *
+ * Effectue une substitution sur certains mots clés pour les contenus de type
+ *   règle du jeu.
  */
 function kw_djambi_node_view($node, $view_mode) {
   if ($node->type == 'rule_element' && $view_mode == 'full' && !empty($node->content['body']) && module_exists('taxonomy')) {
     $text = $node->content['body'][0]['#markup'];
-    $vocabulary = taxonomy_vocabulary_machine_name_load('game_concept');
-    $query = 'SELECT T.name, N.nid, N.title
-    FROM {field_data_field_game_concept} F
-    INNER JOIN {node} N on N.vid = F.revision_id
-    INNER JOIN {taxonomy_term_data} T ON T.tid = F.field_game_concept_tid
-    WHERE N.status = 1 AND N.type = :type AND N.nid != :nid';
-    $result = db_query($query, array(
+    $result = db_query('SELECT T.name, N.nid, N.title
+      FROM {field_data_field_game_concept} F
+      INNER JOIN {node} N on N.vid = F.revision_id
+      INNER JOIN {taxonomy_term_data} T ON T.tid = F.field_game_concept_tid
+      WHERE N.status = 1 AND N.type = :type AND N.nid != :nid', array(
         ':type' => 'rule_element',
-        ':nid' => $node->nid
-    ))->fetchAllAssoc('name');
+        ':nid' => $node->nid,
+      ))->fetchAllAssoc('name');
     if (!empty($result)) {
       $chapitres = explode('<h2', $text);
       foreach ($chapitres as $numero => $chapitre) {
@@ -267,18 +304,17 @@ function kw_djambi_node_view($node, $view_mode) {
         $replacements = array();
         $replaced = array();
         $nodes = array();
-        foreach ($lines as $nl => $line) {
+        foreach ($lines as $line) {
           $paragraphe = $line[0];
           $matches = array();
           $found = preg_match_all($pattern2, $paragraphe, $matches, PREG_SET_ORDER);
           if ($found > 0) {
-            foreach ($matches as $key => $match) {
-              $found = TRUE;
+            foreach ($matches as $match) {
               if (!isset($replaced[$match[2]]) && !isset($nodes[$result[$match[2]]->nid])) {
                 $replaced[$match[2]] = $match[1];
                 $nodes[$result[$match[2]]->nid] = $match[1];
                 $replacements[$match[2]] = l($match[1], 'node/' . $result[$match[2]]->nid,
-                    array('attributes' => array('title' => $result[$match[2]]->title)));
+                  array('attributes' => array('title' => $result[$match[2]]->title)));
               }
             }
           }
@@ -288,7 +324,7 @@ function kw_djambi_node_view($node, $view_mode) {
           $texte = substr($chapitres[$numero], strlen($titre));
           $replace_me = strpos($texte, $replaced[$key]);
           $texte = substr($texte, 0, $replace_me) . $replacement
-          . substr($texte, $replace_me + strlen($replaced[$key]));
+            . substr($texte, $replace_me + strlen($replaced[$key]));
           $chapitres[$numero] = $titre . $texte;
         }
       }
@@ -303,8 +339,8 @@ function kw_djambi_node_view($node, $view_mode) {
  */
 function _kw_djambi_cookie() {
   global $user;
-  // Création d'un cookie si l'utilisateur est anonyme
-  if($user->uid == 0) {
+  // Création d'un cookie si l'utilisateur est anonyme :
+  if ($user->uid == 0) {
     if (empty($_COOKIE['Drupal_visitor_djambi_cookie_id'])) {
       $cookie = uniqid();
       user_cookie_save(array('djambi_cookie_id' => $cookie));
@@ -320,11 +356,11 @@ function _kw_djambi_cookie() {
 }
 
 /**
- * Mise en forme des informations concernant le ping d'un utilisateur
+ * Mise en forme des informations concernant le ping d'un utilisateur.
  */
 function _kw_djambi_format_ping_infos($ping_time) {
   $ping['title'] = t("Last connection information sent by this player : !time",
-      array('!time' => format_date($ping_time, 'short')));
+    array('!time' => format_date($ping_time, 'short')));
   $ping_interval = time() - $ping_time;
   if ($ping_interval < 60) {
     $ping['status'] = t('OK');
@@ -342,28 +378,35 @@ function _kw_djambi_format_ping_infos($ping_time) {
 }
 
 /**
- * Sauvegarde en BdD du jeu
+ * Sauvegarde en BdD du jeu.
+ *
  * @param DjambiBattlefield $grid
- * @return boolean
+ *   partie en cours
+ * @param array $form_state
+ *   état du formulaire courant
  */
 function _kw_djambi_save_game(DjambiBattlefield $grid, &$form_state) {
-  $form_state['saved_grid'] = $grid->getGameManager()->saveGame();
-  return TRUE;
+  $form_state['saved_grid'] = $grid->getGameManager()->save();
 }
 
 /**
- * Chargement des contenus de type règle du jeu correspondant aux pièces présentes dans la partie
+ * Charge les noeuds de type règle du jeu correspondant aux pièces de la partie.
+ *
  * @param DjambiBattlefield $grid
- * @return array -> tableau de noeuds
+ *   grille de Djambi courante
+ *
+ * @return array
+ *   tableau de noeuds
  */
 function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
   $nodes = array();
   if (!node_type_load('rule_element')) {
     return $nodes;
   }
-  $scheme = $grid->getScheme();
+  $scheme = $grid->getDisposition()->getScheme();
   $types = array();
-  foreach ($scheme->getPieceScheme() as $key => $piece) {
+  /* @var $piece DjambiPieceDescription */
+  foreach ($scheme->getPieceScheme() as $piece) {
     $types[] = $piece->getRulePattern();
   }
   $pieces = $types;
@@ -375,7 +418,7 @@ function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
       INNER JOIN {field_data_field_game_concept} F on N.vid = F.revision_id
       INNER JOIN {taxonomy_term_data} T ON T.tid = F.field_game_concept_tid
       WHERE N.type = :type AND N.status = 1 AND T.name IN (:terms)',
-      array(':type' => 'rule_element', ':terms' => $types));
+    array(':type' => 'rule_element', ':terms' => $types));
   $with_transliteration = module_exists('transliteration');
   $with_lightbox = module_exists('ctools');
   if ($raw_result->rowCount() > 0) {
@@ -384,13 +427,13 @@ function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
       ctools_include('modal');
       ctools_modal_add_js();
       $modal_style = array(
-          'kweb-modal' => array(
-              'modalOptions' => array(
-                  'opacity' => .5,
-                  'background-color' => '#000',
-              ),
-              'closeImage' => ''
+        'kweb-modal' => array(
+          'modalOptions' => array(
+            'opacity' => .5,
+            'background-color' => '#000',
           ),
+          'closeImage' => '',
+        ),
       );
       drupal_add_js($modal_style, 'setting');
     }
@@ -404,7 +447,9 @@ function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
       $type = strtolower($type);
       if (in_array($type, $pieces)) {
         $options = array(
-            'attributes' => array('title' => t('Show help for !piece piece', array('!piece' => $result->name)))
+          'attributes' => array(
+            'title' => t('Show help for !piece piece', array('!piece' => $result->name)),
+          ),
         );
       }
       elseif ($type == 'cadavre') {
@@ -418,9 +463,9 @@ function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
       }
       if ($with_lightbox) {
         $nodes[$type] = ctools_modal_text_button(t('Help'),
-            'kw/popup/nojs/' . $result->nid,
-            $options['attributes']['title'],
-            'ctools-modal-kweb-modal'
+          'kw/popup/nojs/' . $result->nid,
+          $options['attributes']['title'],
+          'ctools-modal-kweb-modal'
         );
       }
       else {
@@ -432,85 +477,100 @@ function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
 }
 
 /**
- * Création du label d'une pièce
+ * Affiche le libellé d'une pièce.
+ *
  * @param DjambiPiece $piece
+ *   Pièce de Djambi à nommer
+ *
+ * @return string
+ *   Nom de la pièce
  */
 function _kw_djambi_get_full_piece_name(DjambiPiece $piece) {
   return t("!color !longname", array(
     "!color" => _kw_djambi_get_translatable_messages($piece->getFaction()->getName()),
-    "!longname" => _kw_djambi_get_translatable_messages($piece->getLongname())
+    "!longname" => _kw_djambi_get_translatable_messages($piece->getLongname()),
   ));
 }
 
 /**
- * Génère un message de description d'un mouvement à partir des données enregistrées
- *   dans la base.
+ * Génère la description d'un mouvement à partir des données de la base.
+ *
  * @param array $move
+ *   Description d'un mouvement
  * @param DjambiBattlefield $grid
+ *   Grille de Djambi
+ *
+ * @return string
+ *   Libellé d'un mouvement
  */
 function _kw_djambi_describe_move($move, $grid) {
   $msg = NULL;
   $piece = $grid->getPieceById($move["target"]);
-  if ($move["type"] == "move") {
+  switch($move['type']) {
+    case('move'):
     $faction = $grid->getFactionById($move["target_faction"]);
     if ($faction) {
       $msg = t("!faction has moved !piece from !origin to !destination.", array(
         "!faction" => theme('djambi_faction_name', array('faction' => $faction)),
-        "!piece" =>  theme('djambi_piece_name', array('piece' => $piece)),
+        "!piece" => theme('djambi_piece_name', array('piece' => $piece)),
         "!origin" => $move["from"],
-        "!destination" => $move["to"]
+        "!destination" => $move["to"],
       ));
     }
-  }
-  elseif ($move["type"] == "murder") {
+    break;
+
+    case('murder');
     $victim = $piece;
-    /* @var $responsable DjambiPiece */
     $responsable = $grid->getPieceById($move["acting"]);
     if ($piece && $responsable) {
       $msg = t("!victim has been killed by !piece. The crime took place in !origin, and the victim body was found in !destination.", array(
         "!victim" => theme('djambi_piece_name', array('piece' => $victim)),
-        "!piece" =>  theme('djambi_piece_name', array('piece' => $responsable)),
+        "!piece" => theme('djambi_piece_name', array('piece' => $responsable)),
         "!origin" => $move["from"],
-        "!destination" => $move["to"]
+        "!destination" => $move["to"],
       ));
     }
-  }
-  elseif ($move["type"] == "necromobility") {
+    break;
+
+    case('necromobility'):
     $responsable = $grid->getPieceById($move["acting"]);
     if ($responsable) {
       $msg = t("!piece has exhumed a dead body from !origin. Its new burial place is located in !destination.", array(
-        "!piece" =>  theme('djambi_piece_name', array('piece' => $responsable)),
+        "!piece" => theme('djambi_piece_name', array('piece' => $responsable)),
         "!origin" => $move["from"],
-        "!destination" => $move["to"]
+        "!destination" => $move["to"],
       ));
     }
-  }
-  elseif ($move["type"] == "manipulation") {
+    break;
+
+    case('manipulation'):
     $victim = $piece;
     $responsable = $grid->getPieceById($move["acting"]);
     if ($victim && $responsable) {
       $msg = t("!victim has been manipulated by !piece from !origin to !destination.", array(
         "!victim" => theme('djambi_piece_name', array('piece' => $victim)),
-        "!piece" =>  theme('djambi_piece_name', array('piece' => $responsable)),
+        "!piece" => theme('djambi_piece_name', array('piece' => $responsable)),
         "!origin" => $move["from"],
-        "!destination" => $move["to"]
+        "!destination" => $move["to"],
       ));
     }
-  }
-  elseif ($move['type'] == 'elimination') {
+    break;
+
+    case('elimination'):
     if ($piece) {
       $msg = t("!victim has been eliminated from the game. The action took place in !origin.", array(
         "!victim" => theme('djambi_piece_name', array('piece' => $piece)),
         "!origin" => $move["from"],
       ));
     }
+    break;
+
   }
   return $msg;
 }
 
 /**
- * Génère un message de description des événements à partir des données
- *   enregistrées dans la base.
+ * Génère une description des événements à partir des données de la base.
  */
 function _kw_djambi_describe_event($event, DjambiBattlefield $grid) {
   $args = array();
@@ -526,18 +586,24 @@ function _kw_djambi_describe_event($event, DjambiBattlefield $grid) {
 }
 
 /**
- * Fonction permettant d'afficher une durée à partir d'un intervalle en secondes
+ * Affiche une durée à partir d'un intervalle en secondes.
+ *
  * @param int $seconds_count
+ *   intervalle en secondes
+ *
  * @return string
+ *   durée localisée
  */
 function _kw_djambi_get_duration($seconds_count) {
   $seconds = $seconds_count % 60;
-  $minutes = floor($seconds_count/60) % 60;
-  $hours   = floor($seconds_count/3600) % 24;
-  $days = floor($seconds_count/(3600 * 24));
-  $seconds = t('!sec s', array('!sec' => str_pad($seconds, 2, '0', STR_PAD_LEFT)));
+  $minutes = floor($seconds_count / 60) % 60;
+  $hours = floor($seconds_count / 3600) % 24;
+  $days = floor($seconds_count / (3600 * 24));
+  $seconds = t('!sec s', array(
+    '!sec' => str_pad($seconds, 2, '0', STR_PAD_LEFT),
+  ));
   $minutes = t('!mn min', array('!mn' => $minutes)) . ' ';
-  if($hours > 0) {
+  if ($hours > 0) {
     $hours = t('!h h', array('!h' => $hours)) . ' ';
   }
   else {
@@ -553,9 +619,12 @@ function _kw_djambi_get_duration($seconds_count) {
 }
 
 /**
- * Traduction des chaînes de caractères présentes dans les classes du dossier lib
+ * Traduit les chaînes de caractères présentes dans les classes du dossier lib.
  */
 function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiBattlefield $grid = NULL) {
+  if (!defined('KW_DJAMBI_MODE_FRIENDLY')) {
+    DjambiGameManager::getModes();
+  }
   if (isset($args['faction1']) && !is_null($grid)) {
     $faction1 = $grid->getFactionById($args['faction1']);
     $args['!faction1'] = theme('djambi_faction_name', array('faction' => $faction1));
@@ -579,340 +648,442 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
     }
     $args['!user'] = $username;
   }
-  switch($message) {
+  switch ($message) {
     case("THRONE_ACCESS"):
       $txt = t("!piece is now the great and beloved ruler of the djambi world.", $args);
       break;
+
     case("THRONE_RETREAT"):
       $txt = t("!piece's reign of despotism and terror is now over.", $args);
       break;
+
     case("THRONE_EVACUATION"):
-      $txt= t("!piece body has been exhumed from his mausoleum.", $args);
+      $txt = t("!piece body has been exhumed from his mausoleum.", $args);
       break;
+
     case("THRONE_MURDER"):
-      $txt= t("!piece has been killed during his reign !", $args);
+      $txt = t("!piece has been killed during his reign !", $args);
       break;
+
     case("THRONE_MAUSOLEUM"):
-      $txt= t("!piece body has been placed in the throne case mausoleum. Let's worship his memory.", $args);
+      $txt = t("!piece body has been placed in the throne case mausoleum. Let's worship his memory.", $args);
       break;
+
     case('DIPLOMAT_GOLDEN_MOVE'):
       $txt = t("!piece has just achieved a diplomat golden move !", $args);
       break;
+
     case('ASSASSIN_GOLDEN_MOVE'):
       $txt = t("!piece has just achieved an assassin golden move !", $args);
       break;
+
     case("NEW_DJAMBI_GAME"):
       $txt = t("New djambi chess game created.");
       break;
+
     case("GAME_START"):
       $txt = t("Here it is, the curtain rose on this tragic closed session, the competition can begin.");
       break;
+
     case("SURROUNDED"):
       $txt = t("!faction1 leader is surrounded by dead pieces and cannot access to power anymore.", $args);
       break;
+
     case("LEADER_KILLED"):
       $txt = t("The !faction1 side partisans are mourning the tragic loss of their mentor, the !piece, who was victim of a heinous murder.", $args);
       break;
+
     case("END"):
       $txt = t("End of the game !");
       break;
+
     case("DRAW"):
       $txt = t("This is a draw.");
       break;
+
     case("THE_WINNER_IS"):
       $txt = t("!faction1 wins !!!", $args);
       break;
+
     case("TURN_BEGIN"):
       $txt = t("!faction1 turn begins.", $args);
       break;
+
     case("NEW_TURN"):
       $txt = t("Turn !turn begins.", $args);
       break;
+
     case("SKIPPED_TURN"):
       $txt = t("!faction1 skipps his turn.", $args);
       break;
+
     case(KW_DJAMBI_MODE_SANDBOX):
       $txt = t("Sandbox game");
       break;
+
     case(KW_DJAMBI_MODE_FRIENDLY):
       $txt = t("Friendly game");
       break;
+
     case(KW_DJAMBI_STATUS_RECRUITING):
       $txt = t("Waiting for new players...");
       break;
+
     case('STATUS_RECRUITING_DESCRIPTION'):
       $txt = t("recruiting");
       break;
+
     case(KW_DJAMBI_STATUS_PENDING):
       $txt = t("Game in progress...");
       break;
+
     case('STATUS_PENDING_DESCRIPTION'):
       $txt = t("pending");
       break;
+
     case(KW_DJAMBI_STATUS_FINISHED):
       $txt = t("Game over !");
       break;
+
     case('STATUS_FINISHED_DESCRIPTION'):
       $txt = t("finished");
       break;
+
     case(KW_DJAMBI_STATUS_DRAW_PROPOSAL):
       $txt = t("Peace negociation...");
       break;
+
     case('STATUS_DRAW_PROPOSAL_DESCRIPTION'):
       $txt = t("negociating");
       break;
+
     case("Sniper"):
       $txt = t("Sniper");
       break;
+
     case("Leader"):
       $txt = t("Leader");
       break;
+
     case("Necromobil"):
       $txt = t("Necromobil");
       break;
+
     case("Diplomat"):
       $txt = t("Diplomat");
       break;
+
     case("Reporter"):
       $txt = t("Reporter");
       break;
-    case("Leader"):
-      $txt = t("Leader");
-      break;
+
     case("Militant #1"):
       $txt = t("Militant #1");
       break;
+
     case("Militant #2"):
       $txt = t("Militant #2");
       break;
+
     case("Militant #3"):
       $txt = t("Militant #3");
       break;
+
     case("CHANGING_SIDE"):
       $txt = t("The desperate remaining !faction1 side's partisans are now joining the !faction2 side !", $args);
       break;
+
     case("INDEPENDANT_SIDE"):
       $txt = t("The desperate remaining !faction1 side's partisans are no longing supporting the !faction2 side.", $args);
       break;
+
     case("GAME_OVER"):
       $txt = t("Game over for !faction1 side !", $args);
       break;
+
     case("WITHDRAWAL"):
       $txt = t("The hopeless !faction1 leader decided to withdraw from the game. Shame on him. His remaining pieces stay neutrally in the board, waiting for a better cause to support.", $args);
       break;
+
     case("Red"):
       $txt = t("Red");
       break;
+
     case("Blue"):
       $txt = t("Blue");
       break;
+
     case("Yellow"):
       $txt = t("Yellow");
       break;
+
     case("Green"):
       $txt = t("Green");
       break;
+
     case("DRAW_PROPOSAL"):
       $txt = t("The !faction1 side has called for a draw.", $args);
       break;
+
     case("DRAW_ACCEPTED"):
       $txt = t("The !faction1 side accepted the draw proposal.", $args);
       break;
+
     case("DRAW_REJECTED"):
       $txt = t("The !faction1 side rejected the draw proposal.", $args);
       break;
+
     case("MODE_SANDBOX_DESCRIPTION"):
       $txt = t('Sandbox game - you control successively all sides of the game. Useful to discover the Djambi rules, to test alone new strategies, or to play with other people on the same screen.');
       break;
+
     case("MODE_FRIENDLY_DESCRIPTION"):
       $txt = t('Friendly game - play online Djambi games with unknown human players, just for fun.');
       break;
+
     case("4STD_DESCRIPTION"):
       $txt = t("4 players, on a standard (9x9) square grid");
       break;
+
     case("2STD_DESCRIPTION"):
       $txt = t("2 players, on a standard (9x9) square grid. Each side controls an additional vassalized faction.");
       break;
+
     case("3HEX_DESCRIPTION"):
       $txt = t("3 players, on a hexagonal grid");
       break;
+
     case("COMEBACK_AFTER_SURROUND"):
       $txt = t("The !faction1 leader is not surrounded anymore by dead pieces. It's a come back for !faction1 side !", $args);
       break;
+
     case("COMEBACK_AFTER_WITHDRAW"):
       $txt = t("The !faction1 side got some new hope and is back in the game.", $args);
       break;
+
     case("RULE1"):
-        $txt = t("Leader surrounding rule");
+      $txt = t("Leader surrounding rule");
       break;
+
     case("RULE3"):
-        $txt = t("Team vassalization rule");
+      $txt = t("Team vassalization rule");
       break;
+
     case("RULE2"):
-        $txt = t("Come-back possibilities rule");
+      $txt = t("Come-back possibilities rule");
       break;
+
     case("RULE4"):
-        $txt = t("Canibalism rule");
+      $txt = t("Canibalism rule");
       break;
+
     case("RULE5"):
-        $txt = t("Self manipulation rule");
+      $txt = t("Self manipulation rule");
       break;
+
     case("RULE6"):
-        $txt = t("Press liberty rule");
+      $txt = t("Press liberty rule");
       break;
+
     case("RULE7"):
       $txt = t("Throne case interactions rule");
       break;
+
     case("RULE1_STRICT"):
       $txt = t('A leader is eliminated if he is not occupying the throne case, if he or his controlled adjacent pieces are surrounded by dead peaces (without empty cells) even if he is still controlling a living necromobile.');
       break;
+
     case("RULE1_LOOSE"):
       $txt = t('A leader is eliminated if he is not occupying the throne case, if he or his controlled adjacent pieces cannot move due to dead pieces barricade and if he is not controlling a living necromobile.');
       break;
+
     case("RULE1_THRONE_ACCESS"):
       $txt = t('A leader is eliminated if the way to throne case is locked by dead pieces (even if he can still move) and if he has no living necromobile among his controlled pieces.');
       break;
+
     case("RULE3_TEMPORARY"):
       $txt = t('A player who acceeds to power gains control of the withdrawn or surrounded leaders sides just during the time of his reign.');
       break;
+
     case("RULE3_FULL_CONTROL"):
       $txt = t('A player who acceeds to power gains full control of the withdrawn or surrounded leaders sides until the end of the game,
       even if he leaves the throne case.');
       break;
+
     case("RULE2_NEVER"):
       $txt = t('No come-back.');
       break;
+
     case("RULE2_SURROUNDING"):
       $txt = t('A player who had a surrounded leader can play again if his leader is not surrounded anymore, even if he is controlled by another team.');
       break;
+
     case("RULE2_ALLOWED"):
       $txt = t('A player who had withdrawn or had a surrounded leader can play again if his leader is still alive, not surrounded and not controlled by an another team.');
       break;
+
     case("RULE4_YES"):
       $txt = t('The end justifies the means. If needed, there will be sacrifices. They will remain in our memories.');
       break;
+
     case("RULE4_NO"):
       $txt = t('No way, killing your own pieces is forbidden.');
       break;
+
     case("RULE4_ETHICAL"):
       $txt = t('Responsible game : you cannot kill your own pieces and neutral pieces.');
       break;
+
     case("RULE4_VASSALS"):
       $txt = t('Killing vassalized pieces may be possible.');
-    break;
+      break;
+
     case("RULE5_NEVER"):
       $txt = t('Your diplomats are never allowed to manipulate pieces that you are controlling.');
-    break;
+      break;
+
     case("RULE5_VASSAL"):
       $txt = t('Your diplomat can manipulate vassalized pieces.');
-    break;
+      break;
+
     case("RULE6_PRAVDA"):
       $txt = t('Pradva style reporters : your reporters will never involve your own pieces in their scoops,
       but they can eliminate one ennemy per move.');
-    break;
+      break;
+
     case("RULE6_FOXNEWS"):
       $txt = t('Fox News style reporters : your reporters can involve several pieces in their moves,
       but some scandals can also concern your own troups.');
-    break;
+      break;
+
     case("RULE7_NORMAL"):
       $txt = t("Standard rules");
       break;
+
     case("RULE7_EXTENDED"):
       $txt = t("Extended rules : dead leaders can access to power posthumously, allow assassins and diplomats master moves.");
       break;
+
     case("OPTION2"):
-       $txt = t("Turns before each draw proposal availability");
-    break;
+      $txt = t("Turns before each draw proposal availability");
+      break;
+
     case("OPTION2_NEVER"):
-       $txt = t("No draw !");
-    break;
+      $txt = t("No draw !");
+      break;
+
     case("OPTION2_ALWAYS"):
-       $txt = t("Unlimited draw proposal");
-    break;
+      $txt = t("Unlimited draw proposal");
+      break;
+
     case("OPTION1_XTIME"):
-       $txt = format_plural($args['!value'], '!value time', '!value times', $args);
-    break;
+      $txt = format_plural($args['!value'], '!value time', '!value times', $args);
+      break;
+
     case("OPTION1"):
-       $txt = t("Allowed skipped turns per user before elimination");
-    break;
+      $txt = t("Allowed skipped turns per user before elimination");
+      break;
+
     case("OPTION1_NEVER"):
-       $txt = t("Skipping turns is forbidden !");
+      $txt = t("Skipping turns is forbidden !");
       break;
+
     case("OPTION1_ALWAYS"):
-       $txt = t("No limits, you can always skip your turn.");
+      $txt = t("No limits, you can always skip your turn.");
       break;
+
     case("OPTION2_XTURN"):
-       $txt = format_plural($args['!value'], '!value turn', '!value turns', $args);
+      $txt = format_plural($args['!value'], '!value turn', '!value turns', $args);
       break;
+
     case('OPTION3'):
       $txt = t("Allow anonymous players to join this game");
       break;
+
     case('OPTION3_YES'):
       $txt = t("Yes, anyone can join this game");
       break;
+
     case('OPTION3_NO'):
       $txt = t("No, only registered users can play");
       break;
+
     case(KW_DJAMBI_USER_PLAYING):
       $txt = t('playing');
       break;
+
     case(KW_DJAMBI_USER_WINNER):
       $txt = t('winner');
       break;
+
     case(KW_DJAMBI_USER_DRAW):
       $txt = t('draw');
       break;
+
     case(KW_DJAMBI_USER_KILLED):
       $txt = t('killed');
       break;
+
     case(KW_DJAMBI_USER_WITHDRAW):
       $txt = t('withdrawn');
       break;
+
     case(KW_DJAMBI_USER_SURROUNDED):
       $txt = t('surrounded');
       break;
+
     case(KW_DJAMBI_USER_DEFECT):
       $txt = t('defect');
       break;
+
     case(KW_DJAMBI_USER_EMPTY_SLOT):
       $txt = t('empty');
       break;
+
     case(KW_DJAMBI_USER_READY):
       $txt = t('ready');
       break;
+
     case(KW_DJAMBI_USER_VASSALIZED):
       $txt = t('vassalized');
       break;
+
     case('NEW_TEAM');
       $txt = t('!faction1 side is now controlled by !user', $args);
       break;
+
     case('TEAM_EXIT'):
       $txt = t('!user left the game.', $args);
       break;
+
     case('event');
       $txt = t('game event');
       break;
+
     case('notice'):
       $txt = t('turn info');
       break;
+
     case('info'):
       $txt = t('game info');
       break;
+
     case('move'):
       $txt = t('move');
       break;
+
     case('murder'):
       $txt = t('crime');
       break;
+
     case('necromobility'):
       $txt = t('exhumation');
       break;
+
     case('manipulation'):
       $txt = t("manipulation");
       break;
-      /*case(""):
-       $txt = t("");
-      break;*/
+
     default:
       $txt = $message;
   }

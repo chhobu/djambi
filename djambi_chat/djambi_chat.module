@@ -1,12 +1,22 @@
 <?php
 /**
- * Implements hook_theme()
+ * @file
+ * Gère l'affichage et le formulaire de messages instantanés liés à une partie
+ * de Djambi.
+ */
+
+/**
+ * Implements hook_theme().
  */
 function djambi_chat_theme() {
   return array(
     'djambi_chat' => array(
-      'variables' => array('messages' => array(), 'form' => NULL, 'attributes' => array()),
-    )
+      'variables' => array(
+        'messages' => array(),
+        'form' => NULL,
+        'attributes' => array(),
+      ),
+    ),
   );
 }
 
@@ -14,7 +24,7 @@ function djambi_chat_theme() {
  * Implements hook_node_view().
  */
 function djambi_chat_node_view($node, $view_mode) {
-  if ($node->type == 'djambi' && $view_mode =='full') {
+  if ($node->type == 'djambi' && $view_mode == 'full') {
     /* @var $grid DjambiBattlefield */
     $grid = $node->content['grid']['#grid'];
     $messages = _djambi_chat_display_messages($grid);
@@ -25,13 +35,16 @@ function djambi_chat_node_view($node, $view_mode) {
       $form = NULL;
     }
     $node->content['chat'] = array(
-      '#markup' => theme('djambi_chat', array('messages' => $messages, 'form' => $form))
+      '#markup' => theme('djambi_chat', array(
+        'messages' => $messages,
+        'form' => $form,
+      )),
     );
   }
 }
 
 /**
- * Affichage des messages d'un chat
+ * Affichage des messages d'un chat.
  */
 function _djambi_chat_display_messages(DjambiBattlefield $grid) {
   $messages = array();
@@ -39,29 +52,29 @@ function _djambi_chat_display_messages(DjambiBattlefield $grid) {
 }
 
 /**
- * Formulaire d'ajout de messages sur le chat
+ * Formulaire d'ajout de messages sur le chat.
  */
 function djambi_chat_add_message_form($form, &$form_state, DjambiBattlefield $grid) {
   $form['new_message'] = array(
     '#type' => 'textfield',
-    '#title' => t('New message')
+    '#title' => t('New message'),
   );
   $form['send'] = array(
     '#type' => 'submit',
-    '#value' => t('Send')
+    '#value' => t('Send'),
   );
   return $form;
 }
 
 /**
- * Traitement du formulaire d'ajout de messages
+ * Traitement du formulaire d'ajout de messages.
  */
 function djambi_chat_add_message_form_submit($form, &$form_state) {
 
 }
 
 /**
- * Affichage du chat
+ * Affichage du chat.
  */
 function theme_djambi_chat($variables) {
   $form = $variables['form'];

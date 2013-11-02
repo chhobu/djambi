@@ -1,18 +1,35 @@
 <?php
-class DjambiPiece {
-  private $id,
-          $faction,
-          $original_faction_id,
-          $alive,
-          $position,
-          $movable = FALSE,
-          $allowable_moves = array(),
-          $description;
+/**
+ * @file
+ * Déclare la class DjambiPiece, qui gère les déplacements et les changements
+ * d'état des pièces de Djambi.
+ */
 
-  public function __construct(DjambiPieceDescription $piece, DjambiPoliticalFaction $faction, $original_faction_id, $position, $alive) {
+/**
+ * Class DjambiPiece
+ */
+class DjambiPiece {
+  /* @var string $id */
+  protected $id;
+  /* @var \DjambiPoliticalFaction $faction */
+  protected $faction;
+  /* @var string $originalFactionId */
+  protected $originalFactionId;
+  /* @var  bool $alive */
+  protected $alive;
+  /* @var DjambiCell $position */
+  protected $position;
+  /* @var bool $movable */
+  protected $movable = FALSE;
+  /* @var DjambiCell[] $allowableMoves */
+  protected $allowableMoves = array();
+  /* @var DjambiPieceDescription $description */
+  protected $description;
+
+  public function __construct(DjambiPieceDescription $piece, DjambiPoliticalFaction $faction, $original_faction_id, DjambiCell $position, $alive) {
     $this->description = $piece;
     $this->faction = $faction;
-    $this->original_faction_id = $original_faction_id;
+    $this->originalFactionId = $original_faction_id;
     $this->id = $faction->getId() . '-' . $piece->getShortname();
     $this->alive = $alive;
     $this->setPosition($position);
@@ -31,10 +48,7 @@ class DjambiPiece {
     return $this->description;
   }
 
-  public function getShortname($mode = NULL) {
-    if ($mode == "html") {
-      return "<abbr title=\"". $this->getDescription()->getLongname() ."\">" . $this->getDescription()->getShortname() . "</abbr>";
-    }
+  public function getShortname() {
     return $this->getDescription()->getShortname();
   }
 
@@ -64,11 +78,11 @@ class DjambiPiece {
    * @return DjambiPoliticalFaction
    */
   public function getOriginalFaction() {
-    return $this->getBattlefield()->getFactionById($this->original_faction_id);
+    return $this->getBattlefield()->getFactionById($this->originalFactionId);
   }
 
   public function getOriginalFactionId() {
-    return $this->original_faction_id;
+    return $this->originalFactionId;
   }
 
   public function getImage() {
@@ -89,10 +103,7 @@ class DjambiPiece {
     return $this->position;
   }
 
-  public function setPosition($position) {
-    if (!is_array($position)) {
-      $position = $this->getBattlefield()->getCellXY($position);
-    }
+  public function setPosition(DjambiCell $position) {
     $current_position = isset($this->position) ? $this->position : NULL;
     $this->position = $position;
     $this->faction->getBattlefield()->placePiece($this, $current_position);
@@ -121,39 +132,44 @@ class DjambiPiece {
   }
 
   public function setAllowableMoves($array) {
-    $this->allowable_moves = $array;
+    $this->allowableMoves = $array;
     return $this;
   }
 
   public function getAllowableMoves() {
-    return $this->allowable_moves;
+    return $this->allowableMoves;
   }
 
-  public function buildAllowableMoves($allow_interactions = TRUE, $force_position = NULL) {
-    if (!$this->isAlive()) {
-      return;
+  public function getAllowableMovesNames() {
+    $moves = array();
+    foreach ($this->allowableMoves as $cell) {
+      $moves[] = $cell->getName();
     }
-    $cells = $this->getBattlefield()->getCells();
-    $rows = $this->getBattlefield()->getRows();
-    $cols = $this->getBattlefield()->getCols();
-    $directions = $this->getBattlefield()->getScheme()->getDirections();
-    if (!empty($force_position)) {
-      $current_cell = $cells[DjambiBattlefield::locateCell($force_position)];
-      $force_empty_position = DjambiBattlefield::locateCell($this->getPosition());
+    return $moves;
+  }
+
+  public function buildAllowableMoves($allow_interactions = TRUE, DjambiCell $force_position = NULL) {
+    if (!$this->isAlive()) {
+      return 0;
+    }
+    if (!is_null($force_position)) {
+      $current_cell = $force_position;
+      $force_empty_position = $this->getPosition()->getName();
     }
     else {
-      $current_cell = $cells[DjambiBattlefield::locateCell($this->getPosition())];
+      $current_cell = $this->getPosition();
       $force_empty_position = NULL;
     }
-    if (!empty($current_cell['neighbours'])) {
-      $next_cases = $current_cell['neighbours'];
+    $next_cases = $current_cell->getNeighbours();
+    if (!empty($next_cases)) {
       foreach ($next_cases as $direction => $cell) {
-        $move_ok = $this->checkAvailableMove($cell, $allow_interactions, $cell == $force_empty_position);
-        if (!$move_ok && isset($cells[$cell]['occupant'])) {
+        $move_ok = $this->checkAvailableMove($cell, $allow_interactions, !empty($force_empty_position) && $force_empty_position == $cell->getName());
+        $occupant = $cell->getOccupant();
+        if (!$move_ok && !empty($occupant)) {
           unset($next_cases[$direction]);
           continue;
         }
-        elseif (!isset($cells[$cell]['occupant']) || $cell == $force_empty_position) {
+        elseif (empty($occupant) || $cell == $force_empty_position) {
           $obstacle = FALSE;
           $next_cell = $cell;
           for ($i = 2; $obstacle == FALSE; $i++) {
@@ -162,12 +178,13 @@ class DjambiPiece {
               $obstacle = TRUE;
             }
             else {
-              if (!isset($cells[$next_cell]['neighbours'][$direction])) {
+              $neighbours = $next_cell->getNeighbours();
+              if (!isset($neighbours[$direction])) {
                 $obstacle = TRUE;
               }
               else {
-                $next_cell = $cells[$next_cell]['neighbours'][$direction];
-                $test = $this->checkAvailableMove($next_cell, $allow_interactions, $next_cell == $force_empty_position);
+                $next_cell = $neighbours[$direction];
+                $test = $this->checkAvailableMove($next_cell, $allow_interactions, !empty($force_empty_position) && $next_cell->getName() == $force_empty_position);
                 if ($test) {
                   if (!in_array($next_cell, $next_cases)) {
                     $next_cases[$direction . $i] = $next_cell;
@@ -176,13 +193,14 @@ class DjambiPiece {
                     $obstacle = TRUE;
                   }
                 }
-                if (isset($cells[$next_cell]['occupant'])) {
+                $next_cell_occupant = $next_cell->getOccupant();
+                if (!empty($next_cell_occupant)) {
                   $obstacle = TRUE;
                 }
               }
             }
           }
-          if ($cells[$cell]['type'] == 'throne' && !$this->getDescription()->hasHabilityAccessThrone()) {
+          if ($cell->getType() == 'throne' && !$this->getDescription()->hasHabilityAccessThrone()) {
             unset($next_cases[$direction]);
           }
         }
@@ -192,47 +210,48 @@ class DjambiPiece {
       $this->setMovable(TRUE);
       $this->setAllowableMoves($next_cases);
       foreach ($next_cases as $cell) {
-        $this->getBattlefield()->updateCell($cell, 'reachable', TRUE);
+        $cell->setReachable(TRUE);
       }
     }
-    return count($this->allowable_moves);
+    return count($this->allowableMoves);
   }
 
-  private function checkNewPosition($destination) {
-    $cells = $this->faction->getBattlefield()->getCells();
-    if (is_array($destination)) {
-      $destination = DjambiBattlefield::locateCell($destination);
-    }
-    if (!isset($cells[$destination])) {
-      return FALSE;
-    }
-    return $cells[$destination];
-  }
-
-  public function evaluateMove($destination) {
-    $return = $this->prepareMove($destination, TRUE, TRUE);
+  public function evaluateMove(DjambiCell $destination) {
+    $return = $this->prepareMove($destination, TRUE);
     if (!empty($return['interactions'])) {
       foreach ($return['interactions'] as $key => $interaction) {
         $choices = array();
+        $target = NULL;
         if (isset($interaction['target'])) {
           $target = $interaction['target'];
         }
         switch ($interaction['type']) {
-          case('manipulation') :
-            $choices = $this->getBattlefield()->getFreeCells($target, TRUE, FALSE, $this->getPosition());
+          case('manipulation'):
+            if (!empty($target)) {
+              $choices = $this->getBattlefield()->getFreeCells($target, TRUE, FALSE, $this->getPosition());
+            }
             break;
-          case('necromobility') :
-            $choices = $this->getBattlefield()->getFreeCells($target, FALSE, FALSE, $this->getPosition());
+
+          case('necromobility'):
+            if (!empty($target)) {
+              $choices = $this->getBattlefield()->getFreeCells($target, FALSE, FALSE, $this->getPosition());
+            }
             break;
-          case('reportage') :
+
+          case('reportage'):
+            /* @var DjambiPiece $victim */
             foreach ($interaction['victims'] as $victim) {
               $choices[] = $victim->getId();
             }
             break;
-          case('murder') :
-            $choices = $this->getBattlefield()->getFreeCells($target, FALSE, TRUE, $this->getPosition());
+
+          case('murder'):
+            if (!empty($target)) {
+              $choices = $this->getBattlefield()->getFreeCells($target, FALSE, TRUE, $this->getPosition());
+            }
             break;
-          case('throne_evacuation') :
+
+          case('throne_evacuation'):
             $choices = $this->buildAllowableMoves(FALSE, $destination);
             break;
         }
@@ -242,47 +261,42 @@ class DjambiPiece {
     return $return;
   }
 
-  public function evacuate($destination) {
-    $return = $this->prepareMove($destination, FALSE, FALSE);
+  public function evacuate(DjambiCell $destination) {
+    $return = $this->prepareMove($destination, FALSE);
     if ($return['allowed']) {
-      $this->executeMove($destination, $return['kills'], $return['events']);
+      $this->executeMove($return['cell'], $return['kills'], $return['events']);
     }
     return $return['interactions'];
   }
 
-  public function move($destination) {
-    $return = $this->prepareMove($destination, TRUE, FALSE);
+  public function move(DjambiCell $destination) {
+    $return = $this->prepareMove($destination, TRUE);
     if ($return['allowed']) {
-      $this->executeMove($destination, $return['kills'], $return['events']);
+      $this->executeMove($return['cell'], $return['kills'], $return['events']);
     }
     return $return['interactions'];
   }
 
-  private function prepareMove($destination, $allow_interactions, $simulate) {
+  protected function prepareMove(DjambiCell $destination, $allow_interactions) {
     $interactions = array();
     $events = array();
     $kills = array();
-    $current_position = $this->getPosition();
+    $current_cell = $this->getPosition();
     $move_ok = FALSE;
     $extra_interaction = FALSE;
-    $destination = $this->checkNewPosition($destination);
-    // Vérifie si la pièce dispose d'un droit d'interaction supplémentaire lors d'une évacuation de trône
+    // Vérifie si la pièce dispose d'un droit d'interaction supplémentaire
+    // lors d'une évacuation de trône :
     if (!$allow_interactions && $this->getBattlefield()->getOption('rule_throne_interactions') == 'extended') {
-      $cells = $this->getBattlefield()->getCells();
-      $current_cell = $cells[DjambiBattlefield::locateCell($current_position)];
-      if ($current_cell['type'] == 'throne' && isset($destination['occupant'])) {
-        /* @var $target DjambiPiece */
-        $target = $destination['occupant'];
-        if ($target->getDescription()->hasHabilityAccessThrone()) {
-          $extra_interaction = TRUE;
-        }
+      $target = $destination->getOccupant();
+      if ($current_cell->getType() == 'throne' && !empty($target) && $target->getDescription()->hasHabilityAccessThrone()) {
+        $extra_interaction = TRUE;
       }
     }
-    // Vérifie les conséquences d'un déplacement si le déplacement se fait sur une case occupée
-    if ($destination && ($destination["x"] != $current_position["x"] || $destination["y"] && $current_position["y"])) {
-      if (isset($destination["occupant"])) {
-        /* @var $target DjambiPiece */
-        $target = $destination["occupant"];
+    // Vérifie les conséquences d'un déplacement si le déplacement se fait
+    // sur une case occupée :
+    if ($destination->getName() != $current_cell->getName()) {
+      $target = $destination->getOccupant();
+      if (!empty($target)) {
         // ----> Manipulation ?
         if ($this->getBattlefield()->getOption('rule_self_diplomacy') == 'vassal') {
           $can_manipulate = $target->getFaction()->getId() != $this->getFaction()->getId();
@@ -296,11 +310,15 @@ class DjambiPiece {
             $interactions[] = array("type" => "manipulation", "target" => $target);
           }
           elseif ($extra_interaction) {
-            $events[] = array('type' => 'diplomate_golden_move', 'target' => $target, 'position' => $current_position);
+            $events[] = array(
+              'type' => 'diplomate_golden_move',
+              'target' => $target,
+              'position' => $current_cell->getName(),
+            );
           }
           $move_ok = TRUE;
         }
-        //  ----> Necromobilité ?
+        // ----> Necromobilité ?
         elseif (!$target->isAlive() && $this->getDescription()->hasHabilityMoveDeadPieces() && $allow_interactions) {
           $interactions[] = array("type" => "necromobility", "target" => $target);
           $move_ok = TRUE;
@@ -312,51 +330,59 @@ class DjambiPiece {
           && ($allow_interactions || $extra_interaction)) {
             $kills[] = array(
               'victim' => $target,
-              'position' => $current_position
+              'position' => $current_cell,
             );
             $move_ok = TRUE;
             if ($extra_interaction) {
               $events[] = array('type' => 'assassin_golden_move');
             }
           }
-          // Déplacement du corps de la victime
+          // Déplacement du corps de la victime :
           elseif ($this->getDescription()->hasHabilityKillByAttack() && $allow_interactions) {
-            $interactions[] = array("type" => "murder", "target" => $target, "default" => $current_position);
+            $interactions[] = array(
+              "type" => "murder",
+              "target" => $target,
+              "default" => $current_cell->getName(),
+            );
             $move_ok = TRUE;
           }
         }
       }
       else {
         // ----> reportage ?
-        // Eventuel choix de la victime du reporter
+        // Eventuel choix de la victime du reporter :
         if ($this->getDescription()->hasHabilityKillByProximity() && $allow_interactions) {
           $grid = $this->faction->getBattlefield();
           $next_cells = $grid->findNeighbourCells($destination, FALSE);
-          $cells = $grid->getCells();
           $victims = array();
-          foreach ($next_cells as $cell) {
-            $key = DjambiBattlefield::locateCell($cell);
-            if (!empty($cells[$key]["occupant"])) {
-              $occupant = $cells[$key]["occupant"];
+          foreach ($next_cells as $key) {
+            $cell = $this->getBattlefield()->findCell($key['x'], $key['y']);
+            $occupant = $cell->getOccupant();
+            if (!empty($occupant)) {
               if ($occupant->isAlive() && $occupant->getId() != $this->getId()) {
                 if ($grid->getOption('rule_press_liberty') == 'foxnews' ||
                     $occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) {
                   $canibalism = $grid->getOption('rule_canibalism');
                   if ($canibalism != 'ethical' || $occupant->getFaction()->getControl()->isAlive()) {
-                    $victims[$key] = $occupant;
+                    $victims[$cell->getName()] = $occupant;
                   }
                 }
               }
             }
           }
           if ($grid->getOption('rule_press_liberty') == 'pravda' && count($victims) > 1) {
-            $interactions[] = array("type" => "reportage", "reporter" => $this, "victims" => $victims);
+            $interactions[] = array(
+              "type" => "reportage",
+              "reporter" => $this,
+              "victims" => $victims,
+            );
           }
-          elseif (count($victims) > 0) {
+          elseif (!empty($victims)) {
+            /* @var DjambiPiece $victim */
             foreach ($victims as $victim) {
               $kills[] = array(
                 'victim' => $victim,
-                'position' => $victim->getPosition()
+                'position' => $victim->getPosition(),
               );
             }
           }
@@ -367,29 +393,31 @@ class DjambiPiece {
     if (!$move_ok) {
       $interactions[] = array("type" => "piece_destination", "target" => $this);
     }
-    elseif (!$this->getDescription()->hasHabilityAccessThrone() && $destination["type"] == "throne") {
+    elseif (!$this->getDescription()->hasHabilityAccessThrone() && $destination->getType() == "throne") {
       $interactions[] = array("type" => "throne_evacuation", "target" => $this);
     }
     return array(
-        'allowed' => $move_ok,
-        'interactions' => $interactions,
-        'events' => $events,
-        'kills' => $kills
+      'cell' => $destination,
+      'allowed' => $move_ok,
+      'interactions' => $interactions,
+      'events' => $events,
+      'kills' => $kills,
     );
   }
 
-  private function executeMove($destination, $kills, $events) {
-    $this->faction->getBattlefield()->logMove($this, $destination, 'move',
-        isset($destination['occupant']) ? $destination['occupant'] : NULL);
+  protected function executeMove(DjambiCell $destination, $kills, $events = NULL) {
+    $target = $destination->getOccupant();
+    $this->faction->getBattlefield()->logMove($this, $destination, 'move', $target);
     $this->setPosition($destination);
     if (!empty($kills)) {
-      foreach($kills as $kill) {
+      foreach ($kills as $kill) {
         $this->kill($kill['victim'], $kill['position']);
       }
     }
-    if (!empty($return['events'])) {
-      foreach ($return['events'] as $event) {
+    if (!empty($events)) {
+      foreach ($events as $event) {
         if ($event['type'] == 'diplomat_golden_move') {
+          /* @var DjambiPiece $target */
           $target = $event['target'];
           $target->move($event['position']);
           $this->getBattlefield()->logEvent('event', 'DIPLOMAT_GOLDEN_MOVE', array('piece' => $this->getId()));
@@ -401,15 +429,14 @@ class DjambiPiece {
     }
   }
 
-  public function kill(DjambiPiece $victim, $destination) {
-    $destination = $this->checkNewPosition($destination);
+  public function kill(DjambiPiece $victim, DjambiCell $destination) {
     $victim->setAlive(FALSE);
     $this->faction->getBattlefield()->logMove($victim, $destination, "murder", $this);
     $victim->setPosition($destination);
     if ($victim->getDescription()->hasHabilityMustLive()) {
       $this->getBattlefield()->logEvent('event', 'LEADER_KILLED', array(
-          'faction1' => $victim->getFaction()->getId(),
-          'piece' => $victim->getId()
+        'faction1' => $victim->getFaction()->getId(),
+        'piece' => $victim->getId(),
       ));
       $victim->getFaction()->dieDieDie(KW_DJAMBI_USER_KILLED);
       $victim->getFaction()->setControl($this->faction->getControl());
@@ -419,35 +446,30 @@ class DjambiPiece {
     }
   }
 
-  public function manipulate(DjambiPiece $victim, $destination) {
-    $destination = $this->checkNewPosition($destination);
+  public function manipulate(DjambiPiece $victim, DjambiCell $destination) {
     $this->faction->getBattlefield()->logMove($victim, $destination, "manipulation", $this);
     $victim->setPosition($destination);
   }
 
-  public function necromove(DjambiPiece $victim, $destination) {
-    $destination = $this->checkNewPosition($destination);
+  public function necromove(DjambiPiece $victim, DjambiCell $destination) {
     $this->faction->getBattlefield()->logMove($victim, $destination, "necromobility", $this);
     $victim->setPosition($destination);
   }
 
-  public function checkAvailableMove($cell, $allow_interactions, $force_empty = FALSE) {
+  public function checkAvailableMove(DjambiCell $cell, $allow_interactions, $force_empty = FALSE) {
     $move_ok = FALSE;
-    $grid = $this->getBattlefield();
-    $cells = $grid->getCells();
-    if ($force_empty || !isset($cells[$cell]['occupant'])) {
-      if ($cells[$cell]['type'] != 'throne' || $this->getDescription()->hasHabilityAccessThrone()) {
+    $occupant = $cell->getOccupant();
+    if ($force_empty || empty($occupant)) {
+      if ($cell->getType() != 'throne' || $this->getDescription()->hasHabilityAccessThrone()) {
         $move_ok = TRUE;
       }
     }
     else {
-      /* @var $occupant DjambiPiece */
-      $occupant = $cells[$cell]['occupant'];
       $can_attack = $this->checkAttackingPossibility($occupant);
       $can_manipulate = $this->checkManipulatingPossibility($occupant);
       if (!$allow_interactions) {
         $move_ok = FALSE;
-        if ($grid->getOption('rule_throne_interactions') == 'extended') {
+        if ($this->getBattlefield()->getOption('rule_throne_interactions') == 'extended') {
           if ($occupant->isAlive() && $occupant->getDescription()->hasHabilityKillThroneLeader()) {
             if ($can_manipulate || $can_attack) {
               $move_ok = TRUE;
@@ -458,7 +480,7 @@ class DjambiPiece {
       else {
         if ($occupant->isAlive() && ($can_attack || $can_manipulate)) {
           if ($can_attack) {
-            if ($cells[$cell]['type'] == 'throne') {
+            if ($cell->getType() == 'throne') {
               if ($this->getDescription()->hasHabilityKillThroneLeader()) {
                 $move_ok = TRUE;
               }

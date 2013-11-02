@@ -1,63 +1,161 @@
 <?php
+/**
+ * @file
+ * Déclaration de la class DjambiGameManager permettant de créer
+ * et de gérer la persistance de parties de Djambi.
+ */
+
+/**;
+ * Déclaration des constantes concernant les différents modes de jeu :
+ */
 define('KW_DJAMBI_MODE_SANDBOX', 'bac-a-sable');
 define('KW_DJAMBI_MODE_FRIENDLY', 'amical');
 define('KW_DJAMBI_MODE_TRAINING', 'training');
 
+/**
+ * Déclaration des constantes concernant les phases de jeu :
+ */
 define('KW_DJAMBI_STATUS_PENDING', 'pending');
 define('KW_DJAMBI_STATUS_FINISHED', 'finished');
 define('KW_DJAMBI_STATUS_DRAW_PROPOSAL', 'draw_proposal');
 define('KW_DJAMBI_STATUS_RECRUITING', 'recruiting');
 
-define('KW_DJAMBI_USER_PLAYING', 'playing'); // Partie en cours
-define('KW_DJAMBI_USER_WINNER', 'winner'); // Fin du jeu, vainqueur
-define('KW_DJAMBI_USER_DRAW', 'draw'); // Fin du jeu, nul
-define('KW_DJAMBI_USER_KILLED', 'killed'); // Fin du jeu, perdant
-define('KW_DJAMBI_USER_WITHDRAW', 'withdraw'); // Fin du jeu, abandon
-define('KW_DJAMBI_USER_VASSALIZED', 'vassalized'); // Camp vassalisé
-define('KW_DJAMBI_USER_FANTOCHE', 'fantoche'); // Camp fantôche
-define('KW_DJAMBI_USER_SURROUNDED', 'surrounded'); // Fin du jeu, encerclement
-define('KW_DJAMBI_USER_DEFECT', 'defect'); // Fin du jeu, disqualification
-define('KW_DJAMBI_USER_EMPTY_SLOT', 'empty'); // Création de partie, place libre
-define('KW_DJAMBI_USER_READY', 'ready'); // Création de partie, prêt à jouer
+/**
+ * Déclaration des constantes concernant les statuts utilisateurs :
+ */
+// Partie en cours :
+define('KW_DJAMBI_USER_PLAYING', 'playing');
+// Fin du jeu, vainqueur :
+define('KW_DJAMBI_USER_WINNER', 'winner');
+// Fin du jeu, nul :
+define('KW_DJAMBI_USER_DRAW', 'draw');
+// Fin du jeu, perdant :
+define('KW_DJAMBI_USER_KILLED', 'killed');
+// Fin du jeu, abandon :
+define('KW_DJAMBI_USER_WITHDRAW', 'withdraw');
+// Camp vassalisé :
+define('KW_DJAMBI_USER_VASSALIZED', 'vassalized');
+// Camp fantôche :
+define('KW_DJAMBI_USER_FANTOCHE', 'fantoche');
+// Fin du jeu, encerclement :
+define('KW_DJAMBI_USER_SURROUNDED', 'surrounded');
+// Fin du jeu, disqualification :
+define('KW_DJAMBI_USER_DEFECT', 'defect');
+// Création de partie, place libre :
+define('KW_DJAMBI_USER_EMPTY_SLOT', 'empty');
+// Création de partie, prêt à jouer :
+define('KW_DJAMBI_USER_READY', 'ready');
 
-class DjambiGameManager {
-  private $battlefield,
-          $persistant = FALSE;
+/**
+ * Class DjambiException
+ */
+class DjambiException extends Exception {}
 
-  protected function __construct(DjambiBattlefield $battlefield) {
-    $battlefield->setGameManager($this);
-    $this->battlefield = $battlefield;
+/**
+ * Interface GameManagerInterface
+ */
+interface DjambiGameManagerInterface {
+  /**
+   * Met à jour les données d'un utilisateur.
+   *
+   * @param array $user_data
+   *   Données à mettre à jour
+   * @param string $user_id
+   *   Identifiant de l'utilisateur
+   * @param bool $is_new_user
+   *   TRUE s'il s'agit d'un nouveau joueur
+   */
+  public function updateUserInfos($user_data, $user_id, $is_new_user = FALSE);
+
+  /**
+   * Lance les actions permettant de rendre une partie jouable.
+   */
+  public function play();
+
+  /**
+   * Sauvegarde une partie.
+   */
+  public function save();
+
+  /**
+   * Recharge une partie.
+   */
+  public function reload();
+
+  /**
+   * Charge une partie.
+   */
+  public static function load($data, DjambiGameOptionsStore $store = NULL);
+
+  /**
+   * Créer une partie.
+   */
+  public static function create($data, DjambiGameOptionsStore $store = NULL);
+}
+
+/**
+ * Class DjambiGameManager
+ * Gère la persistance des parties de Djambi.
+ */
+class DjambiGameManager implements DjambiGameManagerInterface {
+  /** @var DjambiBattlefield $battlefield */
+  protected $battlefield;
+  /** @var DjambiGameOptionsStore $store */
+  protected $optionsStore;
+  /** @var bool $persistant */
+  protected $persistant = FALSE;
+
+  /**
+   * Empêche la création directe d'un GameManager.
+   */
+  protected function __construct(DjambiGameOptionsStore $store = NULL) {
+    if (is_null($store)) {
+      $store = new DjambiGameOptionsStoreStandardRuleset();
+    }
+    $this->optionsStore = $store;
     return $this;
   }
 
-  public static function createGame($mode, $disposition, $players_data) {
-    $battlefield = new DjambiBattlefield(array_merge(array(
-        'id' => uniqid('Dj'),
-        'mode' => $mode,
-        'disposition' => $disposition,
-        'is_new' => TRUE
-    ), $players_data));
-    return new self($battlefield);
-  }
-
-  public static function loadGame($data) {
-    $battlefield = new DjambiBattlefield($data);
-    return new self($battlefield);
+  /**
+   * Implements create().
+   */
+  public static function create($data, DjambiGameOptionsStore $store = NULL) {
+    $data['id'] = uniqid('Dj');
+    $data['is_new'] = TRUE;
+    $gm = new self($store);
+    $battlefield = new DjambiBattlefield($gm, $data);
+    $gm->setBattlefield($battlefield);
+    return $gm;
   }
 
   /**
-   * Liste des modes de jeu
-   * @param boolean $with_description
-   * @param boolean $with_hidden
+   * Implements load().
+   */
+  public static function load($data, DjambiGameOptionsStore $store = NULL) {
+    $gm = new self($store);
+    $battlefield = new DjambiBattlefield($gm, $data);
+    $gm->setBattlefield($battlefield);
+    return $gm;
+  }
+
+  /**
+   * Liste les modes de jeu.
+   *
+   * @param bool $with_description
+   *   TRUE pour inclure une description des modes de jeu
+   * @param bool $with_hidden
+   *   TRUE pour inclure les modes de jeu cachés
+   *
    * @return array
+   *   Tableau contenant les différents modes de jeu disponibles.
    */
   public static function getModes($with_description = FALSE, $with_hidden = FALSE) {
     $modes = array(
-        KW_DJAMBI_MODE_FRIENDLY => 'MODE_FRIENDLY_DESCRIPTION',
-        KW_DJAMBI_MODE_SANDBOX => 'MODE_SANDBOX_DESCRIPTION',
+      KW_DJAMBI_MODE_FRIENDLY => 'MODE_FRIENDLY_DESCRIPTION',
+      KW_DJAMBI_MODE_SANDBOX => 'MODE_SANDBOX_DESCRIPTION',
     );
     $hidden_modes = array(
-        KW_DJAMBI_MODE_TRAINING => 'MODE_TRAINING_DESCRIPTION'
+      KW_DJAMBI_MODE_TRAINING => 'MODE_TRAINING_DESCRIPTION',
     );
     if ($with_hidden) {
       $modes = array_merge($modes, $hidden_modes);
@@ -71,12 +169,19 @@ class DjambiGameManager {
   }
 
   /**
-   * Liste des différentes statuts de jeu
-   * @param boolean $with_description
-   * @param boolean $with_recruiting
-   * @param boolean $with_pending
-   * @param boolean $with_finished
+   * Liste les différentes statuts de jeu.
+   *
+   * @param bool $with_description
+   *   TRUE pour renvoyer la description des états.
+   * @param bool $with_recruiting
+   *   TRUE pour inclure également les états avant le début du jeu.
+   * @param bool $with_pending
+   *   TRUE pour inclure également les états parties en cours
+   * @param bool $with_finished
+   *   TRUE pour inclure également les états parties terminées
+   *
    * @return array:
+   *   Tableau contenant les différents statuts disponibles.
    */
   public static function getStatuses($with_description = FALSE, $with_recruiting = TRUE, $with_pending = TRUE, $with_finished = TRUE) {
     $statuses = array();
@@ -99,237 +204,107 @@ class DjambiGameManager {
   }
 
   /**
-   * Liste des différentes dispositions de jeu disponibles
-   * @param string $elements : liste des éléments du tableau à renvoyer : 'all', 'description', 'sides', 'nb' ou 'scheme'
-   * @param boolean $with_hidden
-   * @return array
-   */
-  public static function getDispositions($elements = 'all', $with_hidden = TRUE) {
-    $games = array(
-        '4std' => array(
-            'description' => '4STD_DESCRIPTION',
-            'nb' => 4,
-            'scheme' => 'DjambiBattlefieldSchemeStandardGridWith4Sides'
-        ),
-        '2std' => array(
-            'description' => '2STD_DESCRIPTION',
-            'nb' => 2,
-            'sides' => array(1 => 'playable', 2 => 'vassal', 3 => 'playable', 4 => 'vassal'),
-            'scheme' => 'DjambiBattlefieldSchemeStandardGridWith4Sides'
-        ),
-        '3hex' => array(
-            'description' => '3HEX_DESCRIPTION',
-            'nb' => 3,
-            'scheme' => 'DjambiBattlefieldSchemeHexagonalGridWith3Sides'
-        )
-    );
-    $hidden_games = array(
-        '2mini' => array(
-            'description' => '2MINI_DESCRPTION',
-            'nb' => 2,
-            'scheme' => 'DjambiBattlefieldSchemeMiniGridWith2Sides',
-            'hidden' => TRUE
-        )
-    );
-    if ($with_hidden) {
-      $games = array_merge($games, $hidden_games);
-    }
-    if ($elements == 'all') {
-      return $games;
-    }
-    $return = array();
-    foreach($games as $key => $game) {
-      if (isset($game[$elements])) {
-        $return[$key] = $game[$elements];
-      }
-      else {
-        $return[$key] = $game;
-      }
-    }
-    return $return;
-  }
-
-  /**
-   * Liste des options de jeu
-   * @return array
-   */
-  public static function getOptionsInfo() {
-    return array(
-        'allow_anonymous_players' => array(
-            'default' => 1,
-            'configurable' => TRUE,
-            'title' => 'OPTION3',
-            'widget' => 'radios',
-            'type' => 'game_option',
-            'choices' => array(1 => 'OPTION3_YES', 0 => 'OPTION3_NO'),
-            'modes' => array(KW_DJAMBI_MODE_FRIENDLY)
-        ),
-        'allowed_skipped_turns_per_user' => array(
-            'default' => -1,
-            'configurable' => TRUE,
-            'title' => 'OPTION1',
-            'widget' => 'select',
-            'type' => 'game_option',
-            'choices' => array(
-                0 => 'OPTION1_NEVER',
-                1 => 'OPTION1_XTIME',
-                2 => 'OPTION1_XTIME',
-                3 => 'OPTION1_XTIME',
-                4 => 'OPTION1_XTIME',
-                5 => 'OPTION1_XTIME',
-                10 => 'OPTION1_XTIME',
-                -1 => 'OPTION1_ALWAYS')
-        ),
-        'turns_before_draw_proposal' => array(
-            'default' => 10,
-            'configurable' => TRUE,
-            'title' => 'OPTION2',
-            'widget' => 'select',
-            'type' => 'game_option',
-            'choices' => array(
-                -1 => 'OPTION2_NEVER',
-                0 => 'OPTION2_ALWAYS',
-                2 => 'OPTION2_XTURN',
-                5 => 'OPTION2_XTURN',
-                10 => 'OPTION2_XTURN',
-                20 => 'OPTION2_XTURN')
-        ),
-        'rule_surrounding' => array(
-            'title' => 'RULE1',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'default' => 'throne_access',
-            'widget' => 'radios',
-            'choices' => array(
-                'throne_access' => 'RULE1_THRONE_ACCESS',
-                'strict' => 'RULE1_STRICT',
-                'loose' => 'RULE1_LOOSE'
-            )
-        ),
-        'rule_comeback' => array(
-            'title' => 'RULE2',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'default' => 'allowed',
-            'widget' => 'radios',
-            'choices' => array(
-                'never' => 'RULE2_NEVER',
-                'surrounding' => 'RULE2_SURROUNDING',
-                'allowed' => 'RULE2_ALLOWED'
-            )
-        ),
-        'rule_vassalization' => array(
-            'title' => 'RULE3',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'widget' => 'radios',
-            'default' => 'full_control',
-            'choices' => array(
-                'temporary' => 'RULE3_TEMPORARY',
-                'full_control' => 'RULE3_FULL_CONTROL'
-            )
-        ),
-        'rule_canibalism' => array(
-            'title' => 'RULE4',
-            'type' => 'rule_variant',
-            'widget' => 'radios',
-            'configurable' => TRUE,
-            'default' => 'no',
-            'choices' => array(
-                'yes' => 'RULE4_YES',
-                'vassals' => 'RULE4_VASSALS',
-                'no' => 'RULE4_NO',
-                'ethical' => 'RULE4_ETHICAL'
-            )
-        ),
-        'rule_self_diplomacy' => array(
-            'title' => 'RULE5',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'widget' => 'radios',
-            'default' => 'never',
-            'choices' => array(
-                'never' => 'RULE5_NEVER',
-                'vassal' => 'RULE5_VASSAL'
-            )
-        ),
-        'rule_press_liberty' => array(
-            'title' => 'RULE6',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'widget' => 'radios',
-            'default' => 'pravda',
-            'choices' => array(
-                'pravda' => 'RULE6_PRAVDA',
-                'foxnews' => 'RULE6_FOXNEWS'
-            )
-        ),
-        'rule_throne_interactions' => array(
-            'title' => 'RULE7',
-            'type' => 'rule_variant',
-            'configurable' => TRUE,
-            'widget' => 'radios',
-            'default' => 'normal',
-            'choices' => array(
-                'normal' => 'RULE7_NORMAL',
-                'extended' => 'RULE7_EXTENDED'
-            )
-        ),
-    );
-  }
-
-  /**
-   * @return DjambiBattlefield
+   * Renvoie la grille de Djambi associée au jeu.
    */
   public function getBattlefield() {
     return $this->battlefield;
   }
 
   /**
-   * @return boolean
+   * Associe une grille de Djambi au jeu.
+   *
+   * @param DjambiBattlefield $grid
+   *   Grille de Djambi
+   */
+  protected function setBattlefield(DjambiBattlefield $grid) {
+    $this->battlefield = $grid;
+  }
+
+  /**
+   * Renvoie le magasin d'options associé au jeu.
+   */
+  public function getOptionsStore() {
+    return $this->optionsStore;
+  }
+
+  /**
+   * Détermine si la partie en cours est sauvegardable.
    */
   public function isPersistant() {
     return $this->persistant;
   }
 
+  /**
+   * Autorise la partie en cours à être sauvegardée.
+   */
   protected function setPersistant($bool) {
     $this->persistant = $bool;
+    return $this;
   }
 
-  public function saveGame() {
+  /**
+   * Sauvegarde la partie, en générant un tableau de données.
+   *
+   * @return array
+   *   Tableau associatif, contenant les données permettant de recharger
+   *   la partie
+   */
+  public function save() {
     $this->getBattlefield()->setInfo('changed', time());
     $data = $this->getBattlefield()->toArray();
-    foreach ($this->getBattlefield()->getFactions() as $key => $faction) {
+    /* @var $faction DjambiPoliticalFaction */
+    foreach ($this->getBattlefield()->getFactions() as $faction) {
       $user_data = array(
-          'uid' => $faction->getUserDataItem('uid'),
-          'status' => $faction->getStatus(),
-          'ranking' => $faction->getRanking(),
-          'human' => $faction->isHumanControlled(),
-          'ia' => $faction->getUserDataItem('ia'),
-          'cookie' => NULL
+        'uid' => $faction->getUserDataItem('uid'),
+        'status' => $faction->getStatus(),
+        'ranking' => $faction->getRanking(),
+        'human' => $faction->isHumanControlled(),
+        'ia' => $faction->getUserDataItem('ia'),
+        'cookie' => NULL,
       );
       $data['users'][$faction->getId()] = $user_data;
     }
     return $data;
   }
 
+  /**
+   * Recharge la partie en cours.
+   *
+   * @return DjambiGameManager
+   *   Renvoie l'objet de persistance de la partie rechargé.
+   */
   public function reload() {
     return $this;
   }
 
+  /**
+   * Implémente la fonction updateUserInfos.
+   *
+   * Dans ce cas, ne sert à rien, car pas de persistance des données.
+   */
   public function updateUserInfos($user_data, $user_id, $is_new_user = FALSE) {
-    return FALSE;
+    return $this;
   }
 
+  /**
+   * Vérifie si une partie est jouable.
+   *
+   * @return bool
+   *   Renvoie TRUE si le statut du jeu est en cours.
+   */
   public function isPlayable() {
     if ($this->getBattlefield()->getStatus() == KW_DJAMBI_STATUS_PENDING) {
       return TRUE;
     }
-    else {
-      return FALSE;
-    }
+    return FALSE;
   }
 
+  /**
+   * Lance les actions permettant de rendre une partie jouable.
+   *
+   * @return DjambiGameManager
+   *   Renvoie l'objet DjambiGameManager courant.
+   */
   public function play() {
     if ($this->isPlayable()) {
       $summary = $this->getBattlefield()->getSummary();
@@ -343,8 +318,20 @@ class DjambiGameManager {
   }
 
   /**
-   * Vérifie si la faction passée en argument est contrôlée par l'utilisateur courant.*
+   * Vérifie si une faction est contrôlée par l'utilisateur courant.
+   *
+   * @param string $user_id
+   *   Identifiant de l'utilisateur
+   * @param string $user_cookie
+   *   Cookie permettant d'identifier l'utilisateur anonyme
+   * @param DjambiPoliticalFaction $faction
+   *   Faction à vérifier
+   * @param bool $control
+   *   TRUE pour vérifier également que l'utilisateur possède le contrôle en
+   *   cours de jeu de la faction à vérifier.
+   *
    * @return bool
+   *   TRUE si la faction est contrôlée par l'utilisateur
    */
   public function checkUserPlayingFaction($user_id, $user_cookie, DjambiPoliticalFaction $faction, $control = TRUE) {
     if (empty($faction)) {
@@ -372,14 +359,20 @@ class DjambiGameManager {
     elseif (!empty($user_cookie) && $user_data['cookie'] == $user_cookie) {
       return TRUE;
     }
-    else {
-      return FALSE;
-    }
+    return FALSE;
   }
 
   /**
-   * Détermine si un utilisateur courant contrôle une faction
+   * Détermine si un utilisateur courant contrôle une faction.
+   *
+   * @param string $user_id
+   *   Identiant de l'utilisateur
+   * @param string $user_cookie
+   *   Cookie permettant d'identifier un utilisateur anonyme
+   *
    * @return DjambiPoliticalFaction
+   *   Renvoie le camp contrôlé par l'utilisateur si trouvé.
+   *   Si rien n'est trouvé, renvoie une valeur nulle.
    */
   public function getUserFaction($user_id, $user_cookie) {
     $grid = $this->getBattlefield();
@@ -396,4 +389,5 @@ class DjambiGameManager {
     }
     return $current_user_faction;
   }
+
 }

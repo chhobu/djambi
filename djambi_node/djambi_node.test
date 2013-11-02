@@ -1,12 +1,20 @@
 <?php
+/**
+ * @file
+ * Tests automatisés sur le déroulement d'une partie de Djambi.
+ */
+
+/**
+ * Class DjambiNodeLiveTestCase
+ */
 class DjambiNodeLiveTestCase extends DrupalWebTestCase {
 
   protected function setUp() {
     drupal_set_time_limit($this->timeLimit);
-    $test_folder = 'djambi_test_' . date('YmdHis');
     $this->originalFileDirectory = variable_get('file_public_path', conf_path() . '/files');
     $this->public_files_directory = $this->originalFileDirectory;
-    $this->setup = TRUE; // Attention, utilisation de la base "réelle"
+    // Attention, utilisation de la base "réelle" :
+    $this->setup = TRUE;
   }
 
   protected function tearDown() {
@@ -14,7 +22,7 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
   }
 
   protected function drupalGetContent() {
-    return mb_convert_encoding($this->content, 'HTML-ENTITIES', "UTF-8");;
+    return mb_convert_encoding($this->content, 'HTML-ENTITIES', "UTF-8");
   }
 
   protected function djambiCreateGame($mode, $disposal, $options = array()) {
@@ -85,14 +93,14 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
       unset($this->curlHandle);
       $this->loggedInUser = FALSE;
     }
-     $this->drupalLogin($user);
-     // Save the user's session on the account itself.
-     if (!isset($user->session)) {
-        $user->session = new stdClass;
-     }
-     $user->session->curlHandle = $this->curlHandle;
-     // Switch the currently logged in user.
-     $this->loggedInUser = $user;
+    $this->drupalLogin($user);
+    // Save the user's session on the account itself :
+    if (!isset($user->session)) {
+      $user->session = new stdClass();
+    }
+    $user->session->curlHandle = $this->curlHandle;
+    // Switch the currently logged in user.
+    $this->loggedInUser = $user;
   }
 
   protected function djambiSwitchUser($account) {
@@ -140,17 +148,23 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
       }
     }
     if (isset($html_value) && $html_value == $testing_value) {
-      $this->pass(t("Variable %element OK (!turn).", array('%element' => $testing_element, '!turn' => $html_value)));
+      $this->pass(t("Variable %element OK (!turn).", array(
+        '%element' => $testing_element,
+        '!turn' => $html_value,
+      )));
       return TRUE;
     }
     else {
-      $this->fail(t("Variable %element mismatch (correct value : !turn_id / test value : !turn_html).",
-          array('%element' => $testing_element, '!turn_id' => (isset($html_value) ? $html_value : '?'), '!turn_html' => $testing_value)));
+      $this->fail(t("Variable %element mismatch (correct value : !turn_id / test value : !turn_html).", array(
+        '%element' => $testing_element,
+        '!turn_id' => (isset($html_value) ? $html_value : '?'),
+        '!turn_html' => $testing_value,
+      )));
       return FALSE;
     }
   }
 
-  private function simulateGame($node, $factions_map = array(), $turns = 100) {
+  protected function simulateGame($node, $factions_map = array(), $turns = 100) {
     $finished = FALSE;
     for ($i = 0; $i < $turns; $i++) {
       // Chargement de la datagrid
@@ -166,7 +180,7 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
         $this->pass(t("Djambi game is finished."));
         break;
       }
-      // Vérification de la correspondance concernant le tour de jeu
+      // Vérification de la correspondance concernant le tour de jeu :
       $this->assertDjambiGameInformations('turn', $i);
       // Contrôle des pièces déplaçables
       /* @var $faction DjambiPoliticalFaction */
@@ -181,9 +195,13 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
       $pieces = $faction->getControlledPieces();
       /* @var $piece DjambiPiece */
       $movable_pieces = array();
-      foreach ($pieces as $piece_id => $piece) {
+      foreach ($pieces as $piece) {
         if ($piece->isMovable()) {
-          $test = $this->assertFieldByName('selection-' . $piece->getId(), NULL, t("The piece !name is selectable.", array('!name' => _kw_djambi_get_full_piece_name($piece)))); // Vérification de la présence des pièces déplaçables
+          // Vérification de la présence des pièces déplaçables :
+          $test = $this->assertFieldByName('selection-' . $piece->getId(),
+            NULL, t("The piece !name is selectable.", array(
+              '!name' => _kw_djambi_get_full_piece_name($piece),
+            )));
           if ($test) {
             $movable_pieces[] = $piece;
           }
@@ -201,24 +219,23 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
       $this->pass(t('The piece !piece is selected.', array('!piece' => _kw_djambi_get_full_piece_name($selected_piece))));
       $this->drupalPostAJAX(NULL, NULL, 'selection-' . $selected_piece->getId());
       // Déplacement d'une pièce
-      $cells = $grid->getCells();
       $throne = $grid->getSpecialCells('throne');
       $allowed_moves = $selected_piece->getAllowableMoves();
       $suggested_moves = array();
-      foreach ($allowed_moves as $key => $cell) {
-        if (!is_null($grid->getCellOccupant($cell))) {
-          $target = $grid->getCellOccupant($cell);
+      foreach ($allowed_moves as $cell) {
+        $target = $cell->getOccupant();
+        if (!is_null($target)) {
           if ($target->getHability('must_live')) {
-            $suggested_moves = array($cell);
+            $suggested_moves = array($cell->getName());
             break;
           }
-          $suggested_moves[] = $cell;
+          $suggested_moves[] = $cell->getName();
         }
-        if (in_array($cell, $throne)) {
-          $suggested_moves = array($cell);
+        if (in_array($cell->getName(), $throne)) {
+          $suggested_moves = array($cell->getName());
           break;
         }
-        $this->assertFieldByName('target-' . $cell, NULL, t("The piece !piece can be move to cell !cell", array('!piece' => $selected_piece->getId(), '!cell' => $cell)));
+        $this->assertFieldByName('target-' . $cell->getName(), NULL, t("The piece !piece can be move to cell !cell", array('!piece' => $selected_piece->getId(), '!cell' => $cell)));
       }
       if (empty($allowed_moves)) {
         $this->fail("Cannot move selected piece.");
@@ -231,7 +248,7 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
         $selected_move = $allowed_moves[array_rand($allowed_moves)];
       }
       $this->pass(t("We have finally decided to move the piece !piece to cell !cell.", array('!piece' => $selected_piece->getId(), '!cell' => $selected_move)));
-      $this->drupalPostAjax(NULL, NULL, 'target-' . $selected_move);
+      $this->drupalPostAjax(NULL, NULL, 'target-' . $selected_move->getName());
       // Recherche d'interactions supplémentaires
       $xpath_request = "//input[@type='image' and @data-grid-button='interaction']/@name";
       $interactions = $this->xpath($xpath_request);
@@ -241,14 +258,14 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
         $interactions = $this->xpath($xpath_request);
       }
     }
-    // TODO si la partie n'est pas finie, faire abandonner successivement chacun des camps
+    // TODO si la partie n'est pas finie, faire abandonner successivement chacun des camps...
     if ($finished) {
-      // TODO contrôles supplémentaires sur la fin de jeu
+      // TODO contrôles supplémentaires sur la fin de jeu !
     }
   }
 
   protected function djambiPlaySandboxGame($disposal, $options = array()) {
-    // Création par un joueur anonyme d'une nouvelle partie
+    // Création par un joueur anonyme d'une nouvelle partie :
     $node = $this->djambiCreateGame(KW_DJAMBI_MODE_SANDBOX, $disposal, $options);
     if (!$node) {
       return;
@@ -257,10 +274,19 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
   }
 
   protected function djambiPlayFriendlyGame($disposal, $options = array()) {
-    $test_users = array('sun-tzu', 'von-klausewitz', 'kissinger', 'nash', 'gracian', 'mazarin', 'richelieu', 'gwbush');
+    $test_users = array(
+      'sun-tzu',
+      'von-klausewitz',
+      'kissinger',
+      'nash',
+      'gracian',
+      'mazarin',
+      'richelieu',
+      'gwbush',
+    );
     shuffle($test_users);
-    $disposals = DjambiGameManager::getDispositions();
-    $players = $disposals[$disposal]['nb'];
+    $disposition = DjambiGameDispositionsFactory::loadDisposition($disposal);
+    $players = $disposition->getNbPlayers();
     $users = array();
     for ($i = 0; $i < $players; $i++) {
       $users[] = $this->djambiLoadUser($test_users[$i]);
@@ -320,33 +346,39 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
   }
 }
 
+/**
+ * Class DjambiNodeTestSandboxGame
+ */
 class DjambiNodeTestSandboxGame extends DjambiNodeLiveTestCase {
   public static function getInfo() {
     return array(
-        'name' => t('Djambi automated sandbox game'),
-        'description' => t('Runs a Djambi sandbox game (using the current database) with random silly moves.'),
-        'group' => 'Djambi'
+      'name' => t('Djambi automated sandbox game'),
+      'description' => t('Runs a Djambi sandbox game (using the current database) with random silly moves.'),
+      'group' => 'Djambi',
     );
   }
 
   public function testRandomSandboxGame() {
-    $disposals = DjambiGameManager::getDispositions('all', FALSE);
+    $disposals = DjambiGameDispositionsFactory::listPublicDispositions();
     $disposal = array_rand($disposals);
     $this->djambiPlaySandboxGame($disposal);
   }
 }
 
+/**
+ * Class DjambiNodeTestFriendlyGame
+ */
 class DjambiNodeTestFriendlyGame extends DjambiNodeLiveTestCase {
   public static function getInfo() {
     return array(
-        'name' => t('Djambi automated friendly game'),
-        'description' => t('Runs a Djambi friendly game (using the current database and auto-generated testing users) with random silly moves.'),
-        'group' => 'Djambi'
+      'name' => t('Djambi automated friendly game'),
+      'description' => t('Runs a Djambi friendly game (using the current database and auto-generated testing users) with random silly moves.'),
+      'group' => 'Djambi',
     );
   }
 
   public function testRandomFriendlyGame() {
-    $disposals = DjambiGameManager::getDispositions('all', FALSE);
+    $disposals = DjambiGameDispositionsFactory::listPublicDispositions();
     $disposal = array_rand($disposals);
     $this->djambiPlayFriendlyGame($disposal);
   }

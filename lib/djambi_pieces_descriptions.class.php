@@ -1,23 +1,23 @@
 <?php
 class DjambiPieceDescription {
-  private $type,
-          $shortname,
-          $num,
-          $generic_name,
-          $image_pattern,
-          $rule_pattern,
-          $start_position,
-          $value,
-          $habilities = array();
+  protected $type;
+  protected $shortname;
+  protected $num;
+  protected $genericName;
+  protected $imagePattern;
+  protected $rulePattern;
+  protected $startPosition;
+  protected $value;
+  protected $habilities = array();
 
   public function __construct($type, $generic_shortname, $generic_name, $num, $start_position, $value) {
     $this->type = $type;
     $this->num = $num;
     $this->shortname = $num == 0 ? $generic_shortname : $generic_shortname . $num;
-    $this->start_position = $start_position;
-    $this->generic_name = $generic_name;
-    $this->image_pattern = $type;
-    $this->rule_pattern = $type;
+    $this->startPosition = $start_position;
+    $this->genericName = $generic_name;
+    $this->imagePattern = $type;
+    $this->rulePattern = $type;
     $this->value = $value;
   }
 
@@ -30,7 +30,7 @@ class DjambiPieceDescription {
   }
 
   public function getGenericName() {
-    return $this->generic_name;
+    return $this->genericName;
   }
 
   public function echoName() {
@@ -47,25 +47,25 @@ class DjambiPieceDescription {
   }
 
   public function getImagePattern() {
-    return $this->image_pattern;
+    return $this->imagePattern;
   }
 
   public function getRulePattern() {
-    return $this->rule_pattern;
+    return $this->rulePattern;
   }
 
   public function setImagePattern($image_pattern) {
-    $this->image_pattern = $image_pattern;
+    $this->imagePattern = $image_pattern;
     return $this;
   }
 
   public function setRulePattern($rule_pattern) {
-    $this->rule_pattern = $rule_pattern;
+    $this->rulePattern = $rule_pattern;
     return $this;
   }
 
   public function getStartPosition() {
-    return $this->start_position;
+    return $this->startPosition;
   }
 
   public function getValue() {
@@ -83,7 +83,7 @@ class DjambiPieceDescription {
     return $this->habilities;
   }
 
-  private function getHability($name) {
+  protected function getHability($name) {
     return isset($this->habilities[$name]) ? $this->habilities[$name] : FALSE;
   }
 
@@ -168,7 +168,7 @@ class DjambiPieceLeader extends DjambiPieceDescription {
         'kill_by_attack' => TRUE,
         'kill_throne_leader' => TRUE,
         'access_throne' => TRUE,
-        'cannot_defect' => TRUE
+        'cannot_defect' => TRUE,
     ));
     return parent::__construct('leader', 'L', 'Leader', $num, $start_position, 10);
   }
@@ -180,7 +180,7 @@ class DjambiPieceAssassin extends DjambiPieceDescription {
         'kill_by_attack' => TRUE,
         'kill_throne_leader' => TRUE,
         'signature' => TRUE,
-        'enter_fortress' => TRUE
+        'enter_fortress' => TRUE,
     ));
     return parent::__construct('assassin', 'A', 'Assassin', $num, $start_position, 2);
   }
@@ -221,8 +221,12 @@ class DjambiPieceMilitant extends DjambiPieceDescription {
         'kill_by_attack' => TRUE,
         'gain_promotion' => array(
           'threshold' => 3,
-          'choices' => array('DjambiPieceLegend', 'DjambiPieceLeader', 'DjambiPieceAssassin')
-        )
+          'choices' => array(
+            'DjambiPieceLegend',
+            'DjambiPieceLeader',
+            'DjambiPieceAssassin',
+          ),
+        ),
     ));
     return parent::__construct('militant', 'M', 'Militant', $num, $start_position, 1);
   }
@@ -240,9 +244,9 @@ class DjambiPieceJudge extends DjambiPieceDescription {
 class DjambiPiecePropagandist extends DjambiPieceDescription {
   public function __construct($num, $start_position) {
     $this->setHabilities(array(
-        'convert_pieces' => TRUE,
-        'cannot_defect' => TRUE,
-        'signature' => TRUE
+      'convert_pieces' => TRUE,
+      'cannot_defect' => TRUE,
+      'signature' => TRUE,
     ));
     return parent::__construct('propagandist', 'P', 'Propagandist', $num, $start_position, 3);
   }
@@ -264,7 +268,6 @@ class DjambiPieceFanatic extends DjambiPieceDescription {
       'kill_throne_leader' => TRUE,
       'limited_move' => 2,
       'kamikaze' => TRUE,
-      'cannot_defect' => TRUE
     ));
     return parent::__construct('fanatic', 'F', 'Fanatic', $num, $start_position, 1);
   }
@@ -275,7 +278,7 @@ class DjambiPieceLegend extends DjambiPieceDescription {
     $this->setHabilities(array(
       'raise_dead_pieces' => TRUE,
       'cannot_defect' => TRUE,
-      'signature' => TRUE
+      'signature' => TRUE,
     ));
     return parent::__construct('legend', 'L', 'Legend', $num, $start_position, 6);
   }
