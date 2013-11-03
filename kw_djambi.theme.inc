@@ -55,7 +55,7 @@ function theme_djambi_grid($variables) {
   $show_changes = $variables['show_changes'];
   $show_moves = $variables['show_moves'];
   $rows = $variables['rows'];
-  $animated_moves = ($show_changes && !empty($past_moves) && isset($past_moves['animations'])) ? $past_moves['animations'] : array();
+  $animated_moves = $variables['animated_moves'];
   foreach ($grid->getCells() as $key => $cell) {
     $row_inner_html = "";
     $changes = array();
@@ -409,6 +409,7 @@ function theme_djambi_grid_caption($variables) {
   $displayed_turn = $variables['displayed_turn'];
   $displayed_turn_id = $variables['displayed_turn_id'];
   $show_changes = $variables['show_changes'];
+  $animated_moves = $variables['animated_moves'];
   $turns = $grid->getTurns();
   $max_turn = end($turns);
   $caption_title = _kw_djambi_get_translatable_messages($grid->getStatus());

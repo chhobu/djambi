@@ -44,6 +44,7 @@ function kw_djambi_theme() {
         'displayed_turn' => NULL,
         'displayed_turn_id' => NULL,
         'show_changes' => FALSE,
+        'animated_moves' => NULL,
       ),
       'file' => 'kw_djambi.theme.inc',
     ),
@@ -128,6 +129,7 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
     $past_moves = $grid->returnPastMoveData($displayed_turn_id, $show_moves, '_kw_djambi_describe_move');
   }
   $variables['past_moves'] = $past_moves;
+  $variables['animated_moves'] = ($show_changes && !empty($past_moves) && isset($past_moves['animations'])) ? $past_moves['animations'] : array();
   // Affichage des derniers mouvements ?
   $described_moves = array();
   if ($show_moves && !$show_changes && isset($form['controls']['showable_turns'])) {
@@ -274,6 +276,7 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
     'displayed_turn_id' => $displayed_turn_id,
     'displayed_turn' => $displayed_turn,
     'show_changes' => $show_changes,
+    'animated_moves' => $variables['animated_moves'],
   ));
 
 }
