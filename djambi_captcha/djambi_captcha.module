@@ -39,6 +39,7 @@ function djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
     $grid = $game->getBattlefield();
   }
   else {
+    DjambiGameManager::getModes();
     $data = array(
       'mode' => KW_DJAMBI_MODE_TRAINING,
       'disposition' => '2mini',

@@ -87,15 +87,17 @@ class DjambiGameDispositionsFactory {
    *
    * @param string $code
    *   Code de la disposition (par exemple : 3hex)
+   * @param array $disposition_settings
+   *   Tableau associatif contenant les options de la disposition
    *
    * @throws DjambiException
    * @return DjambiGameDisposition
    *   Objet étendant la classe abstraite DjambiGameDisposition
    */
-  public static function loadDisposition($code) {
+  public static function loadDisposition($code, $disposition_settings = NULL) {
     $class = 'DjambiGameDisposition' . $code;
     if (!empty($class) && class_exists($class)) {
-      return new $class();
+      return new $class($disposition_settings);
     }
     else {
       throw new DjambiException('Missing disposition class : ' . $class);
@@ -133,8 +135,8 @@ class DjambiGameDispositionsFactory {
  * Class DjambiGameDisposition4std
  */
 class DjambiGameDisposition4std extends DjambiGameDisposition {
-  public function __construct() {
-    $scheme = new DjambiBattlefieldSchemeStandardGridWith4Sides();
+  public function __construct($settings = NULL) {
+    $scheme = new DjambiBattlefieldSchemeStandardGridWith4Sides($settings);
     $this->setScheme($scheme)->setNbPlayers(4);
   }
 }
@@ -143,8 +145,8 @@ class DjambiGameDisposition4std extends DjambiGameDisposition {
  * Class DjambiGameDisposition3hex
  */
 class DjambiGameDisposition3hex extends DjambiGameDisposition {
-  public function __construct() {
-    $scheme = new DjambiBattlefieldSchemeHexagonalGridWith3Sides();
+  public function __construct($settings = NULL) {
+    $scheme = new DjambiBattlefieldSchemeHexagonalGridWith3Sides($settings);
     $this->setScheme($scheme)->setNbPlayers(3);
   }
 }
@@ -153,8 +155,8 @@ class DjambiGameDisposition3hex extends DjambiGameDisposition {
  * Class DjambiGameDisposition2std
  */
 class DjambiGameDisposition2std extends DjambiGameDisposition {
-  public function __construct() {
-    $scheme = new DjambiBattlefieldSchemeStandardGridWith4Sides();
+  public function __construct($settings = NULL) {
+    $scheme = new DjambiBattlefieldSchemeStandardGridWith4Sides($settings);
     $this->setScheme($scheme)->setNbPlayers(2)->setSides(array(
       1 => 'playable',
       2 => 'vassal',
@@ -168,8 +170,8 @@ class DjambiGameDisposition2std extends DjambiGameDisposition {
  * Class DjambiGameDisposition2mini
  */
 class DjambiGameDisposition2mini extends DjambiGameDisposition {
-  public function __construct() {
-    $scheme = new DjambiBattlefieldSchemeMiniGridWith2Sides();
+  public function __construct($settings = NULL) {
+    $scheme = new DjambiBattlefieldSchemeMiniGridWith2Sides($settings);
     $this->setScheme($scheme)->setNbPlayers(2);
   }
 }

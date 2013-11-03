@@ -52,7 +52,7 @@ class DjambiIA {
         switch ($interaction['type']) {
           case('manipulation'):
             $destination = $this->decideManipulation($interaction['choices']);
-            $piece->manipulate($interaction['target'], $destination);
+            $piece->manipulate($interaction['target'], $piece->getBattlefield()->findCellByName($destination));
             break;
 
           case('necromobility'):
@@ -68,7 +68,7 @@ class DjambiIA {
 
           case('murder'):
             $destination = $this->decideDeadPlacement($interaction['choices']);
-            $piece->kill($interaction['target'], $destination);
+            $piece->kill($interaction['target'], $piece->getBattlefield()->findCellByName($destination));
             break;
 
           case('throne_evacuation'):

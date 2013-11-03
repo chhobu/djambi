@@ -252,7 +252,6 @@ class DjambiGameManager implements DjambiGameManagerInterface {
   public function save() {
     $this->getBattlefield()->setInfo('changed', time());
     $data = $this->getBattlefield()->toArray();
-    /* @var $faction DjambiPoliticalFaction */
     foreach ($this->getBattlefield()->getFactions() as $faction) {
       $user_data = array(
         'uid' => $faction->getUserDataItem('uid'),

@@ -77,7 +77,8 @@ class DjambiBattlefield {
     $this->moves = array();
     $this->events = array();
     $this->summary = array();
-    $this->disposition = DjambiGameDispositionsFactory::loadDisposition($data['disposition']);
+    $this->disposition = DjambiGameDispositionsFactory::loadDisposition($data['disposition'],
+      isset($data['scheme_settings']) ? $data['scheme_settings'] : NULL);
     $this->mode = $data['mode'];
     if (isset($data['is_new']) && $data['is_new']) {
       unset($data['is_new']);
@@ -1612,6 +1613,7 @@ class DjambiBattlefield {
       'status' => $this->getStatus(),
       'infos' => $this->infos,
       'disposition' => $this->getDisposition()->getName(),
+      'scheme_settings' => $this->getDisposition()->getScheme()->getSettings(),
     );
     return $return;
   }

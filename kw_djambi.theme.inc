@@ -503,13 +503,12 @@ function theme_djambi_recruiting_phase($variables) {
   $empty = 0;
   foreach (element_children($form['factions']) as $id) {
     if (!empty($form['factions'][$id]['infos'])) {
-      // $ip = $form['factions'][$id]['infos']['#value']['ip'];
       $ping = $form['factions'][$id]['infos']['#value']['ping'];
       $ping_array = _kw_djambi_format_ping_infos($ping);
       $joined = format_interval(time() - $form['factions'][$id]['infos']['#value']['joined']);
     }
     else {
-      // $ip = $ping_array['status'] = $joined = '?';
+      $ping_array['status'] = $joined = '?';
       $ping_array['class'] = 'empty';
       $ping_array['title'] = '?';
       $joined = '?';
@@ -521,14 +520,13 @@ function theme_djambi_recruiting_phase($variables) {
         'data' => $form['factions'][$id]['label']['#markup']
         . (isset($form['factions'][$id]['infos']) && $form['factions'][$id]['infos']['#value']['me'] ? ' (' . t('Me !') . ')' : ''),
       ),
-      // 2 => array('data' => $ip),
-      3 => array(
+      2 => array(
         'data' => $ping_array['status'],
         'class' => array($ping_array['class'], 'ping-info'),
         'title' => $ping_array['title'],
       ),
-      4 => array('data' => $joined, 'class' => array('joined')),
-      5 => array('data' => !empty($form['factions'][$id]['action']) ? drupal_render($form['factions'][$id]['action']) : '-'),
+      3 => array('data' => $joined, 'class' => array('joined')),
+      4 => array('data' => !empty($form['factions'][$id]['action']) ? drupal_render($form['factions'][$id]['action']) : '-'),
     );
     $rows[] = array(
       'data' => $row,

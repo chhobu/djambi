@@ -43,6 +43,7 @@ function _djambi_node_list_games() {
  * Construit un tableau listant les parties de Djambi en phase de recrutement.
  */
 function _djambi_node_list_recruiting_games($item_id = NULL) {
+  DjambiGameManager::getStatuses();
   $options = array(
     'form_display' => 'advanced',
     'file' => drupal_get_path('module', 'djambi_node') . '/djambi_node.blocks.inc',
