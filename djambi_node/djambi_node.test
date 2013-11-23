@@ -305,13 +305,16 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
         $factions = $grid->getFactions();
         $this->assertDjambiGameInformations('status', KW_DJAMBI_STATUS_RECRUITING);
         $empty_factions = array();
-        $default_faction = $grid->getGameManager()->getUserFaction($user->uid, _kw_djambi_cookie());
+        $default_faction = $grid->getGameManager()->getUserFaction(array(
+          'uid' => $user->uid,
+          'cookie' => _kw_djambi_cookie()
+        ));
         if (is_null($default_faction)) {
           $this->fail(t("The current user doesn't control any faction."));
           return;
         }
         foreach ($factions as $faction) {
-          if ($faction->getStatus() == KW_DJAMBI_USER_EMPTY_SLOT) {
+          if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT) {
             $empty_factions[] = $faction->getId();
           }
         }

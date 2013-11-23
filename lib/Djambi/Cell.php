@@ -4,7 +4,9 @@
  * Classe permettant de gérer les cellules d'une grille de Djambi.
  */
 
-class DjambiCell {
+namespace Djambi;
+
+class Cell {
   /**
    * Nom de la cellule
    * @var string $name
@@ -25,7 +27,7 @@ class DjambiCell {
 
   /**
    * Pièce placée sur la cellule
-   * @var DjambiPiece $occupant
+   * @var Piece $occupant
    */
   protected $occupant;
 
@@ -37,7 +39,7 @@ class DjambiCell {
 
   /**
    * Liste des cellules voisines
-   * @var DjambiCell[] $neighbours
+   * @var Cell[] $neighbours
    */
   protected $neighbours = array();
 
@@ -56,7 +58,7 @@ class DjambiCell {
   /**
    * Ajoute une cellule dans la grille.
    *
-   * @param DjambiBattlefield $grid
+   * @param Battlefield $grid
    *   Grille de Djambi
    * @param string $row_letter
    *   Nom de la colonne de la grille
@@ -65,19 +67,18 @@ class DjambiCell {
    * @param int $y
    *   Coordonnée horizontale
    */
-  protected function __construct(DjambiBattlefield $grid, $row_letter, $x, $y) {
+  protected function __construct(Battlefield $grid, $row_letter, $x, $y) {
     $this->x = $x;
     $this->y = $y;
     $this->name = $row_letter . $y;
     $this->columnName = $row_letter;
     $grid->registerCell($this);
-    return $this;
   }
 
   /**
    * Construit une cellule de Djambi à partir de ses coordonnées x / y.
    */
-  public static function createByXY(DjambiBattlefield $grid, $x, $y) {
+  public static function createByXY(Battlefield $grid, $x, $y) {
     $x_corrected = $x - 1;
     for ($row_letter = ""; $x_corrected >= 0; $x_corrected = intval($x_corrected / 26) - 1) {
       $row_letter = chr($x_corrected % 26 + 0x41) . $row_letter;
@@ -85,28 +86,19 @@ class DjambiCell {
     return new self($grid, $row_letter, $x, $y);
   }
 
-  /**
-   * @return int
-   */
   public function getY() {
     return $this->y;
   }
 
-  /**
-   * @return int
-   */
   public function getX() {
     return $this->x;
   }
 
-  /**
-   * @return string
-   */
   public function getName() {
     return $this->name;
   }
 
-  public function setOccupant(DjambiPiece $occupant) {
+  public function setOccupant(Piece $occupant) {
     $this->occupant = $occupant;
     return $this;
   }
@@ -116,9 +108,6 @@ class DjambiCell {
     return $this;
   }
 
-  /**
-   * @return DjambiPiece
-   */
   public function getOccupant() {
     return $this->occupant;
   }
@@ -137,9 +126,6 @@ class DjambiCell {
     return $this;
   }
 
-  /**
-   * @return string
-   */
   public function getType() {
     return $this->type;
   }
@@ -152,7 +138,7 @@ class DjambiCell {
     return $this->neighbours;
   }
 
-  public function addNeighbour(DjambiCell $neighbour, $direction) {
+  public function addNeighbour(Cell $neighbour, $direction) {
     $this->neighbours[$direction] = $neighbour;
     return $this;
   }

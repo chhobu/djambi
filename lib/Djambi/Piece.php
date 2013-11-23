@@ -5,28 +5,31 @@
  * d'état des pièces de Djambi.
  */
 
+namespace Djambi;
+use Djambi\Exceptions\Exception;
+
 /**
  * Class DjambiPiece
  */
-class DjambiPiece {
+class Piece {
   /* @var string $id */
   protected $id;
-  /* @var \DjambiPoliticalFaction $faction */
+  /* @var Faction $faction */
   protected $faction;
   /* @var string $originalFactionId */
   protected $originalFactionId;
   /* @var  bool $alive */
   protected $alive;
-  /* @var DjambiCell $position */
+  /* @var Cell $position */
   protected $position;
   /* @var bool $movable */
   protected $movable = FALSE;
-  /* @var DjambiCell[] $allowableMoves */
+  /* @var Cell[] $allowableMoves */
   protected $allowableMoves = array();
-  /* @var DjambiPieceDescription $description */
+  /* @var PieceDescription $description */
   protected $description;
 
-  public function __construct(DjambiPieceDescription $piece, DjambiPoliticalFaction $faction, $original_faction_id, DjambiCell $position, $alive) {
+  public function __construct(PieceDescription $piece, Faction $faction, $original_faction_id, Cell $position, $alive) {
     $this->description = $piece;
     $this->faction = $faction;
     $this->originalFactionId = $original_faction_id;
@@ -34,16 +37,12 @@ class DjambiPiece {
     $this->alive = $alive;
     $this->setPosition($position);
     $this->getBattlefield()->addHabilitiesInStore($piece->getHabilities());
-    return $this;
   }
 
   public function getId() {
     return $this->id;
   }
 
-  /**
-   * @return DjambiPieceDescription
-   */
   public function getDescription() {
     return $this->description;
   }
@@ -60,23 +59,14 @@ class DjambiPiece {
     return $this->getDescription()->getType();
   }
 
-  /**
-   * @return DjambiPoliticalFaction
-   */
   public function getFaction() {
     return $this->faction;
   }
 
-  /**
-   * @return DjambiBattlefield
-   */
   public function getBattlefield() {
     return $this->faction->getBattlefield();
   }
 
-  /**
-   * @return DjambiPoliticalFaction
-   */
   public function getOriginalFaction() {
     return $this->getBattlefield()->getFactionById($this->originalFactionId);
   }
@@ -103,7 +93,7 @@ class DjambiPiece {
     return $this->position;
   }
 
-  public function setPosition(DjambiCell $position) {
+  public function setPosition(Cell $position) {
     $current_position = isset($this->position) ? $this->position : NULL;
     $this->position = $position;
     $this->faction->getBattlefield()->placePiece($this, $current_position);
@@ -148,7 +138,7 @@ class DjambiPiece {
     return $moves;
   }
 
-  public function buildAllowableMoves($allow_interactions = TRUE, DjambiCell $force_position = NULL) {
+  public function buildAllowableMoves($allow_interactions = TRUE, Cell $force_position = NULL) {
     if (!$this->isAlive()) {
       return 0;
     }
@@ -216,7 +206,7 @@ class DjambiPiece {
     return count($this->allowableMoves);
   }
 
-  public function evaluateMove(DjambiCell $destination) {
+  public function evaluateMove(Cell $destination) {
     $return = $this->prepareMove($destination, TRUE);
     if (!empty($return['interactions'])) {
       foreach ($return['interactions'] as $key => $interaction) {
@@ -239,7 +229,7 @@ class DjambiPiece {
             break;
 
           case('reportage'):
-            /* @var DjambiPiece $victim */
+            /* @var Piece $victim */
             foreach ($interaction['victims'] as $victim) {
               $choices[] = $victim->getId();
             }
@@ -261,7 +251,7 @@ class DjambiPiece {
     return $return;
   }
 
-  public function evacuate(DjambiCell $destination) {
+  public function evacuate(Cell $destination) {
     $return = $this->prepareMove($destination, FALSE);
     if ($return['allowed']) {
       $this->executeMove($return['cell'], $return['kills'], $return['events']);
@@ -269,7 +259,7 @@ class DjambiPiece {
     return $return['interactions'];
   }
 
-  public function move(DjambiCell $destination) {
+  public function move(Cell $destination) {
     $return = $this->prepareMove($destination, TRUE);
     if ($return['allowed']) {
       $this->executeMove($return['cell'], $return['kills'], $return['events']);
@@ -277,7 +267,7 @@ class DjambiPiece {
     return $return['interactions'];
   }
 
-  protected function prepareMove(DjambiCell $destination, $allow_interactions) {
+  protected function prepareMove(Cell $destination, $allow_interactions) {
     $interactions = array();
     $events = array();
     $kills = array();
@@ -378,7 +368,7 @@ class DjambiPiece {
             );
           }
           elseif (!empty($victims)) {
-            /* @var DjambiPiece $victim */
+            /* @var Piece $victim */
             foreach ($victims as $victim) {
               $kills[] = array(
                 'victim' => $victim,
@@ -405,7 +395,7 @@ class DjambiPiece {
     );
   }
 
-  protected function executeMove(DjambiCell $destination, $kills, $events = NULL) {
+  protected function executeMove(Cell $destination, $kills, $events = NULL) {
     $target = $destination->getOccupant();
     $this->faction->getBattlefield()->logMove($this, $destination, 'move', $target);
     $this->setPosition($destination);
@@ -417,7 +407,7 @@ class DjambiPiece {
     if (!empty($events)) {
       foreach ($events as $event) {
         if ($event['type'] == 'diplomat_golden_move') {
-          /* @var DjambiPiece $target */
+          /* @var Piece $target */
           $target = $event['target'];
           $target->move($event['position']);
           $this->getBattlefield()->logEvent('event', 'DIPLOMAT_GOLDEN_MOVE', array('piece' => $this->getId()));
@@ -429,7 +419,7 @@ class DjambiPiece {
     }
   }
 
-  public function kill(DjambiPiece $victim, DjambiCell $destination) {
+  public function kill(Piece $victim, Cell $destination) {
     $victim->setAlive(FALSE);
     $this->faction->getBattlefield()->logMove($victim, $destination, "murder", $this);
     $victim->setPosition($destination);
@@ -438,7 +428,7 @@ class DjambiPiece {
         'faction1' => $victim->getFaction()->getId(),
         'piece' => $victim->getId(),
       ));
-      $victim->getFaction()->dieDieDie(KW_DJAMBI_USER_KILLED);
+      $victim->getFaction()->dieDieDie(KW_DJAMBI_FACTION_STATUS_KILLED);
       $victim->getFaction()->setControl($this->faction->getControl());
       $victim->getFaction()->setMaster($this->faction->getControl()->getId());
       $this->faction->getBattlefield()->updateSummary();
@@ -446,17 +436,17 @@ class DjambiPiece {
     }
   }
 
-  public function manipulate(DjambiPiece $victim, DjambiCell $destination) {
+  public function manipulate(Piece $victim, Cell $destination) {
     $this->faction->getBattlefield()->logMove($victim, $destination, "manipulation", $this);
     $victim->setPosition($destination);
   }
 
-  public function necromove(DjambiPiece $victim, DjambiCell $destination) {
+  public function necromove(Piece $victim, Cell $destination) {
     $this->faction->getBattlefield()->logMove($victim, $destination, "necromobility", $this);
     $victim->setPosition($destination);
   }
 
-  public function checkAvailableMove(DjambiCell $cell, $allow_interactions, $force_empty = FALSE) {
+  public function checkAvailableMove(Cell $cell, $allow_interactions, $force_empty = FALSE) {
     $move_ok = FALSE;
     $occupant = $cell->getOccupant();
     if ($force_empty || empty($occupant)) {
@@ -501,7 +491,7 @@ class DjambiPiece {
     return $move_ok;
   }
 
-  public function checkAttackingPossibility(DjambiPiece $occupant) {
+  public function checkAttackingPossibility(Piece $occupant) {
     $can_attack = FALSE;
     if ($this->getDescription()->hasHabilityKillByAttack()) {
       $canibalism = $this->getBattlefield()->getOption('rule_canibalism');
@@ -521,7 +511,7 @@ class DjambiPiece {
     return $can_attack;
   }
 
-  public function checkManipulatingPossibility(DjambiPiece $occupant) {
+  public function checkManipulatingPossibility(Piece $occupant) {
     $can_manipulate = FALSE;
     if ($this->getDescription()->hasHabilityMoveLivingPieces()) {
       $manipulation_rule = $this->getBattlefield()->getOption('rule_self_diplomacy');

@@ -6,6 +6,15 @@
  */
 
 /**
+ * Implements hook_xautoload().
+ *
+ * @param xautoload_InjectedAPI_hookXautoload $api
+ */
+function kw_djambi_xautoload($api) {
+  $api->namespaceRoot('Djambi', 'lib');
+}
+
+/**
  * Implements hook_theme().
  */
 function kw_djambi_theme() {
@@ -75,14 +84,13 @@ function kw_djambi_theme() {
  * Pré-traitement de l'affichage d'une grille de Djambi.
  */
 function kw_djambi_preprocess_djambi_grid(&$variables) {
-  global $user;
   $form = $variables["form"];
-  /* @var $grid DjambiBattlefield */
+  /* @var $grid \Djambi\Battlefield */
   // Récupération de la grille.
   $grid = $form["#grid"];
   // Affichage du bloc événement ?
   $display_events = $grid->isPending();
-  if ($grid->getInfo('interface') == 'minimal') {
+  if ($grid->getGameManager()->getInfo('interface') == 'minimal') {
     $display_events = FALSE;
   }
   $variables['show_events'] = $display_events;
@@ -139,7 +147,7 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
   // En-tête dans le cas d'une grille classique.
   $header = array();
   $rows = array();
-  if ($grid->getDisposition()->getScheme()->getDisposition() != 'hexagonal') {
+  if ($grid->getDisposition()->getGrid()->getDisposition() != 'hexagonal') {
     for ($i = 0; $i <= $grid->getDimensions(); $i++) {
       $header[] = array(
         "data" => $i > 0 ? $grid->findCell($i, 1)->getColumnName() : '#',
@@ -168,26 +176,20 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
 
   // Génération des lignes d'information
   $infos_lines = array();
-  if ($grid->getInfo('interface') != 'minimal') {
+  if ($grid->getGameManager()->getInfo('interface') != 'minimal') {
     $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
   }
   // Cas d'une partie à joueur unique.
   if ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
-    /* @var $random_faction DjambiPoliticalFaction */
     foreach ($grid->getFactions() as $random_faction) {
-      if ($random_faction->getStatus() != KW_DJAMBI_USER_VASSALIZED) {
+      if ($random_faction->getStatus() != KW_DJAMBI_FACTION_STATUS_VASSALIZED) {
         break;
       }
     }
-    $current_user = user_load($random_faction->getUserDataItem('uid'));
-    $player = theme('username', array('account' => $current_user));
-    if ($current_user->uid == 0) {
-      $ip = $random_faction->getUserDataItem('ip');
-      if (!empty($ip)) {
-        $player .= ' (' . t('IP adress : !ip', array('!ip' => $ip)) . ')';
-      }
+    if (!empty($random_faction) && !is_null($random_faction->getPlayer())) {
+      $player = $random_faction->getPlayer()->displayName();
+      $infos_lines[t('Player')] = t('!player, controlling all sides.', array('!player' => $player));
     }
-    $infos_lines[t('Player')] = t('!player, controlling all sides.', array('!player' => $player));
   }
   // Cas d'une partie en cours : génération du tableau des joueurs...
   elseif ($grid->isPending()) {
@@ -229,7 +231,6 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
     else {
       $accepted = array();
       $waiting = array();
-      /* @var $playing_faction DjambiPoliticalFaction */
       foreach ($grid->getFactions() as $playing_faction) {
         if (!$playing_faction->isAlive()) {
           continue;
@@ -253,7 +254,8 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
       }
       if (!empty($waiting)) {
         $infos_lines[t("Undecided sides")] = implode(', ', $waiting);
-        if (!$grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $playing_faction)) {
+        $context = \Drupal\kw_djambi\Djambi\DjambiContext::getInstance();
+        if (!empty($playing_faction) && !$context->checkUserPlayingFaction($playing_faction)) {
           $infos_lines[t("Pending decision")] = theme('djambi_waiting_label', array(
             'faction' => $now_playing_faction,
             'grid' => $grid,
@@ -338,77 +340,21 @@ function kw_djambi_node_view($node, $view_mode) {
 }
 
 /**
- * Ajout d'un cookie identifiant un visiteur anonyme.
- */
-function _kw_djambi_cookie() {
-  global $user;
-  // Création d'un cookie si l'utilisateur est anonyme :
-  if ($user->uid == 0) {
-    if (empty($_COOKIE['Drupal_visitor_djambi_cookie_id'])) {
-      $cookie = uniqid();
-      user_cookie_save(array('djambi_cookie_id' => $cookie));
-    }
-    else {
-      $cookie = $_COOKIE['Drupal_visitor_djambi_cookie_id'];
-    }
-  }
-  else {
-    $cookie = NULL;
-  }
-  return $cookie;
-}
-
-/**
- * Mise en forme des informations concernant le ping d'un utilisateur.
- */
-function _kw_djambi_format_ping_infos($ping_time) {
-  $ping['title'] = t("Last connection information sent by this player : !time",
-    array('!time' => format_date($ping_time, 'short')));
-  $ping_interval = time() - $ping_time;
-  if ($ping_interval < 60) {
-    $ping['status'] = t('OK');
-    $ping['class'] = 'ok';
-  }
-  elseif ($ping_interval < 60 * 5) {
-    $ping['status'] = t('Warning');
-    $ping['class'] = 'warning';
-  }
-  else {
-    $ping['status'] = t('Failed !');
-    $ping['class'] = 'error';
-  }
-  return $ping;
-}
-
-/**
- * Sauvegarde en BdD du jeu.
- *
- * @param DjambiBattlefield $grid
- *   partie en cours
- * @param array $form_state
- *   état du formulaire courant
- */
-function _kw_djambi_save_game(DjambiBattlefield $grid, &$form_state) {
-  $form_state['saved_grid'] = $grid->getGameManager()->save();
-}
-
-/**
  * Charge les noeuds de type règle du jeu correspondant aux pièces de la partie.
  *
- * @param DjambiBattlefield $grid
+ * @param \Djambi\Battlefield $grid
  *   grille de Djambi courante
  *
  * @return array
  *   tableau de noeuds
  */
-function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
+function _kw_djambi_load_rule_nodes(\Djambi\Battlefield $grid) {
   $nodes = array();
   if (!node_type_load('rule_element')) {
     return $nodes;
   }
-  $scheme = $grid->getDisposition()->getScheme();
+  $scheme = $grid->getDisposition()->getGrid();
   $types = array();
-  /* @var $piece DjambiPieceDescription */
   foreach ($scheme->getPieceScheme() as $piece) {
     $types[] = $piece->getRulePattern();
   }
@@ -482,13 +428,13 @@ function _kw_djambi_load_rule_nodes(DjambiBattlefield $grid) {
 /**
  * Affiche le libellé d'une pièce.
  *
- * @param DjambiPiece $piece
+ * @param \Djambi\Piece $piece
  *   Pièce de Djambi à nommer
  *
  * @return string
  *   Nom de la pièce
  */
-function _kw_djambi_get_full_piece_name(DjambiPiece $piece) {
+function _kw_djambi_get_full_piece_name(\Djambi\Piece $piece) {
   return t("!color !longname", array(
     "!color" => _kw_djambi_get_translatable_messages($piece->getFaction()->getName()),
     "!longname" => _kw_djambi_get_translatable_messages($piece->getLongname()),
@@ -500,7 +446,7 @@ function _kw_djambi_get_full_piece_name(DjambiPiece $piece) {
  *
  * @param array $move
  *   Description d'un mouvement
- * @param DjambiBattlefield $grid
+ * @param \Djambi\Battlefield $grid
  *   Grille de Djambi
  *
  * @return string
@@ -509,64 +455,64 @@ function _kw_djambi_get_full_piece_name(DjambiPiece $piece) {
 function _kw_djambi_describe_move($move, $grid) {
   $msg = NULL;
   $piece = $grid->getPieceById($move["target"]);
-  switch($move['type']) {
+  switch ($move['type']) {
     case('move'):
-    $faction = $grid->getFactionById($move["target_faction"]);
-    if ($faction) {
-      $msg = t("!faction has moved !piece from !origin to !destination.", array(
-        "!faction" => theme('djambi_faction_name', array('faction' => $faction)),
-        "!piece" => theme('djambi_piece_name', array('piece' => $piece)),
-        "!origin" => $move["from"],
-        "!destination" => $move["to"],
-      ));
-    }
-    break;
+      $faction = $grid->getFactionById($move["target_faction"]);
+      if ($faction) {
+        $msg = t("!faction has moved !piece from !origin to !destination.", array(
+          "!faction" => theme('djambi_faction_name', array('faction' => $faction)),
+          "!piece" => theme('djambi_piece_name', array('piece' => $piece)),
+          "!origin" => $move["from"],
+          "!destination" => $move["to"],
+        ));
+      }
+      break;
 
     case('murder');
-    $victim = $piece;
-    $responsable = $grid->getPieceById($move["acting"]);
-    if ($piece && $responsable) {
-      $msg = t("!victim has been killed by !piece. The crime took place in !origin, and the victim body was found in !destination.", array(
-        "!victim" => theme('djambi_piece_name', array('piece' => $victim)),
-        "!piece" => theme('djambi_piece_name', array('piece' => $responsable)),
-        "!origin" => $move["from"],
-        "!destination" => $move["to"],
-      ));
-    }
-    break;
+      $victim = $piece;
+      $responsable = $grid->getPieceById($move["acting"]);
+      if ($piece && $responsable) {
+        $msg = t("!victim has been killed by !piece. The crime took place in !origin, and the victim body was found in !destination.", array(
+          "!victim" => theme('djambi_piece_name', array('piece' => $victim)),
+          "!piece" => theme('djambi_piece_name', array('piece' => $responsable)),
+          "!origin" => $move["from"],
+          "!destination" => $move["to"],
+        ));
+      }
+      break;
 
     case('necromobility'):
-    $responsable = $grid->getPieceById($move["acting"]);
-    if ($responsable) {
-      $msg = t("!piece has exhumed a dead body from !origin. Its new burial place is located in !destination.", array(
-        "!piece" => theme('djambi_piece_name', array('piece' => $responsable)),
-        "!origin" => $move["from"],
-        "!destination" => $move["to"],
-      ));
-    }
-    break;
+      $responsable = $grid->getPieceById($move["acting"]);
+      if ($responsable) {
+        $msg = t("!piece has exhumed a dead body from !origin. Its new burial place is located in !destination.", array(
+          "!piece" => theme('djambi_piece_name', array('piece' => $responsable)),
+          "!origin" => $move["from"],
+          "!destination" => $move["to"],
+        ));
+      }
+      break;
 
     case('manipulation'):
-    $victim = $piece;
-    $responsable = $grid->getPieceById($move["acting"]);
-    if ($victim && $responsable) {
-      $msg = t("!victim has been manipulated by !piece from !origin to !destination.", array(
-        "!victim" => theme('djambi_piece_name', array('piece' => $victim)),
-        "!piece" => theme('djambi_piece_name', array('piece' => $responsable)),
-        "!origin" => $move["from"],
-        "!destination" => $move["to"],
-      ));
-    }
-    break;
+      $victim = $piece;
+      $responsable = $grid->getPieceById($move["acting"]);
+      if ($victim && $responsable) {
+        $msg = t("!victim has been manipulated by !piece from !origin to !destination.", array(
+          "!victim" => theme('djambi_piece_name', array('piece' => $victim)),
+          "!piece" => theme('djambi_piece_name', array('piece' => $responsable)),
+          "!origin" => $move["from"],
+          "!destination" => $move["to"],
+        ));
+      }
+      break;
 
     case('elimination'):
-    if ($piece) {
-      $msg = t("!victim has been eliminated from the game. The action took place in !origin.", array(
-        "!victim" => theme('djambi_piece_name', array('piece' => $piece)),
-        "!origin" => $move["from"],
-      ));
-    }
-    break;
+      if ($piece) {
+        $msg = t("!victim has been eliminated from the game. The action took place in !origin.", array(
+          "!victim" => theme('djambi_piece_name', array('piece' => $piece)),
+          "!origin" => $move["from"],
+        ));
+      }
+      break;
 
   }
   return $msg;
@@ -575,7 +521,7 @@ function _kw_djambi_describe_move($move, $grid) {
 /**
  * Génère une description des événements à partir des données de la base.
  */
-function _kw_djambi_describe_event($event, DjambiBattlefield $grid) {
+function _kw_djambi_describe_event($event, \Djambi\Battlefield $grid) {
   $args = array();
   if (is_array($event["args"])) {
     foreach ($event["args"] as $key => $arg) {
@@ -586,6 +532,28 @@ function _kw_djambi_describe_event($event, DjambiBattlefield $grid) {
     }
   }
   return _kw_djambi_get_translatable_messages($event["event"], $args, $grid);
+}
+
+/**
+ * Mise en forme des informations concernant le ping d'un utilisateur.
+ */
+function _kw_djambi_format_ping_infos($ping_time) {
+  $ping['title'] = t("Last connection information sent by this player : !time",
+    array('!time' => format_date($ping_time, 'short')));
+  $ping_interval = time() - $ping_time;
+  if ($ping_interval <= 60) {
+    $ping['status'] = t('Online');
+    $ping['class'] = 'ok';
+  }
+  elseif ($ping_interval <= 60 * 5) {
+    $ping['status'] = t('Away');
+    $ping['class'] = 'warning';
+  }
+  else {
+    $ping['status'] = t('Offline');
+    $ping['class'] = 'error';
+  }
+  return $ping;
 }
 
 /**
@@ -624,9 +592,9 @@ function _kw_djambi_get_duration($seconds_count) {
 /**
  * Traduit les chaînes de caractères présentes dans les classes du dossier lib.
  */
-function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiBattlefield $grid = NULL) {
+function _kw_djambi_get_translatable_messages($message, $args = array(), \Djambi\Battlefield $grid = NULL) {
   if (!defined('KW_DJAMBI_MODE_FRIENDLY')) {
-    DjambiGameManager::getModes();
+    \Djambi\GameManager::getModes();
   }
   if (isset($args['faction1']) && !is_null($grid)) {
     $faction1 = $grid->getFactionById($args['faction1']);
@@ -864,6 +832,14 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
       $txt = t("The !faction1 side got some new hope and is back in the game.", $args);
       break;
 
+    case("RULE_VARIANT"):
+      $txt = t("Rule variant #!num", $args);
+      break;
+
+    case("GAMEPLAY_ELEMENT"):
+      $txt = t("Gameplay element #!num", $args);
+      break;
+
     case("RULE1"):
       $txt = t("Leader surrounding rule");
       break;
@@ -1011,43 +987,43 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), DjambiB
       $txt = t("No, only registered users can play");
       break;
 
-    case(KW_DJAMBI_USER_PLAYING):
+    case(KW_DJAMBI_FACTION_STATUS_PLAYING):
       $txt = t('playing');
       break;
 
-    case(KW_DJAMBI_USER_WINNER):
+    case(KW_DJAMBI_FACTION_STATUS_WINNER):
       $txt = t('winner');
       break;
 
-    case(KW_DJAMBI_USER_DRAW):
+    case(KW_DJAMBI_FACTION_STATUS_DRAW):
       $txt = t('draw');
       break;
 
-    case(KW_DJAMBI_USER_KILLED):
+    case(KW_DJAMBI_FACTION_STATUS_KILLED):
       $txt = t('killed');
       break;
 
-    case(KW_DJAMBI_USER_WITHDRAW):
+    case(KW_DJAMBI_FACTION_STATUS_WITHDRAW):
       $txt = t('withdrawn');
       break;
 
-    case(KW_DJAMBI_USER_SURROUNDED):
+    case(KW_DJAMBI_FACTION_STATUS_SURROUNDED):
       $txt = t('surrounded');
       break;
 
-    case(KW_DJAMBI_USER_DEFECT):
+    case(KW_DJAMBI_FACTION_STATUS_DEFECT):
       $txt = t('defect');
       break;
 
-    case(KW_DJAMBI_USER_EMPTY_SLOT):
+    case(KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT):
       $txt = t('empty');
       break;
 
-    case(KW_DJAMBI_USER_READY):
-      $txt = t('ready');
+    case(KW_DJAMBI_FACTION_STATUS_READY):
+      $txt = t('waiting');
       break;
 
-    case(KW_DJAMBI_USER_VASSALIZED):
+    case(KW_DJAMBI_FACTION_STATUS_VASSALIZED):
       $txt = t('vassalized');
       break;
 

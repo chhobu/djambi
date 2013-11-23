@@ -178,6 +178,9 @@
       $djambi.find('.refresh-button').hide();
       var refresh_type = $djambi.data('refresh');
       if (refresh_type != 'no') {
+        var refresh_interval = 10000;
+        if (refresh_type == 'force') {refresh_interval = 1000;}
+        else if (refresh_type == 'minimal') {refresh_interval = 60000;}
         if (typeof DjambiRefreshInterval !== 'undefined') {
           clearInterval(DjambiRefreshInterval);
         }
@@ -192,14 +195,8 @@
             $('.djambi input[name="ui-computer-refresh"]').mousedown();
             return;
           }
-          jQuery.ajax('/js/djambi_node/check_update/' + $grid.data('nid') + '/' + $grid.data('version')).done(function(json) {
-            var result;
-            if (typeof json === 'string') {
-              result = jQuery.parseJSON(json);
-            }
-            else {
-              result = json;
-            }
+          jQuery.ajax(Drupal.settings.basePath + 'djambi/check_update/' + $grid.data('nid') + '/' + $grid.data('version')).done(function(json) {
+            var result = (typeof json === 'string') ? jQuery.parseJSON(json) : json;
             var $block = $('#DjambiActiveGameInfo');
             if ($block.length > 0 && ($block.data('user-faction') != result['user-faction'] || $block.data('status') != result['status'])) {
               $('.refresh-my-djambi-panel a').click();
@@ -213,8 +210,8 @@
               if(typeof result['pings'] != 'undefined') {
                 var $players_table = $grid.find('.players');
                 for (key in result['pings']) {
-                  value = result.pings[key];
-                  var $tr = $players_table.find('tr[data-djuid="'+ key +'"]');
+                  var value = result.pings[key];
+                  var $tr = $players_table.find('tr[data-faction="'+ key +'"]');
                   $tr.find('td.ping-info').html(value['status'])
                     .removeClass().addClass('ping-info').addClass(value['class'])
                     .attr('title', value['title']);
@@ -251,7 +248,7 @@
               }, ends);
             }
           });
-        }, refresh_type == 'force' ? 1000 : 10000);
+        }, refresh_interval);
       }
       // Glisser-déposer des pièces
       var $positionable = $djambigrid.find(".piece.positionable");

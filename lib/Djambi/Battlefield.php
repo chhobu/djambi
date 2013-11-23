@@ -5,34 +5,28 @@
  * un plateau de jeu.
  */
 
-
-/**
- * Class DjambiCellNotFoundException
- */
-class DjambiCellNotFoundException extends DjambiException {}
-
-/**
- * Class DjambiPieceNotFoundException
- */
-class DjambiPieceNotFoundException extends DjambiException {}
-
-/**
- * Class DjambiFactionNotFoundException
- */
-class DjambiFactionNotFoundException extends DjambiException {}
+namespace Djambi;
+use Djambi\Exceptions\BadGridException;
+use Djambi\Exceptions\CellNotFoundException;
+use Djambi\Exceptions\FactionNotFoundException;
+use Djambi\Exceptions\PieceNotFoundException;
+use Djambi\Interfaces\BattlefieldInterface;
+use Djambi\Interfaces\GameManagerInterface;
+use Djambi\Interfaces\PlayerInterface;
+use Djambi\Players\HumanPlayer;
 
 /**
  * Class DjambiBattlefield
  */
-class DjambiBattlefield {
+class Battlefield implements BattlefieldInterface {
   protected $id;
-  /* @var DjambiGameManager $gameManager */
+  /* @var GameManagerInterface $gameManager */
   protected $gameManager;
-  /** @var DjambiGameDisposition $disposition */
+  /** @var GameDisposition $disposition */
   protected $disposition;
-  /** @var DjambiCell[] $cells */
+  /** @var Cell[] $cells */
   protected $cells = array();
-  /** @var DjambiPoliticalFaction[] $factions */
+  /** @var Faction[] $factions */
   protected $factions = array();
   /** @var array $moves */
   protected $moves = array();
@@ -42,8 +36,6 @@ class DjambiBattlefield {
   protected $events = array();
   /** @var array $options */
   protected $options = array();
-  /** @var array $infos */
-  protected $infos = array();
   /** @var array $habilities_store */
   protected $habilitiesStore = array();
   /** @var array $summary */
@@ -58,38 +50,27 @@ class DjambiBattlefield {
   /**
    * Construction de l'objet DjambiBattlefield.
    *
-   * @param DjambiGameManager $gm
+   * @param GameManagerInterface $gm
    *   Objet de gestion du jeu
-   * @param array $data
-   *   informations sur la partie en cours ou à créer
+   * @param string $id
+   *   Identifiant du jeu
+   * @param string $mode
+   *   Mode de jeu
+   * @param GameDisposition $disposition
+   *   Disposition de jeu
    *
-   * @throws DjambiException
-   * @return DjambiBattlefield
+   * @return Battlefield
    *   Nouvel objet plateau de jeu
    */
-  public function __construct(DjambiGameManager $gm, $data) {
-    if (!isset($data['id']) || !isset($data['mode']) || !isset($data['disposition'])) {
-      throw new DjambiException('DjambiBattlefield creation failure : missing required elements in data variable (id, mode, disposition).');
-    }
-    $this->setGameManager($gm);
-    $this->id = $data['id'];
+  protected function __construct(GameManagerInterface $gm, $id, $mode, GameDisposition $disposition) {
+    $this->gameManager = $gm;
+    $this->id = $id;
+    $this->disposition = $disposition;
     $this->setDefaultOptions();
     $this->moves = array();
     $this->events = array();
     $this->summary = array();
-    $this->disposition = DjambiGameDispositionsFactory::loadDisposition($data['disposition'],
-      isset($data['scheme_settings']) ? $data['scheme_settings'] : NULL);
-    $this->mode = $data['mode'];
-    if (isset($data['is_new']) && $data['is_new']) {
-      unset($data['is_new']);
-      if (isset($data['sequence'])) {
-        $this->setInfo('sequence', $data['sequence']);
-      }
-      return $this->createNewGame($data);
-    }
-    else {
-      return $this->loadBattlefield($data);
-    }
+    $this->mode = $mode;
   }
 
   /* ---------------------------------------------------------
@@ -99,114 +80,60 @@ class DjambiBattlefield {
   /**
    * Crée une nouvelle grille de Djambi.
    *
-   * @param array $data
-   *   Tableau de données permettant de charger une partie
+   * @param GameManagerInterface $gm
+   *   Objet de gestion de la partie
+   * @param PlayerInterface[] $players
+   *   Liste des joueurs
+   * @param string $id
+   *   Identifiant de la grille
+   * @param string $mode
+   *   Mode de jeu
+   * @param GameDisposition $disposition
+   *   Disposition de la grille
    *
-   * @return DjambiBattlefield
-   *   Grille de Djambi courante
-   * @throws DjambiException
+   * @throws BadGridException
+   * @return Battlefield
+   *   Nouvelle grille de Djambi
    */
-  protected function createNewGame($data) {
-    $user_id = isset($data['user_id']) ? $data['user_id'] : 0;
-    $user_cookie = isset($data['user_cookie']) ? $data['user_cookie'] : NULL;
-    if (isset($data['computers'])) {
-      $computers_classes = $data['computers'];
-    }
+  public static function createNewBattlefield(GameManagerInterface $gm, $players, $id, $mode, GameDisposition $disposition) {
+    $battlefield = new self($gm, $id, $mode, $disposition);
+
     // Construction des factions :
-    $players_info = array();
     $ready = TRUE;
-    foreach ($this->getDisposition()->getSides() as $key => $player) {
-      switch ($player) {
-        case('playable'):
-          if ($this->mode == KW_DJAMBI_MODE_SANDBOX || ($key == 1 && in_array($this->mode, array(KW_DJAMBI_MODE_FRIENDLY, KW_DJAMBI_MODE_TRAINING)))) {
-            $user_data['ip'] = function_exists('ip_address') ? ip_address() : $_SERVER['REMOTE_ADDR'];
-            if ($this->mode != KW_DJAMBI_MODE_SANDBOX) {
-              $user_data['ping'] = $user_data['joined'] = time();
-            }
-            $players_info[$key] = array(
-              'uid' => $user_id,
-              'data' => $user_data,
-              'status' => KW_DJAMBI_USER_READY,
-              'cookie' => $user_cookie,
-              'human' => TRUE,
-              'ia' => FALSE,
-            );
-          }
-          else {
-            if ($this->mode == KW_DJAMBI_MODE_FRIENDLY) {
-              $players_info[$key] = array(
-                'uid' => 0,
-                'data' => array(),
-                'status' => KW_DJAMBI_USER_EMPTY_SLOT,
-                'cookie' => NULL,
-                'human' => TRUE,
-                'ia' => NULL,
-              );
-              $ready = FALSE;
-            }
-            else {
-              $class_candidate = NULL;
-              if (isset($computers_classes)) {
-                if (is_array($computers_classes) && isset($computers_classes[$key])) {
-                  $class_candidate = $computers_classes[$key];
-                }
-                else {
-                  $class_candidate = $computers_classes;
-                }
-              }
-              if (!is_null($class_candidate) && class_exists($class_candidate) && in_array($class_candidate, class_parents($class_candidate))) {
-                $computer_class = $class_candidate;
-              }
-              else {
-                $computer_class = DjambiIA::getDefaultIAClass();
-              }
-              $players_info[$key] = array(
-                'uid' => 0,
-                'data' => array(),
-                'status' => KW_DJAMBI_USER_READY,
-                'cookie' => NULL,
-                'human' => FALSE,
-                'ia' => $computer_class,
-              );
-            }
-          }
-          break;
-
-        case('vassal'):
-          $players_info[$key] = array(
-            'uid' => 0,
-            'data' => array(),
-            'status' => KW_DJAMBI_USER_VASSALIZED,
-            'cookie' => NULL,
-            'human' => FALSE,
-            'ia' => NULL,
-          );
-          break;
-
+    foreach ($battlefield->getDisposition()->getGrid()->getSides() as $side) {
+      if ($side['start_status'] == KW_DJAMBI_FACTION_STATUS_READY) {
+        /* @var HumanPlayer $player */
+        if ($battlefield->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+          $player = current($players);
+        }
+        else {
+          $player = array_shift($players);
+        }
+        if (empty($player)) {
+          $side['start_status'] = KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT;
+          $ready = FALSE;
+        }
       }
-    }
-    $this->setInfo('players_info', $players_info);
-    $factions_data = DjambiPoliticalFaction::buildFactionsInfos();
-    $i = 0;
-    foreach ($factions_data as $key => $faction_data) {
-      $i++;
-      if ($i > count($players_info)) {
-        break;
+      else {
+        $player = NULL;
       }
-      $faction = new DjambiPoliticalFaction($this, $players_info[$i], $key, $faction_data);
-      $this->factions[$i] = $faction;
+      $data['status'] = $side['start_status'];
+      $battlefield->factions[$side['id']] = new Faction($battlefield, $side['id'],
+        $side['name'], $side['class'], $side['start_order'], $data, $player);
     }
-    $this->buildField();
-    $scheme = $this->getDisposition()->getScheme();
+
+    // Construction de la grille :
+    $battlefield->buildField();
+    $scheme = $battlefield->getDisposition()->getGrid();
     $directions = $scheme->getDirections();
     $scheme_sides = $scheme->getSides();
-    foreach ($this->factions as $faction) {
+    foreach ($battlefield->factions as $faction) {
       $start_order = $faction->getStartOrder();
       $leader_position = current(array_slice($scheme_sides, $start_order - 1, 1));
       $start_scheme = array();
       $axis = NULL;
       foreach ($directions as $orientation => $direction) {
-        $next_cell = $this->findCell($leader_position['x'], $leader_position['y']);
+        $next_cell = $battlefield->findCell($leader_position['x'], $leader_position['y']);
         $continue = TRUE;
         while ($continue) {
           if ($next_cell->getType() == 'throne') {
@@ -226,11 +153,11 @@ class DjambiBattlefield {
         }
       }
       if (empty($axis)) {
-        throw new DjambiException('Bad pieces start scheme.');
+        throw new BadGridException('Bad pieces start scheme.');
       }
       foreach ($scheme->getPieceScheme() as $piece_id => $piece) {
         $start_position = $piece->getStartPosition();
-        $starting_cell = $this->findCell($leader_position['x'], $leader_position['y']);
+        $starting_cell = $battlefield->findCell($leader_position['x'], $leader_position['y']);
         for ($i = 0; $i < $start_position['y']; $i++) {
           $neighbours = $starting_cell->getNeighbours();
           $starting_cell = $neighbours[$axis];
@@ -249,42 +176,74 @@ class DjambiBattlefield {
       }
       $faction->createPieces($scheme->getPieceScheme(), $start_scheme);
     }
-    $this->logEvent('info', 'NEW_DJAMBI_GAME');
-    $this->setStatus($ready ? KW_DJAMBI_STATUS_PENDING : KW_DJAMBI_STATUS_RECRUITING);
-    $this->setInfo('changed', time());
-    return $this;
+    $battlefield->logEvent('info', 'NEW_DJAMBI_GAME');
+    $battlefield->setStatus($ready ? KW_DJAMBI_STATUS_PENDING : KW_DJAMBI_STATUS_RECRUITING);
+    return $battlefield;
   }
 
   /**
    * Charge une grille de Djambi.
    *
+   * @param GameManagerInterface $gm
+   *   Objet GameManager lié
+   * @param GameDisposition $disposition
+   *   Disposition de jeu
    * @param array $data
-   *   Tableau de données permettant de créer la partie
+   *   Tableau de données permettant de recréer la partie
    *
-   * @return DjambiBattlefield
+   * @throws Exceptions\FactionNotFoundException
+   * @return Battlefield
    *   Grille de Djambi courante
    */
-  protected function loadBattlefield($data) {
-    $scheme = $this->getDisposition()->getScheme();
-    $this->setStatus($data['status']);
-    $this->infos = isset($data['infos']) ? $data['infos'] : $this->infos;
-    $this->moves = isset($data['moves']) ? $data['moves'] : $this->moves;
-    $this->turns = isset($data['turns']) ? $data['turns'] : $this->turns;
-    $this->events = isset($data['events']) ? $data['events'] : $this->events;
-    $this->summary = isset($data['summary']) ? $data['summary'] : $this->summary;
-    $this->factions = array();
+  public static function loadBattlefield(GameManagerInterface $gm, GameDisposition $disposition, $data) {
+    $battlefield = new self($gm, $data['id'], $data['mode'], $disposition);
+    $battlefield->setStatus($data['status']);
+    $battlefield->moves = isset($data['moves']) ? $data['moves'] : $battlefield->moves;
+    $battlefield->turns = isset($data['turns']) ? $data['turns'] : $battlefield->turns;
+    $battlefield->events = isset($data['events']) ? $data['events'] : $battlefield->events;
+    $battlefield->summary = isset($data['summary']) ? $data['summary'] : $battlefield->summary;
+    $battlefield->factions = array();
     if (isset($data['options']) && is_array($data['options'])) {
       foreach ($data['options'] as $option => $value) {
-        $this->setOption($option, $value);
+        $battlefield->setOption($option, $value);
       }
     }
-    $this->buildField();
+    $battlefield->buildField();
+    $scheme = $battlefield->getDisposition()->getGrid();
     $pieces_scheme = $scheme->getPieceScheme();
+    $sides_scheme = $scheme->getSides();
     foreach ($data['factions'] as $key => $faction_data) {
-      $faction = new DjambiPoliticalFaction($this, $data['users'][$key], $key, $faction_data);
+      $player = $id = $name = $class = $start_order = NULL;
+      if (empty($faction_data['data'])) {
+        $faction_data['data'] = array();
+      }
+      if (!is_null($faction_data['player'])) {
+        $player = call_user_func_array($faction_data['player']['className'] . '::loadPlayer',
+          array(array_merge($faction_data['player'], $faction_data['data'])));
+      }
+      if (!isset($faction_data['id'])) {
+        foreach ($sides_scheme as $side_scheme) {
+          if ($side_scheme['id'] == $key) {
+            $id = $side_scheme['id'];
+            $name = $side_scheme['name'];
+            $start_order = $side_scheme['start_order'];
+            $class = $side_scheme['class'];
+          }
+        }
+      }
+      else {
+        $id = $faction_data['id'];
+        $name = $faction_data['name'];
+        $class = $faction_data['class'];
+        $start_order = $faction_data['start_order'];
+      }
+      if (empty($id) || empty($name) || empty($class) || empty($start_order)) {
+        throw new FactionNotFoundException("Cannot load faction.");
+      }
+      $faction = new Faction($battlefield, $id, $name, $class, $start_order, $faction_data, $player);
       $positions = array();
       foreach ($data['positions'] as $cell_name => $piece_id) {
-        $cell = $this->findCellByName($cell_name);
+        $cell = $battlefield->findCellByName($cell_name);
         $piece_data = explode('-', $piece_id, 2);
         if ($piece_data[0] == $key) {
           $positions[$piece_data[1]] = array(
@@ -293,27 +252,27 @@ class DjambiBattlefield {
           );
         }
       }
-      $faction->setAlive($faction_data['alive']);
+      $faction->setStatus($faction_data['status']);
       $faction->createPieces($pieces_scheme, $positions, $data['deads']);
-      $this->factions[] = $faction;
+      $battlefield->factions[] = $faction;
     }
-    if (!empty($this->summary)) {
-      $this->rebuildFactionsControls($this->summary[max(array_keys($this->summary))]);
+    if (!empty($battlefield->summary)) {
+      $battlefield->rebuildFactionsControls($battlefield->summary[max(array_keys($battlefield->summary))]);
     }
-    return $this;
+    return $battlefield;
   }
 
   /**
    * Génère les cellules d'une grille de Djambi.
-   *
-   * @return DjambiBattlefield
+
+   * @return Battlefield
    *   Grille de Djambi courante
    */
   protected function buildField() {
-    $special_cells = $this->getDisposition()->getScheme()->getSpecialCells();
+    $special_cells = $this->getDisposition()->getGrid()->getSpecialCells();
     for ($x = 1; $x <= $this->getCols(); $x++) {
       for ($y = 1; $y <= $this->getRows(); $y++) {
-        DjambiCell::createByXY($this, $x, $y);
+        Cell::createByXY($this, $x, $y);
       }
     }
     foreach ($special_cells as $description) {
@@ -324,7 +283,7 @@ class DjambiBattlefield {
       if ($cell->getType() == 'disabled') {
         continue;
       }
-      foreach ($this->getDisposition()->getScheme()->getDirections() as $d => $direction) {
+      foreach ($this->getDisposition()->getGrid()->getDirections() as $d => $direction) {
         $new_x = $cell->getX() + $direction['x'];
         $new_y = $cell->getY() + $direction['y'];
         if (!empty($direction['modulo_x'])) {
@@ -345,7 +304,7 @@ class DjambiBattlefield {
             $cell->addNeighbour($neighbour, $d);
           }
         }
-        catch (DjambiCellNotFoundException $e) {
+        catch (CellNotFoundException $e) {
           continue;
         }
       }
@@ -357,15 +316,15 @@ class DjambiBattlefield {
   /**
    * Place une pièce sur la grille de Djambi.
    *
-   * @param DjambiPiece $piece
+   * @param Piece $piece
    *   Pièce à placer
-   * @param DjambiCell $old_cell
+   * @param Cell $old_cell
    *   Ancienne cellule de la pièce
    *
-   * @return DjambiBattlefield
+   * @return Battlefield
    *   Grille de Djambi courante
    */
-  public function placePiece(DjambiPiece $piece, DjambiCell $old_cell = NULL) {
+  public function placePiece(Piece $piece, Cell $old_cell = NULL) {
     $new_cell = $piece->getPosition();
     $new_cell->setOccupant($piece);
     if (!is_null($old_cell) && $new_cell->getName() != $old_cell->getName()) {
@@ -379,19 +338,13 @@ class DjambiBattlefield {
 
   /**
    * Charge les options par défaut dans la grille de Djambi.
-   *
-   * @return DjambiBattlefield
+
+   * @return Battlefield
    *   Grille de Djambi courante
    */
   protected function setDefaultOptions() {
-    $options_store = $this->getGameManager()->getOptionsStore();
-    $game_options = DjambiGameOptionGameplayElement::listItems($options_store);
-    foreach ($game_options as $name => $object) {
-      $this->setOption($name, $object->getDefault());
-    }
-    $rule_variants = DjambiGameOptionRuleVariant::listItems($options_store);
-    foreach ($rule_variants as $name => $object) {
-      $this->setOption($name, $object->getDefault());
+    foreach ($this->getDisposition()->getOptionsStore()->getAllGameOptions() as $object) {
+      $this->setOption($object->getName(), $object->getDefault());
     }
     return $this;
   }
@@ -416,7 +369,7 @@ class DjambiBattlefield {
    * @param array $habilities
    *   Liste de capacités
    *
-   * @return DjambiBattlefield
+   * @return Battlefield
    *   Grille de Djambi courante
    */
   public function addHabilitiesInStore($habilities) {
@@ -441,24 +394,12 @@ class DjambiBattlefield {
     return $this->disposition;
   }
 
-  public function getInfo($info) {
-    if (!isset($this->infos[$info])) {
-      return FALSE;
-    }
-    return $this->infos[$info];
-  }
-
-  public function setInfo($info, $value) {
-    $this->infos[$info] = $value;
-    return $this;
-  }
-
   public function getId() {
     return $this->id;
   }
 
   /**
-   * @return DjambiPoliticalFaction[]
+   * @return Faction[]
    */
   public function getFactions() {
     return $this->factions;
@@ -470,8 +411,8 @@ class DjambiBattlefield {
    * @param string $id
    *   Identifiant de la faction à renvoyer.
    *
-   * @throws DjambiFactionNotFoundException
-   * @return DjambiPoliticalFaction
+   * @throws FactionNotFoundException
+   * @return Faction
    *   Faction si trouvée, FALSE sinon.
    */
   public function getFactionById($id) {
@@ -481,18 +422,18 @@ class DjambiBattlefield {
         return $faction;
       }
     }
-    throw new DjambiFactionNotFoundException("Faction " . $id . " not found.");
+    throw new FactionNotFoundException("Faction " . $id . " not found.");
   }
 
   /**
    * Renvoie l'objet faction actuellement en tour de jeu.
-   *
-   * @return DjambiPoliticalFaction
-   *   Faction si trouvé, FALSE sinon.
+
+   * @return Faction
+   *   Faction si trouvé, NULL sinon.
    */
   public function getPlayingFaction() {
     if (!$this->isPending()) {
-      return FALSE;
+      return NULL;
     }
     $play_order = current($this->getPlayOrder());
     return $this->getFactionById($play_order["side"]);
@@ -540,8 +481,8 @@ class DjambiBattlefield {
    * @param string $piece_id
    *   Identifiant d'une pièce (par exemple : R-N)
    *
-   * @throws DjambiPieceNotFoundException
-   * @return DjambiPiece
+   * @throws PieceNotFoundException
+   * @return Piece
    *   Renvoie la pièce associée.
    */
   public function getPieceById($piece_id) {
@@ -552,7 +493,7 @@ class DjambiBattlefield {
       return $pieces[$piece_description_id];
     }
     else {
-      throw new DjambiPieceNotFoundException("Piece " . $piece_id . " not found.");
+      throw new PieceNotFoundException("Piece " . $piece_id . " not found.");
     }
   }
 
@@ -565,11 +506,11 @@ class DjambiBattlefield {
   }
 
   public function getRows() {
-    return $this->getDisposition()->getScheme()->getRows();
+    return $this->getDisposition()->getGrid()->getRows();
   }
 
   public function getCols() {
-    return $this->getDisposition()->getScheme()->getCols();
+    return $this->getDisposition()->getGrid()->getCols();
   }
 
   public function getCells() {
@@ -579,7 +520,7 @@ class DjambiBattlefield {
   /**
    * Enregistre une nouvelle cellule sur la grille.
    */
-  public function registerCell(DjambiCell $cell) {
+  public function registerCell(Cell $cell) {
     $this->cells[$cell->getName()] = $cell;
     $this->cellsIndex[$cell->getX()][$cell->getY()] = $cell->getName();
     return $this;
@@ -593,8 +534,8 @@ class DjambiBattlefield {
    * @param int $y
    *   Coordonnée horizontale
    *
-   * @throws DjambiException
-   * @return DjambiCell
+   * @throws Exceptions\CellNotFoundException
+   * @return Cell
    *   Cellulue de Djambi
    */
   public function findCell($x, $y) {
@@ -602,7 +543,7 @@ class DjambiBattlefield {
       return $this->findCellByName($this->cellsIndex[$x][$y]);
     }
     else {
-      throw new DjambiCellNotFoundException('X:' . $x . '-Y:' . $y);
+      throw new CellNotFoundException('X:' . $x . '-Y:' . $y);
     }
   }
 
@@ -611,7 +552,7 @@ class DjambiBattlefield {
       return $this->cells[$name];
     }
     else {
-      throw new DjambiCellNotFoundException($name);
+      throw new CellNotFoundException($name);
     }
   }
 
@@ -625,39 +566,22 @@ class DjambiBattlefield {
     return $this;
   }
 
-  /**
-   * @return mixed
-   */
   public function getStatus() {
     return $this->status;
   }
 
-  /**
-   * @return mixed
-   */
   public function getMode() {
     return $this->mode;
   }
 
-  /**
-   * @return mixed
-   */
   public function getDimensions() {
     return max($this->getRows(), $this->getCols());
   }
 
-  /**
-   * @return array
-   */
   public function getTurns() {
     return $this->turns;
   }
 
-  /**
-   * @param $option_key
-   *
-   * @return null
-   */
   public function getOption($option_key) {
     if (isset($this->options[$option_key])) {
       return $this->options[$option_key];
@@ -672,17 +596,9 @@ class DjambiBattlefield {
 
   /**
    * Renvoie le gestionnaire de jeu associé à cette grille.
-   *
-   * @return DjambiGameManager
-   *   Gestionnaire de jeu
    */
   public function getGameManager() {
     return $this->gameManager;
-  }
-
-  public function setGameManager(DjambiGameManager $gm) {
-    $this->gameManager = $gm;
-    return $this;
   }
 
   /* --------------------------------------------------------
@@ -690,7 +606,7 @@ class DjambiBattlefield {
   ---------------------------------------------------------*/
 
   /**
-   * @return DjambiBattlefield 
+   * @return Battlefield
    *   Grille de Djambi courante
    */
   public function cancelLastTurn() {
@@ -705,10 +621,10 @@ class DjambiBattlefield {
   }
 
   /**
-   * @param $turn
+   * @param int $turn
    * @param bool $unset
    *
-   * @return DjambiBattlefield 
+   * @return Battlefield
    *   Grille de Djambi courante
    */
   public function viewTurnHistory($turn, $unset = FALSE) {
@@ -883,7 +799,7 @@ class DjambiBattlefield {
   /**
    * @param $summary
    *
-   * @return DjambiBattlefield 
+   * @return Battlefield
    *   Grille de Djambi courante
    */
   protected function rebuildFactionsControls($summary) {
@@ -899,7 +815,7 @@ class DjambiBattlefield {
   /**
    * @param $living_factions
    *
-   * @return DjambiBattlefield 
+   * @return Battlefield
    *   Grille de Djambi courante
    */
   public function endGame($living_factions) {
@@ -907,7 +823,7 @@ class DjambiBattlefield {
     if ($nb_living_factions == 1) {
       $winner_id = current($living_factions);
       $winner = $this->getFactionById($winner_id);
-      $winner->setStatus(KW_DJAMBI_USER_WINNER);
+      $winner->setStatus(KW_DJAMBI_FACTION_STATUS_WINNER);
       $winner->setRanking(1);
       $this->logEvent('event', 'THE_WINNER_IS', array('faction1' => $winner->getId()));
     }
@@ -915,7 +831,7 @@ class DjambiBattlefield {
       $this->logEvent("event", "DRAW");
       foreach ($living_factions as $faction_id) {
         $faction = $this->getFactionById($faction_id);
-        $faction->setStatus(KW_DJAMBI_USER_DRAW);
+        $faction->setStatus(KW_DJAMBI_FACTION_STATUS_DRAW);
         $faction->setRanking($nb_living_factions);
       }
     }
@@ -927,7 +843,7 @@ class DjambiBattlefield {
   }
 
   /**
-   * @return DjambiBattlefield 
+   * @return Battlefield
    *   Grille de Djambi courante
    */
   public function changeTurn() {
@@ -937,7 +853,7 @@ class DjambiBattlefield {
     $this->turns[$last_turn_key]["end"] = time();
     // Vérification des conditions de victoire :
     $living_factions = array();
-    /* @var $faction DjambiPoliticalFaction */
+    /* @var $faction Faction */
     foreach ($this->getFactions() as $faction) {
       if ($faction->isAlive()) {
         $control_leader = $faction->checkLeaderFreedom();
@@ -951,7 +867,7 @@ class DjambiBattlefield {
               }
             }
           }
-          $faction->dieDieDie(KW_DJAMBI_USER_SURROUNDED);
+          $faction->dieDieDie(KW_DJAMBI_FACTION_STATUS_SURROUNDED);
           $changes = TRUE;
         }
         else {
@@ -960,10 +876,10 @@ class DjambiBattlefield {
       }
       elseif ($this->getOption('rule_comeback') == 'surrounded' ||
           ($this->getOption('rule_comeback') == 'allowed' && empty($kings))) {
-        if ($faction->getStatus() == KW_DJAMBI_USER_SURROUNDED) {
+        if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_SURROUNDED) {
           $control_leader = $faction->checkLeaderFreedom();
           if ($control_leader) {
-            $faction->setStatus(KW_DJAMBI_USER_READY);
+            $faction->setStatus(KW_DJAMBI_FACTION_STATUS_READY);
             $this->logEvent("event", "COMEBACK_AFTER_SURROUND", array('faction1' => $faction->getId()));
             $changes = TRUE;
           }
@@ -1002,9 +918,9 @@ class DjambiBattlefield {
         foreach ($this->getFactions() as $faction) {
           if (!$faction->isAlive()) {
             $allowed_statuses = array(
-              KW_DJAMBI_USER_DEFECT,
-              KW_DJAMBI_USER_WITHDRAW,
-              KW_DJAMBI_USER_SURROUNDED,
+              KW_DJAMBI_FACTION_STATUS_DEFECT,
+              KW_DJAMBI_FACTION_STATUS_WITHDRAW,
+              KW_DJAMBI_FACTION_STATUS_SURROUNDED,
             );
             if (in_array($faction->getStatus(), $allowed_statuses) && $faction->getControl()->getId() != $faction->getId()) {
               $faction->setControl($faction);
@@ -1272,15 +1188,11 @@ class DjambiBattlefield {
     return TRUE;
   }
 
-  /**
-   * @return DjambiBattlefield 
-   *   Grille de Djambi courante
-   */
   public function defineMovablePieces() {
-    /* @var $active_faction DjambiPoliticalFaction */
+    /* @var $active_faction Faction */
     $current_order = current($this->playOrder);
     $active_faction = $this->getFactionById($current_order["side"]);
-    /* @var $piece DjambiPiece */
+    /* @var $piece Piece */
     $can_move = FALSE;
     foreach ($active_faction->getControlledPieces() as $piece) {
       $moves = $piece->buildAllowableMoves();
@@ -1300,7 +1212,7 @@ class DjambiBattlefield {
    */
   public function countLivingFactions() {
     $nb_alive = 0;
-    /* @var $faction DjambiPoliticalFaction */
+    /* @var $faction Faction */
     foreach ($this->getFactions() as $faction) {
       if ($faction->isAlive()) {
         $nb_alive++;
@@ -1312,7 +1224,7 @@ class DjambiBattlefield {
   /**
    * Trouve les coordonnées des cases voisines.
    *
-   * @param DjambiCell $cell
+   * @param Cell $cell
    *   Case d'origine
    * @param bool $use_diagonals
    *   TRUE pour permettre le mouvement en diagonale.
@@ -1320,10 +1232,10 @@ class DjambiBattlefield {
    * @return array
    *   Coordonnées (x,y) des cases voisines
    */
-  public function findNeighbourCells(DjambiCell $cell, $use_diagonals = TRUE) {
+  public function findNeighbourCells(Cell $cell, $use_diagonals = TRUE) {
     $next_positions = array();
     foreach ($cell->getNeighbours() as $direction_key => $neighbour) {
-      $direction = $this->getDisposition()->getScheme()->getDirection($direction_key);
+      $direction = $this->getDisposition()->getGrid()->getDirection($direction_key);
       if ($use_diagonals || !$direction['diagonal']) {
         $next_positions[] = array(
           'x' => $neighbour->getX(),
@@ -1347,19 +1259,19 @@ class DjambiBattlefield {
   /**
    * Liste les cases libres d'une grille de Djambi
    *
-   * @param DjambiPiece $piece
+   * @param Piece $piece
    *   Pièce à déplacer
    * @param bool $keep_alive
    *   TRUE si la pièce reste vivante
    * @param bool $murder
    *   TRUE si la pièce à déplacer vient d'être tuée
-   * @param DjambiCell $force_free_cell
+   * @param Cell $force_free_cell
    *   Cellule libre même si déjà occupée
    *
    * @return array
    *   Liste de cases libres
    */
-  public function getFreeCells(DjambiPiece $piece, $keep_alive = TRUE, $murder = FALSE, DjambiCell $force_free_cell = NULL) {
+  public function getFreeCells(Piece $piece, $keep_alive = TRUE, $murder = FALSE, Cell $force_free_cell = NULL) {
     $freecells = array();
     foreach ($this->cells as $key => $cell) {
       $occupant = $cell->getOccupant();
@@ -1383,9 +1295,15 @@ class DjambiBattlefield {
     return $freecells;
   }
 
-  /**
-   * @return array
-   */
+  public function prepareNewTurn() {
+    $summary = $this->getSummary();
+    if (empty($summary)) {
+      $this->prepareSummary();
+    }
+    $this->getPlayOrder(TRUE);
+    $this->defineMovablePieces();
+  }
+
   public function getSummary() {
     return $this->summary;
   }
@@ -1394,7 +1312,7 @@ class DjambiBattlefield {
     $vassals = array();
     $players = array();
     foreach ($this->factions as $faction) {
-      if ($faction->getStatus() == KW_DJAMBI_USER_VASSALIZED) {
+      if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_VASSALIZED) {
         $vassals[] = $faction->getId();
       }
       else {
@@ -1414,8 +1332,7 @@ class DjambiBattlefield {
 
   public function updateSummary() {
     $infos = array();
-    /* @var $faction DjambiPoliticalFaction */
-    foreach ($this->factions as $faction) {
+    foreach ($this->getFactions() as $faction) {
       $faction_info = array(
         'control' => $faction->getControl()->getId(),
         'status' => $faction->getStatus(),
@@ -1433,7 +1350,7 @@ class DjambiBattlefield {
         }
       }
     }
-    if (!empty($event['turn'])) {
+    if (isset($event['turn'])) {
       $this->summary[$event['turn']] = $infos;
     }
     return $this;
@@ -1457,7 +1374,7 @@ class DjambiBattlefield {
   }
 
   /**
-   * ENregistre un événement d'une partie.
+   * Enregistre un événement d'une partie.
    *
    * @param string $type
    *   Différents types possibles : event, info, notice
@@ -1468,7 +1385,7 @@ class DjambiBattlefield {
    * @param int $time
    *   Timestamp auquel a eu lieu l'événement
    *
-   * @return DjambiBattlefield 
+   * @return Battlefield
    *   Grille de Djambi courante
    */
   public function logEvent($type, $event_txt, $event_args = NULL, $time = NULL) {
@@ -1504,7 +1421,6 @@ class DjambiBattlefield {
 
   /**
    * Enregistre un mouvemement dans un tableau récapitulatif.
-   *
    * Entrées du tableau :
    * - turn : identifiant du tour de jeu courant
    * - time : timestamp du mouvement
@@ -1519,20 +1435,20 @@ class DjambiBattlefield {
    * le mouvement
    * - special_event (optionnel) : événement déclenché par le mouvement
    *
-   * @param DjambiPiece $target_piece
+   * @param Piece $target_piece
    *   Pièce concernée par le mouvement
-   * @param DjambiCell $destination_cell
+   * @param Cell $destination_cell
    *   Destination du mouvement (move, necromove, murder, manipulation,
    *   elimination ou evacuation)
    * @param string $type
    *   Type du mouvement
-   * @param DjambiPiece $acting_piece
+   * @param Piece $acting_piece
    *   Pièce ayant provoqué le mouvement
    *
-   * @return DjambiBattlefield 
+   * @return Battlefield
    *   Grille de Djambi courante
    */
-  public function logMove(DjambiPiece $target_piece, DjambiCell $destination_cell, $type = "move", DjambiPiece $acting_piece = NULL) {
+  public function logMove(Piece $target_piece, Cell $destination_cell, $type = "move", Piece $acting_piece = NULL) {
     $origin_cell_object = $target_piece->getPosition();
     if ($destination_cell->getType() == 'throne' && $target_piece->getDescription()->hasHabilityAccessThrone() && $target_piece->isAlive()) {
       $special_event = 'THRONE_ACCESS';
@@ -1611,9 +1527,8 @@ class DjambiBattlefield {
       'summary' => $this->summary,
       'mode' => $this->getMode(),
       'status' => $this->getStatus(),
-      'infos' => $this->infos,
       'disposition' => $this->getDisposition()->getName(),
-      'scheme_settings' => $this->getDisposition()->getScheme()->getSettings(),
+      'scheme_settings' => $this->getDisposition()->getGrid()->getSettings(),
     );
     return $return;
   }

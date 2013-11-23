@@ -1,17 +1,35 @@
 <?php
 /**
+ * @file
+ * Implémente la notion de schéma de jeu (forme et taille des grilles,
+ * disposition initiale des pièces, localisation des cases spéciales,...) et
+ * fournit des schémas pour des cas classiques.
+ */
+
+namespace Djambi;
+use Djambi\Exceptions\BadGridException;
+
+/**
  * Class DjambiBattlefieldScheme
  */
-class DjambiBattlefieldScheme {
-  /* @var DjambiPieceDescription[] $pieceScheme */
+class Grid {
+  /* @var PieceDescription[] $pieceScheme */
   protected $pieceScheme = array();
+  /* @var string $disposition */
   protected $disposition;
+  /* @var int $rows */
   protected $rows;
+  /* @var int $cols */
   protected $cols;
+  /* @var array $specialCells */
   protected $specialCells;
+  /* @var array $sides */
   protected $sides;
+  /* @var array $allowableDispotions */
   protected $allowableDispositions = array('cardinal', 'hexagonal');
+  /* @var array $directions */
   protected $directions = array();
+  /* @var array $settings */
   protected $settings = array();
 
   public function __construct($settings = NULL) {
@@ -26,19 +44,18 @@ class DjambiBattlefieldScheme {
     $this->specialCells = isset($settings['special_cells']) ? $settings['special_cells'] : $this->specialCells;
     $this->setSettings($settings);
     $this->useStandardPieces();
-    return $this;
   }
 
   protected function useStandardPieces() {
-    $this->addPiece('DjambiPieceLeader', NULL, array('x' => 0, 'y' => 0));
-    $this->addPiece('DjambiPieceDiplomate', NULL, array('x' => 0, 'y' => 1));
-    $this->addPiece('DjambiPieceReporter', NULL, array('x' => -1, 'y' => 0));
-    $this->addPiece('DjambiPieceAssassin', NULL, array('x' => 1, 'y' => 0));
-    $this->addPiece('DjambiPieceNecromobile', NULL, array('x' => 0, 'y' => 2));
-    $this->addPiece('DjambiPieceMilitant', 1, array('x' => -2, 'y' => 0));
-    $this->addPiece('DjambiPieceMilitant', 2, array('x' => 2, 'y' => 0));
-    $this->addPiece('DjambiPieceMilitant', 3, array('x' => -1, 'y' => 1));
-    $this->addPiece('DjambiPieceMilitant', 4, array('x' => 1, 'y' => 1));
+    $this->addPiece('\Djambi\PieceDescriptions\Leader', NULL, array('x' => 0, 'y' => 0));
+    $this->addPiece('\Djambi\PieceDescriptions\Diplomate', NULL, array('x' => 0, 'y' => 1));
+    $this->addPiece('\Djambi\PieceDescriptions\Reporter', NULL, array('x' => -1, 'y' => 0));
+    $this->addPiece('\Djambi\PieceDescriptions\Assassin', NULL, array('x' => 1, 'y' => 0));
+    $this->addPiece('\Djambi\PieceDescriptions\Necromobile', NULL, array('x' => 0, 'y' => 2));
+    $this->addPiece('\Djambi\PieceDescriptions\Militant', 1, array('x' => -2, 'y' => 0));
+    $this->addPiece('\Djambi\PieceDescriptions\Militant', 2, array('x' => 2, 'y' => 0));
+    $this->addPiece('\Djambi\PieceDescriptions\Militant', 3, array('x' => -1, 'y' => 1));
+    $this->addPiece('\Djambi\PieceDescriptions\Militant', 4, array('x' => 1, 'y' => 1));
   }
 
   protected function useStandardGrid($cols = 9, $rows = 9) {
@@ -217,7 +234,7 @@ class DjambiBattlefieldScheme {
 
   protected function setDispostion($disposition) {
     if (!in_array($disposition, $this->allowableDispositions)) {
-      throw new Exception('Unknown disposition');
+      throw new BadGridException('Unknown disposition');
     }
     else {
       $this->disposition = $disposition;
@@ -230,10 +247,10 @@ class DjambiBattlefieldScheme {
 
   protected function setRows($nb) {
     if ($nb <= 0) {
-      throw new Exception('Not enough rows');
+      throw new BadGridException('Not enough rows');
     }
     elseif ($nb > 26) {
-      throw new Exception('Too many rows');
+      throw new BadGridException('Too many rows');
     }
     else {
       $this->rows = $nb;
@@ -246,10 +263,10 @@ class DjambiBattlefieldScheme {
 
   protected function setCols($nb) {
     if ($nb <= 0) {
-      throw new Exception('Not enough columns');
+      throw new BadGridException('Not enough columns');
     }
     elseif ($nb > 26) {
-      throw new Exception('Too many colums');
+      throw new BadGridException('Too many colums');
     }
     else {
       $this->cols = $nb;
@@ -261,7 +278,7 @@ class DjambiBattlefieldScheme {
   }
 
   protected function addPiece($class, $identifier, $start_scheme) {
-    /* @var DjambiPiece $piece */
+    /* @var PieceDescription $piece */
     $piece = new $class($identifier, $start_scheme);
     $this->pieceScheme[$piece->getShortname()] = $piece;
   }
@@ -270,8 +287,50 @@ class DjambiBattlefieldScheme {
     return $this->pieceScheme;
   }
 
-  protected function addSide($start_origin) {
-    $this->sides[] = $start_origin;
+  public static function getSidesInfos($i = NULL) {
+    $factions = array();
+    $factions['R'] = array(
+      'id' => 'R',
+      'name' => 'Red',
+      'class' => 'rouge',
+      'start_order' => 1
+    );
+    $factions['B'] = array(
+      'id' => 'B',
+      'name' => 'Blue',
+      'class' => 'bleu',
+      'start_order' => 2,
+    );
+    $factions['J'] = array(
+      'id' => 'J',
+      'name' => 'Yellow',
+      'class' => 'jaune',
+      'start_order' => 3,
+    );
+    $factions['V'] = array(
+      'id' => 'V',
+      'name' => 'Green',
+      'class' => 'vert',
+      'start_order' => 4,
+    );
+    if (is_null($i)) {
+      return $factions;
+    }
+    else {
+      foreach ($factions as $faction) {
+        if ($faction['start_order'] == $i) {
+          return $faction;
+        }
+      }
+      throw new BadGridException("Undescribed faction : #" . $i);
+    }
+  }
+
+  protected function addSide($start_origin, $start_status = KW_DJAMBI_FACTION_STATUS_READY) {
+    $nb_sides = count($this->sides) + 1;
+    $side_info = array_merge(self::getSidesInfos($nb_sides), $start_origin);
+    $side_info['start_status'] = $start_status;
+    $this->sides[] = $side_info;
   }
 
   public function getSides() {
@@ -299,7 +358,7 @@ class DjambiBattlefieldScheme {
       return $directions[$orientation];
     }
     else {
-      throw new Exception('Unknown direction.');
+      throw new BadGridException('Unknown direction.');
     }
   }
 
@@ -313,80 +372,5 @@ class DjambiBattlefieldScheme {
     }
     return $this;
   }
-}
 
-/**
- * Class DjambiBattlefieldSchemeStandardGridWith4Sides
- */
-class DjambiBattlefieldSchemeStandardGridWith4Sides extends DjambiBattlefieldScheme {
-  public function __construct($settings = NULL) {
-    $this->useStandardGrid(9, 9);
-    $this->useStandardPieces();
-    $this->addSide(array('x' => 1, 'y' => 9));
-    $this->addSide(array('x' => 9, 'y' => 9));
-    $this->addSide(array('x' => 9, 'y' => 1));
-    $this->addSide(array('x' => 1, 'y' => 1));
-    return $this;
-  }
-}
-
-/**
- * Class DjambiBattlefieldSchemeHexagonalGridWith3Sides
- */
-class DjambiBattlefieldSchemeHexagonalGridWith3Sides extends DjambiBattlefieldScheme {
-  public function __construct($settings = NULL) {
-    $this->useHexagonalGrid(9, 9);
-    $this->useStandardPieces();
-    $this->addSpecialCell('disabled', array('x' => 1, 'y' => 1));
-    $this->addSpecialCell('disabled', array('x' => 2, 'y' => 1));
-    $this->addSpecialCell('disabled', array('x' => 8, 'y' => 1));
-    $this->addSpecialCell('disabled', array('x' => 9, 'y' => 1));
-    $this->addSpecialCell('disabled', array('x' => 1, 'y' => 2));
-    $this->addSpecialCell('disabled', array('x' => 8, 'y' => 2));
-    $this->addSpecialCell('disabled', array('x' => 9, 'y' => 2));
-    $this->addSpecialCell('disabled', array('x' => 1, 'y' => 3));
-    $this->addSpecialCell('disabled', array('x' => 9, 'y' => 3));
-    $this->addSpecialCell('disabled', array('x' => 9, 'y' => 4));
-    $this->addSpecialCell('disabled', array('x' => 9, 'y' => 6));
-    $this->addSpecialCell('disabled', array('x' => 1, 'y' => 7));
-    $this->addSpecialCell('disabled', array('x' => 9, 'y' => 7));
-    $this->addSpecialCell('disabled', array('x' => 1, 'y' => 8));
-    $this->addSpecialCell('disabled', array('x' => 8, 'y' => 8));
-    $this->addSpecialCell('disabled', array('x' => 9, 'y' => 8));
-    $this->addSpecialCell('disabled', array('x' => 1, 'y' => 9));
-    $this->addSpecialCell('disabled', array('x' => 2, 'y' => 9));
-    $this->addSpecialCell('disabled', array('x' => 8, 'y' => 9));
-    $this->addSpecialCell('disabled', array('x' => 9, 'y' => 9));
-    $this->addSide(array('x' => 1, 'y' => 5));
-    $this->addSide(array('x' => 7, 'y' => 9));
-    $this->addSide(array('x' => 7, 'y' => 1));
-  }
-}
-
-/**
- * Class DjambiBattlefieldSchemeMiniGridWith2Sides
- */
-class DjambiBattlefieldSchemeMiniGridWith2Sides extends DjambiBattlefieldScheme {
-  public function __construct($settings = NULL) {
-    $this->useStandardGrid(7, 7);
-    $this->addPiece('DjambiPieceLeader', NULL, array('x' => 0, 'y' => 0));
-    $this->addPiece('DjambiPieceMilitant', 1, array('x' => 1, 'y' => 0));
-    $this->addPiece('DjambiPieceMilitant', 2, array('x' => -1, 'y' => 0));
-    if (isset($settings['surprise_piece'])) {
-      $surprise = $settings['surprise_piece'];
-    }
-    else {
-      $surprises = array(
-        'DjambiPieceAssassin',
-        'DjambiPieceReporter',
-        'DjambiPieceDiplomate',
-      );
-      $surprise = $surprises[array_rand($surprises)];
-      $settings['surprise_piece'] = $surprise;
-    }
-    $this->addPiece($surprise, NULL, array('x' => 0, 'y' => 1));
-    $this->addSide(array('x' => 1, 'y' => 7));
-    $this->addSide(array('x' => 7, 'y' => 1));
-    $this->setSettings($settings);
-  }
 }

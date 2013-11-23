@@ -9,7 +9,7 @@
  */
 function djambi_node_schema() {
   $schema['djambi_node'] = array(
-    'description' => t('Extra data used by djambi nodes'),
+    'description' => 'Extra data used by djambi nodes',
     'fields' => array(
       'nid' => array(
         'type' => 'int',
@@ -39,9 +39,7 @@ function djambi_node_schema() {
       ),
       'data' => array(
         'type' => 'blob',
-        'not null' => TRUE,
         'size' => 'big',
-        'serialize' => TRUE,
       ),
       'begin' => array(
         'type' => 'int',
@@ -62,10 +60,14 @@ function djambi_node_schema() {
       ),
       'disposition' => array(
         'type' => 'varchar',
-        'length' => 10,
+        'length' => 250,
       ),
     ),
     'primary key' => array('nid'),
+    'indexes' => array(
+      'modes' => array('mode'),
+      'statuses' => array('status'),
+    ),
     'foreign keys' => array(
       'node' => array(
         'table' => 'node',
@@ -76,11 +78,6 @@ function djambi_node_schema() {
   $schema['djambi_users'] = array(
     'description' => 'Users involved in a djambi game.',
     'fields' => array(
-      'djuid' => array(
-        'type' => 'serial',
-        'not null' => TRUE,
-        'unsigned' => TRUE,
-      ),
       'nid' => array(
         'type' => 'int',
         'not null' => TRUE,
@@ -89,9 +86,7 @@ function djambi_node_schema() {
       ),
       'uid' => array(
         'type' => 'int',
-        'not null' => TRUE,
         'unsigned' => TRUE,
-        'default' => '0',
       ),
       'status' => array(
         'type' => 'varchar',
@@ -108,7 +103,6 @@ function djambi_node_schema() {
       ),
       'data' => array(
         'type' => 'blob',
-        'not null' => TRUE,
         'serialize' => TRUE,
       ),
       'cookie' => array(
@@ -125,8 +119,16 @@ function djambi_node_schema() {
         'type' => 'varchar',
         'length' => 50,
       ),
+      'joined' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
+      'played' => array(
+        'type' => 'int',
+        'unsigned' => TRUE,
+      ),
     ),
-    'primary key' => array('djuid'),
+    'primary key' => array('nid', 'faction'),
     'indexes' => array(
       'link_to_node' => array('nid'),
       'link_to_user' => array('uid'),
@@ -136,6 +138,10 @@ function djambi_node_schema() {
       'node' => array(
         'table' => 'node',
         'columns' => array('nid' => 'nid'),
+      ),
+      'users' => array(
+        'table' => 'users',
+        'column' => array('uid' => 'uid'),
       ),
     ),
   );
@@ -173,7 +179,7 @@ function djambi_node_update_7102() {
 function djambi_node_update_7103() {
   db_add_field('djambi_users', 'ia', array(
     'type' => 'varchar',
-    'length' => 50,
+    'length' => 250,
   ));
   db_add_field('djambi_users', 'human', array(
     'type' => 'int',
@@ -181,4 +187,57 @@ function djambi_node_update_7103() {
     'unsigned' => TRUE,
     'default' => 1,
   ));
+}
+
+/**
+ * Modifications de la base de données suite à l'introduction d'un objet Player.
+ *
+ * - Change la clé primaire de la table djambi_users
+ * - Augmente la taille de champs enregistrant des noms de classe
+ */
+function djambi_node_update_7104() {
+  db_drop_field('djambi_users', 'djuid');
+  db_drop_primary_key('djambi_users');
+  db_add_primary_key('djambi_users', array('nid', 'faction'));
+  db_change_field('djambi_users', 'uid', 'uid', array(
+    'type' => 'int',
+    'not null' => FALSE,
+    'default' => NULL,
+    'unsigned' => TRUE,
+  ));
+  db_change_field('djambi_node', 'disposition', 'disposition', array(
+    'type' => 'varchar',
+    'length' => 250,
+  ));
+  db_change_field('djambi_users', 'ia', 'ia', array(
+    'type' => 'varchar',
+    'length' => 250,
+  ));
+  db_change_field('djambi_node', 'data', 'data', array(
+    'type' => 'blob',
+    'size' => 'big',
+    'serialize' => FALSE,
+    'not null' => FALSE,
+  ));
+  db_change_field('djambi_users', 'data', 'data', array(
+    'type' => 'blob',
+    'serialize' => TRUE,
+    'not null' => FALSE,
+  ));
+}
+
+/**
+ * Ajout de timestamps sur la table djambi_users.
+ */
+function djambi_node_update_7105() {
+  db_add_field('djambi_users', 'joined', array(
+    'type' => 'int',
+    'unsigned' => TRUE,
+  ));
+  db_add_field('djambi_users', 'played', array(
+    'type' => 'int',
+    'unsigned' => TRUE,
+  ));
+  db_add_index('djambi_node', 'modes', array('mode'));
+  db_add_index('djambi_node', 'statuses', array('status'));
 }

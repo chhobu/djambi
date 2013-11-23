@@ -5,99 +5,73 @@
  * d'une partie de Djambi.
  */
 
+namespace Djambi;
+
+use Djambi\Interfaces\HumanPlayerInterface;
+use Djambi\Interfaces\PlayerInterface;
+use Djambi\Players\ComputerPlayer;
+use Djambi\Players\HumanPlayer;
+
+define('KW_DJAMBI_DRAW_STATUS_PROPOSED', 1);
+define('KW_DJAMBI_DRAW_STATUS_ACCEPTED', 2);
+define('KW_DJAMBI_DRAW_STATUS_REJECTED', 0);
+
 /**
  * Class DjambiPoliticalFaction
  */
-class DjambiPoliticalFaction {
+class Faction {
+  /* @var string $status */
   protected $status;
+  /* @var int $ranking */
   protected $ranking;
-  protected $userData;
+  /* @var string $id */
   protected $id;
+  /* @var string $name */
   protected $name;
+  /* @var string $class */
   protected $class;
-  /* @var  \DjambiPoliticalFaction $control */
+  /* @var Faction $control */
   protected $control;
   /* @var bool $alive */
-  protected $alive;
-  /* @var  \DjambiPiece[] $pieces */
+  protected $alive = FALSE;
+  /* @var Piece[] $pieces */
   protected $pieces;
-  /* @var \DjambiBattlefield $battlefield */
+  /* @var Battlefield $battlefield */
   protected $battlefield;
+  /* @var int $startOrder; */
   protected $startOrder;
   /* @var bool $playing */
-  protected $playing;
+  protected $playing = FALSE;
+  /* @var int $skippedTurns */
   protected $skippedTurns;
+  /* @var int $lastDrawProposal */
   protected $lastDrawProposal;
+  /* @var int $drawStatus */
   protected $drawStatus;
-  /* @var DjambiIA $ia */
-  protected $ia;
+  /* @var string $master */
+  protected $master;
+  /* @var PlayerInterface $player */
+  protected $player;
 
-  public function __construct(DjambiBattlefield $battlefield, $user_data, $id, $data) {
+  public function __construct(Battlefield $battlefield, $id, $name, $class, $start_order, $data, PlayerInterface $player = NULL) {
     $this->battlefield = $battlefield;
-    $this->userData = $user_data;
     $this->id = $id;
-    $this->name = $data['name'];
-    $this->class = $data['class'];
+    $this->name = $name;
+    $this->class = $class;
+    $this->startOrder = $start_order;
     $this->control = $this;
-    $this->alive = TRUE;
+    $this->setStatus(isset($data['status']) ? $data['status'] : KW_DJAMBI_FACTION_STATUS_READY);
     $this->pieces = array();
-    $this->startOrder = $data['start_order'];
     $this->playing = FALSE;
     $this->skippedTurns = isset($data['skipped_turns']) ? $data['skipped_turns'] : 0;
     $this->lastDrawProposal = isset($data['last_draw_proposal']) ? $data['last_draw_proposal'] : 0;
     $this->drawStatus = isset($data['draw_status']) ? $data['draw_status'] : NULL;
     $this->ranking = isset($data['ranking']) ? $data['ranking'] : NULL;
     $this->master = isset($data['master']) ? $data['master'] : NULL;
-    $ia_class = $this->getUserDataItem('ia');
-    if (!empty($ia_class)) {
-      $ia_class = DjambiIA::getDefaultIAClass();
-      $ia = new $ia_class($this);
-      $this->ia = $ia;
+    $this->player = $player;
+    if (!is_null($player)) {
+      $player->setFaction($this);
     }
-    $this->setStatus($this->getUserDataItem('status'));
-  }
-
-  public static function buildFactionsInfos() {
-    $factions = array();
-    $factions['R'] = array(
-      'name' => 'Red',
-      'class' => 'rouge',
-      'start_order' => 1,
-    );
-    $factions['B'] = array(
-      'name' => 'Blue',
-      'class' => 'bleu',
-      'start_order' => 2,
-    );
-    $factions['J'] = array(
-      'name' => 'Yellow',
-      'class' => 'jaune',
-      'start_order' => 3,
-    );
-    $factions['V'] = array(
-      'name' => 'Green',
-      'class' => 'vert',
-      'start_order' => 4,
-    );
-    return $factions;
-  }
-
-  public function updateUserData($data) {
-    foreach ($data as $key => $value) {
-      $this->userData[$key] = $value;
-    }
-    return $this;
-  }
-
-  public function getUserData() {
-    return $this->userData;
-  }
-
-  public function getUserDataItem($item) {
-    if (!isset($this->userData[$item])) {
-      return NULL;
-    }
-    return $this->userData[$item];
   }
 
   public function getStatus() {
@@ -162,25 +136,18 @@ class DjambiPoliticalFaction {
     return $this;
   }
 
-  /**
-   * @return DjambiIA
-   */
-  public function getIa() {
-    return $this->ia;
-  }
-
   public function setStatus($status) {
-    if ($this->status == KW_DJAMBI_USER_VASSALIZED) {
+    if ($this->status == KW_DJAMBI_FACTION_STATUS_VASSALIZED) {
       return $this;
     }
     $this->status = $status;
-    $allowed_statuses = array(
-      KW_DJAMBI_USER_PLAYING,
-      KW_DJAMBI_USER_READY,
-      KW_DJAMBI_USER_DRAW,
-      KW_DJAMBI_USER_WINNER,
+    $living_statuses = array(
+      KW_DJAMBI_FACTION_STATUS_PLAYING,
+      KW_DJAMBI_FACTION_STATUS_READY,
+      KW_DJAMBI_FACTION_STATUS_DRAW,
+      KW_DJAMBI_FACTION_STATUS_WINNER,
     );
-    if (in_array($status, $allowed_statuses)) {
+    if (in_array($status, $living_statuses)) {
       $this->setAlive(TRUE);
     }
     else {
@@ -200,7 +167,7 @@ class DjambiPoliticalFaction {
   }
 
   /**
-   * @return DjambiPiece[]
+   * @return Piece[]
    */
   public function getControlledPieces() {
     $pieces = array();
@@ -214,13 +181,13 @@ class DjambiPoliticalFaction {
     return $pieces;
   }
 
-  public function setControl(DjambiPoliticalFaction $faction, $log = TRUE) {
+  public function setControl(Faction $faction, $log = TRUE) {
     $old_control = $this->control;
     $this->control = $faction;
     $grid = $this->getBattlefield();
     foreach ($grid->getFactions() as $f) {
       if ($f->getId() != $this->getId() && $f->getControl()->getId() == $this->getId()) {
-        if ($grid->getOption('rule_vassalization') == 'full_control' || $f->getStatus() == KW_DJAMBI_USER_KILLED) {
+        if ($grid->getOption('rule_vassalization') == 'full_control' || $f->getStatus() == KW_DJAMBI_FACTION_STATUS_KILLED) {
           $f->setControl($faction, FALSE);
         }
         elseif ($faction->getId() != $this->id) {
@@ -258,11 +225,11 @@ class DjambiPoliticalFaction {
     $this->playing = $playing;
     if ($playing) {
       foreach ($this->getBattlefield()->getFactions() as $faction) {
-        if ($faction->getStatus() == KW_DJAMBI_USER_PLAYING) {
-          $faction->setStatus(KW_DJAMBI_USER_READY);
+        if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_PLAYING) {
+          $faction->setStatus(KW_DJAMBI_FACTION_STATUS_READY);
         }
       }
-      $this->setStatus(KW_DJAMBI_USER_PLAYING);
+      $this->setStatus(KW_DJAMBI_FACTION_STATUS_PLAYING);
     }
     return $this;
   }
@@ -285,18 +252,35 @@ class DjambiPoliticalFaction {
     return $this;
   }
 
-  public function isHumanControlled() {
-    return $this->getUserDataItem('human');
-  }
-
-  /**
-   * @return DjambiBattlefield
-   */
   public function getBattlefield() {
     return $this->battlefield;
   }
 
-  public function setBattlefield(DjambiBattlefield $grid) {
+  /**
+   * @return HumanPlayer|ComputerPlayer
+   */
+  public function getPlayer() {
+    return $this->player;
+  }
+
+  public function changePlayer(PlayerInterface $player) {
+    $this->player = $player;
+    $player->setFaction($this);
+    $this->setStatus(KW_DJAMBI_FACTION_STATUS_READY);
+    if ($player instanceof HumanPlayerInterface && is_null($player->getJoined())) {
+      $player->setJoined(time());
+    }
+  }
+
+  public function removePlayer() {
+    if (!empty($this->player)) {
+      $this->player->removeFaction();
+    }
+    $this->player = NULL;
+    $this->setStatus(KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT);
+  }
+
+  public function setBattlefield(Battlefield $grid) {
     $this->battlefield = $grid;
   }
 
@@ -313,7 +297,7 @@ class DjambiPoliticalFaction {
       }
       $original_faction_id = $this->getId();
       $start_cell = $this->getBattlefield()->findCell($start_scheme[$key]['x'], $start_scheme[$key]['y']);
-      $piece = new DjambiPiece($piece_description, $this, $original_faction_id, $start_cell, $alive);
+      $piece = new Piece($piece_description, $this, $original_faction_id, $start_cell, $alive);
       $this->pieces[$key] = $piece;
     }
   }
@@ -329,12 +313,12 @@ class DjambiPoliticalFaction {
 
   public function withdraw() {
     $this->getBattlefield()->logEvent('event', 'WITHDRAWAL', array('faction1' => $this->getId()));
-    $this->dieDieDie(KW_DJAMBI_USER_WITHDRAW);
+    $this->dieDieDie(KW_DJAMBI_FACTION_STATUS_WITHDRAW);
     $this->getBattlefield()->updateSummary();
   }
 
   public function canComeBackAfterWithdraw() {
-    if ($this->getStatus() == KW_DJAMBI_USER_WITHDRAW
+    if ($this->getStatus() == KW_DJAMBI_FACTION_STATUS_WITHDRAW
         && $this->getBattlefield()->getOption('rule_comeback') == 'allowed'
         && $this->getControl()->getId() == $this->getId()
         && $this->checkLeaderFreedom()) {
@@ -347,7 +331,7 @@ class DjambiPoliticalFaction {
 
   public function comeBackAfterWithdraw() {
     if ($this->canComeBackAfterWithdraw()) {
-      $this->setStatus(KW_DJAMBI_USER_READY);
+      $this->setStatus(KW_DJAMBI_FACTION_STATUS_READY);
       $this->getBattlefield()->logEvent('event', 'COMEBACK_AFTER_WITHDRAW', array('faction1' => $this->getId()));
       $this->getBattlefield()->updateSummary();
     }
@@ -358,13 +342,13 @@ class DjambiPoliticalFaction {
     $this->setLastDrawProposal($turns[$this->getBattlefield()->getCurrentTurnId()]['turn']);
     $this->getBattlefield()->logEvent('event', 'DRAW_PROPOSAL', array('faction1' => $this->getId()));
     $this->getBattlefield()->setStatus(KW_DJAMBI_STATUS_DRAW_PROPOSAL);
-    $this->setDrawStatus(1);
+    $this->setDrawStatus(KW_DJAMBI_DRAW_STATUS_PROPOSED);
     $this->getBattlefield()->changeTurn();
   }
 
   public function acceptDraw() {
     $this->getBattlefield()->logEvent('event', 'DRAW_ACCEPTED', array('faction1' => $this->getId()));
-    $this->setDrawStatus(2);
+    $this->setDrawStatus(KW_DJAMBI_DRAW_STATUS_ACCEPTED);
     $factions = $this->getBattlefield()->getFactions();
     $alive_factions = array();
     $accepted_draws = 0;
@@ -418,7 +402,7 @@ class DjambiPoliticalFaction {
     $thrones = $this->getBattlefield()->getSpecialCells("throne");
     $nb_factions = $this->getBattlefield()->countLivingFactions();
     $checked = array();
-    /* @var $leader DjambiPiece */
+    /* @var $leader Piece */
     foreach ($leaders as $leader) {
       $position = $leader->getPosition();
       if (in_array($position->getName(), $thrones)) {
@@ -493,16 +477,24 @@ class DjambiPoliticalFaction {
   }
 
   public function toArray() {
-    $data = array(
-      'name' => $this->name,
-      'class' => $this->class,
-      'control' => $this->control->getId(),
-      'alive' => $this->alive,
-      'start_order' => $this->startOrder,
-      'ranking' => $this->ranking,
-      'status' => $this->status,
-      'master' => $this->master,
-    );
+    $data = array();
+    $data['status'] = $this->getStatus();
+    $player = $this->getPlayer();
+    if (!empty($player)) {
+      $data['player'] = $this->getPlayer()->saveToArray();
+    }
+    else {
+      $data['player'] = NULL;
+    }
+    if ($this->getControl()->getId() != $this->getId()) {
+      $data['control'] = $this->getControl()->getId();
+    }
+    if (!is_null($this->getRanking())) {
+      $data['ranking'] = $this->getRanking();
+    }
+    if (!is_null($this->getMaster())) {
+      $data['master'] = $this->getMaster();
+    }
     if ($this->skippedTurns > 0) {
       $data['skipped_turns'] = $this->skippedTurns;
     }

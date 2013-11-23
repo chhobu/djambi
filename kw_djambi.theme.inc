@@ -8,7 +8,7 @@
  * Affichage du nom d'une pièce.
  */
 function theme_djambi_piece_name($variables) {
-  /* @var $piece DjambiPiece */
+  /* @var $piece \Djambi\Piece */
   $piece = $variables['piece'];
   $attributes['class'] = array($piece->getType());
   if (!empty($variables['use_control_class'])) {
@@ -25,7 +25,7 @@ function theme_djambi_piece_name($variables) {
  * Affichage du nom d'une faction.
  */
 function theme_djambi_faction_name($variables) {
-  /* @var $faction DjambiPoliticalFaction */
+  /* @var $faction \Djambi\Faction */
   $faction = $variables['faction'];
   $attributes['class'] = array('faction', $faction->getClass());
   if (!empty($variables['use_control_class'])) {
@@ -41,7 +41,7 @@ function theme_djambi_faction_name($variables) {
  */
 function theme_djambi_grid($variables) {
   $form = $variables["form"];
-  /* @var $grid DjambiBattlefield */
+  /* @var $grid \Djambi\Battlefield */
   $grid = $form["#grid"];
   $cells = $grid->getCells();
   $moves = $grid->getMoves();
@@ -70,7 +70,7 @@ function theme_djambi_grid($variables) {
       $extra_classes[] = $past_moves['changing_cells'][$key];
       foreach ($past_moves['moves'] as $order => $move) {
         if ($move['location'] == $key) {
-          /* @var $acting_faction DjambiPoliticalFaction */
+          /* @var $acting_faction \Djambi\Faction */
           $acting_faction = $grid->getFactionById($move['faction']);
           $change_html = "<div class='change " . $acting_faction->getClass() . "' data-order='" . $order . "'>";
           if (!$move['hidden']) {
@@ -91,7 +91,7 @@ function theme_djambi_grid($variables) {
       $extra_classes[] = 'recent-move';
       foreach ($last_moves['moves'] as $order => $move) {
         if ($move['location'] == $key) {
-          /* @var $acting_faction DjambiPoliticalFaction */
+          /* @var $acting_faction \Djambi\Faction */
           $acting_faction = $grid->getFactionById($move['faction']);
           if (!$acting_faction) {
             continue;
@@ -240,7 +240,7 @@ function theme_djambi_grid($variables) {
   // Affichage de la grille :
   $grid_classes = array('djambigrid');
   $grid_id = 'DjambiGrid' . $grid->getId();
-  if ($grid->getDisposition()->getScheme()->getDisposition() == 'hexagonal') {
+  if ($grid->getDisposition()->getGrid()->getDisposition() == 'hexagonal') {
     $markup = theme('hexagonal_grid', array(
       'rows' => $rows,
       'attributes' => array('class' => $grid_classes, 'id' => $grid_id),
@@ -329,47 +329,46 @@ function theme_hexagonal_grid($variables) {
  * Affichage du tableau des joueurs sur une partie en cours.
  */
 function theme_djambi_players_table($variables) {
-  global $user;
-  /* @var $grid DjambiBattlefield */
+  /* @var $grid \Djambi\Battlefield */
   $grid = $variables['grid'];
   $pheader['sides'] = array('data' => t('Sides'), 'scope' => 'col');
   $pheader['players'] = array('data' => t('Players'), 'scope' => 'col');
   if ($grid->getMode() == KW_DJAMBI_MODE_FRIENDLY) {
-    // $pheader['ip'] = array('data' => t('IP address'), 'scope' => 'col');
-    $pheader['ping'] = array('data' => t('Ping'), 'scope' => 'col');
+    $pheader['ping'] = array('data' => t('Online ?'), 'scope' => 'col');
   }
   $pheader['status'] = array('data' => t('Status'), 'scope' => 'col');
   $prows = array();
-  /* @var $faction DjambiPoliticalFaction */
   foreach ($grid->getFactions() as $faction) {
     $prow = array();
     $prow['sides'] = array('data' => theme('djambi_faction_name', array('faction' => $faction)));
-    if (!in_array($faction->getStatus(), array(KW_DJAMBI_USER_VASSALIZED, KW_DJAMBI_USER_EMPTY_SLOT))) {
-      $me = $grid->getGameManager()->checkUserPlayingFaction($user->uid, _kw_djambi_cookie(), $faction, FALSE);
-      if (!$faction->isHumanControlled()) {
-        $prow['players'] = array('data' => '<div class="icon cogs">' . t('Computer') . ' <em>(' . $faction->getIa()->getName() . ')</em></div>');
+    $player = $faction->getPlayer();
+    if (!is_null($player)) {
+      if ($player instanceof \Djambi\Players\ComputerPlayer) {
+        $me = FALSE;
+        $prow['players'] = array('data' => '<div class="icon cogs">' . t('Computer') . ' <em>(' . $player->getIa()->getName() . ')</em></div>');
       }
       else {
-        $uid = $faction->getUserDataItem('uid');
-        if ($me && $uid == 0) {
+        $context = \Drupal\kw_djambi\Djambi\DjambiContext::getInstance();
+        $me = $context->checkUserPlayingFaction($faction, FALSE);
+        if ($me && ($player->getName() == $player->getId() || ($player instanceof \Drupal\kw_djambi\Djambi\Players\DrupalPlayer && empty($player->getUser()->uid)))) {
           $prow['players'] = array('data' => t('Me !'));
         }
         else {
-          $prow['players'] = array(
-            'data' => theme('username', array('account' => user_load($uid))) . ($me ? ' (' . t('Me !') . ')' : ''),
-          );
+          $prow['players'] = array('data' => $player->displayName() . ($me ? ' (' . t('Me !') . ')' : ''));
         }
       }
-      if (isset($pheader['ip'])) {
-        $prow['ip'] = array('data' => $faction->getUserDataItem('ip'));
-      }
       if (isset($pheader['ping'])) {
-        $ping = _kw_djambi_format_ping_infos($faction->getUserDataItem('ping'));
-        $prow['ping'] = array(
-          'data' => $ping['status'],
-          'class' => array('ping-info', $ping['class']),
-          'title' => $ping['title'],
-        );
+        if ($player instanceof \Djambi\Interfaces\HumanPlayerInterface && !is_null($signal = $player->getLastSignal())) {
+          $ping = _kw_djambi_format_ping_infos($signal->getPing());
+          $prow['ping'] = array(
+            'data' => $ping['status'],
+            'class' => array('ping-info', $ping['class']),
+            'title' => $ping['title'],
+          );
+        }
+        else {
+          $prow['ping'] = array('data' => '-');
+        }
       }
     }
     else {
@@ -389,7 +388,7 @@ function theme_djambi_players_table($variables) {
     );
     $prows[] = array(
       'data' => $prow,
-      'data-djuid' => $faction->getUserDataItem('djuid'),
+      'data-faction' => $faction->getId(),
       'class' => $me ? array('me') : array('not-me'),
     );
   }
@@ -404,7 +403,7 @@ function theme_djambi_players_table($variables) {
  * Génération de la légende d'une grille.
  */
 function theme_djambi_grid_caption($variables) {
-  /* @var $grid DjambiBattlefield */
+  /* @var $grid \Djambi\Battlefield */
   $grid = $variables['grid'];
   $displayed_turn = $variables['displayed_turn'];
   $displayed_turn_id = $variables['displayed_turn_id'];
@@ -456,10 +455,10 @@ function theme_djambi_grid_caption($variables) {
  */
 function theme_djambi_recent_events($variables) {
   $html = '';
-  /* @var $grid DjambiBattlefield */
+  /* @var $grid \Djambi\Battlefield */
   $grid = $variables['grid'];
   $display_events = $grid->isPending();
-  if ($grid->getInfo('interface') == 'minimal') {
+  if ($grid->getGameManager()->getInfo('interface') == 'minimal') {
     $display_events = FALSE;
   }
   if ($display_events) {
@@ -490,7 +489,7 @@ function theme_djambi_recent_events($variables) {
 function theme_djambi_recruiting_phase($variables) {
   $form = $variables["form"];
   // Détermination de la phase de jeu
-  /* @var $grid DjambiBattlefield */
+  /* @var $grid \Djambi\Battlefield */
   $grid = $form["#grid"];
   $header = array(
     0 => array('data' => t('Faction')),
@@ -503,16 +502,19 @@ function theme_djambi_recruiting_phase($variables) {
   $rows = array();
   $empty = 0;
   foreach (element_children($form['factions']) as $id) {
-    if (!empty($form['factions'][$id]['infos'])) {
-      $ping = $form['factions'][$id]['infos']['#value']['ping'];
-      $ping_array = _kw_djambi_format_ping_infos($ping);
-      $joined = format_interval(time() - $form['factions'][$id]['infos']['#value']['joined']);
+    $player = $grid->getFactionById($id)->getPlayer();
+    $ping_array['status'] = '?';
+    $ping_array['class'] = 'empty';
+    $ping_array['title'] = '?';
+    $joined = '?';
+    if (!empty($player) && $player instanceof \Djambi\Interfaces\HumanPlayerInterface) {
+      $signal = $player->getLastSignal();
+      if (!empty($signal)) {
+        $ping_array = _kw_djambi_format_ping_infos($signal->getPing());
+      }
+      $joined = format_interval(time() - $player->getJoined());
     }
     else {
-      $ping_array['status'] = $joined = '?';
-      $ping_array['class'] = 'empty';
-      $ping_array['title'] = '?';
-      $joined = '?';
       $empty++;
     }
     $row = array(
@@ -532,7 +534,7 @@ function theme_djambi_recruiting_phase($variables) {
     $rows[] = array(
       'data' => $row,
       'class' => isset($form['factions'][$id]['infos']) && $form['factions'][$id]['infos']['#value']['me'] ? array('me') : array('not-me'),
-      'data-djuid' => !empty($form['factions'][$id]['infos']['#value']['djuid']) ? $form['factions'][$id]['infos']['#value']['djuid'] : NULL,
+      'data-faction' => $id,
     );
   }
   unset($form['factions']);
@@ -598,11 +600,11 @@ function theme_djambi_game_description($variables) {
  * (potentiellement mise à jour régulièrement par Ajax)
  */
 function theme_djambi_waiting_label($variables) {
-  /* @var $now_playing_faction DjambiPoliticalFaction */
+  /* @var $now_playing_faction \Djambi\Faction */
   $now_playing_faction = $variables['faction'];
-  /* @var $grid DjambiBattlefield */
+  /* @var $grid \Djambi\Battlefield */
   $grid = $variables['grid'];
-  $last_change = $grid->getInfo('changed');
+  $last_change = $grid->getGameManager()->getChanged();
   if (!is_null($now_playing_faction)) {
     $args = array(
       '!side' => _kw_djambi_get_translatable_messages($now_playing_faction->getName()),

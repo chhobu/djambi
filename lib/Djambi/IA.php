@@ -1,36 +1,53 @@
 <?php
-class DjambiIA {
-  protected $name;
-  /* @var DjambiPoliticalFaction $faction */
-  protected $faction;
+namespace Djambi;
 
-  public static function getDefaultIAClass() {
-    return 'DjambiIADummy';
+use Djambi\IA\DummyIA;
+use Djambi\Players\ComputerPlayer;
+
+class IA {
+  /* @var string $name */
+  protected $name;
+  /* @var ComputerPlayer $faction */
+  protected $player;
+  /* @var string className */
+  protected $className;
+
+  public static function useIA(ComputerPlayer $player, $className) {
+    if (class_exists($className) && $className != __CLASS__) {
+      $ia = new $className($player);
+      $ia->className = $className;
+    }
+    else {
+      $ia = new DummyIA($player);
+      $ia->className = 'DjambiIADummy';
+    }
+    return $ia;
   }
 
-  public function __construct(DjambiPoliticalFaction $faction, $name = 'SillyBot') {
-    $this->faction = $faction;
+  protected function __construct(ComputerPlayer $player, $name = 'DefaultBot') {
+    $this->player = $player;
     $this->name = $name;
+  }
+
+  public function getClassName() {
+    return $this->className;
   }
 
   public function getName() {
     return $this->name;
   }
 
-  /**
-   * @return DjambiPoliticalFaction
-   */
-  protected function getFaction() {
-    return $this->faction;
+  protected function getPlayer() {
+    return $this->player;
   }
 
   public function getBattlefield() {
-    return $this->getFaction()->getBattlefield();
+    return $this->getPlayer()->getFaction()->getBattlefield();
   }
 
   public function play() {
     $available_moves = array();
-    foreach ($this->getFaction()->getControlledPieces() as $piece) {
+    foreach ($this->getPlayer()->getFaction()->getControlledPieces() as $piece) {
       if ($piece->isMovable()) {
         foreach ($piece->getAllowableMoves() as $destination) {
           $available_moves[] = array_merge($piece->evaluateMove($destination), array(
@@ -41,11 +58,11 @@ class DjambiIA {
       }
     }
     if (empty($available_moves)) {
-      $this->getFaction()->skipTurn();
+      $this->getPlayer()->getFaction()->skipTurn();
     }
     else {
       $move = $this->decideMove($available_moves);
-      /* @var DjambiPiece $piece */
+      /* @var Piece $piece */
       $piece = $move['piece'];
       $piece->move($move['destination']);
       foreach ($move['interactions'] as $interaction) {
@@ -78,7 +95,7 @@ class DjambiIA {
         }
       }
     }
-    foreach ($this->getFaction()->getControlledPieces() as $piece) {
+    foreach ($this->getPlayer()->getFaction()->getControlledPieces() as $piece) {
       $piece->setMovable(FALSE);
     }
     $this->getBattlefield()->resetCells();
@@ -104,10 +121,4 @@ class DjambiIA {
     return $choices[array_rand($choices, 1)];
   }
 
-}
-
-class DjambiIADummy extends DjambiIA {
-  public function __construct(DjambiPoliticalFaction $faction, $name = 'BetaBot') {
-    parent::__construct($faction, $name);
-  }
 }
