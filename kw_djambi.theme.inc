@@ -494,8 +494,7 @@ function theme_djambi_recruiting_phase($variables) {
   $header = array(
     0 => array('data' => t('Faction')),
     1 => array('data' => t('User')),
-    // 2 => array('data' => t('IP address')),
-    3 => array('data' => t('Ping')),
+    3 => array('data' => t('Online ?')),
     4 => array('data' => t('Waiting time')),
     5 => array('data' => t('Action')),
   );
