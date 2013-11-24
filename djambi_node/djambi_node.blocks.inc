@@ -113,7 +113,7 @@ function _djambi_node_list_recruiting_games($item_id = NULL) {
   ));
   $grid->addDefaultOrder('nid', 'desc');
   $grid->addPager(10);
-  $grid->addAutoRefresh(60);
+  $grid->addAutoRefresh(90);
   $grid->setEmptyText(t('There is currently no new games.'));
   return $grid->build();
 }
@@ -283,7 +283,7 @@ function _djambi_node_list_viewable_games($modes = NULL, $item_id = NULL) {
   ));
   $grid->addDefaultOrder('changed_ts', 'asc');
   $grid->addPager(10);
-  $grid->addAutoRefresh(60);
+  $grid->addAutoRefresh(100);
   $grid->setEmptyText(t('There is currently no pending or finished games to view.'));
   return $grid->build();
 }
