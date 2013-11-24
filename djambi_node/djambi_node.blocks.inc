@@ -26,7 +26,7 @@ function _djambi_node_list_games() {
       $links['friendly-link'] = array(
         'title' => t('Create a new friendly game'),
         'href' => 'node/add/djambi',
-        'query' => array('mode' => KW_DJAMBI_MODE_FRIENDLY),
+        'query' => array('mode' => DjambiGameManager::MODE_FRIENDLY),
         'attributes' => array('class' => array('icon militant')),
       );
     }
@@ -46,7 +46,6 @@ function _djambi_node_list_games() {
  * Construit un tableau listant les parties de Djambi en phase de recrutement.
  */
 function _djambi_node_list_recruiting_games($item_id = NULL) {
-  DjambiGameManager::getStatuses();
   $options = array(
     'form_display' => 'advanced',
     'file' => drupal_get_path('module', 'djambi_node') . '/djambi_node.blocks.inc',
@@ -59,16 +58,16 @@ function _djambi_node_list_recruiting_games($item_id = NULL) {
   );
   $grid = new KwDatagrid('DjambiGameRecrutingList', 'djambi_node', 'dn', __FUNCTION__, array(), $options);
   $grid->setTitle(t('New djambi games'));
-  $grid->addCondition('dn.status', KW_DJAMBI_STATUS_RECRUITING);
+  $grid->addCondition('dn.status', DjambiGameManager::STATUS_RECRUITING);
   $subquery1 = db_select('djambi_users', 'u1')
     ->fields('u1', array('nid'))
-    ->condition('u1.status', KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT)
+    ->condition('u1.status', \Djambi\Faction::STATUS_EMPTY_SLOT)
     ->groupBy('u1.nid');
   $subquery1->addExpression('COUNT(u1.nid)', 'empty_slots');
   $grid->addTable($subquery1, 'du1', 'inner', 'du1.nid = dn.nid');
   $subquery2 = db_select('djambi_users', 'u2')
     ->fields('u2', array('nid'))
-    ->condition('u2.status', KW_DJAMBI_FACTION_STATUS_READY)
+    ->condition('u2.status', \Djambi\Faction::STATUS_READY)
     ->groupBy('u2.nid');
   $subquery2->addExpression('COUNT(u2.nid)', 'ready_slots');
   $grid->addTable($subquery2, 'du2', 'inner', 'du2.nid = dn.nid');
@@ -104,7 +103,7 @@ function _djambi_node_list_recruiting_games($item_id = NULL) {
     'subquery' => "SELECT D.nid, D.cookie, U.* "
       . "FROM {djambi_users} D INNER JOIN {users} U ON U.uid = D.uid AND D.status = :status "
       . "WHERE D.nid IN (:input) ORDER BY U.name",
-    'subquery_args' => array(':status' => KW_DJAMBI_FACTION_STATUS_READY),
+    'subquery_args' => array(':status' => \Djambi\Faction::STATUS_READY),
     'subquery_callback' => '_djambi_node_list_build_games_users_list',
     'export' => array('with_me'),
   ));
@@ -128,7 +127,7 @@ function _djambi_node_list_viewable_games($modes = NULL, $item_id = NULL) {
   }
   $mode_choices = array();
   foreach ($modes as $value) {
-    if ($value != KW_DJAMBI_MODE_SANDBOX) {
+    if ($value != DjambiGameManager::MODE_SANDBOX) {
       $mode_choices[$value] = _kw_djambi_get_translatable_messages($value);
     }
   }
@@ -153,11 +152,11 @@ function _djambi_node_list_viewable_games($modes = NULL, $item_id = NULL) {
   );
   $grid = new KwDatagrid('DjambiGameViewableList', 'djambi_node', 'dn', __FUNCTION__, array(), $options);
   $grid->setTitle(t('Pending and finished djambi games'));
-  $grid->addCondition('dn.status', KW_DJAMBI_STATUS_RECRUITING, '!=');
-  $grid->addCondition('dn.mode', KW_DJAMBI_MODE_SANDBOX, '!=');
+  $grid->addCondition('dn.status', DjambiGameManager::STATUS_RECRUITING, '!=');
+  $grid->addCondition('dn.mode', DjambiGameManager::MODE_SANDBOX, '!=');
   $subquery2 = db_select('djambi_users', 'u2')
     ->fields('u2', array('nid'))
-    ->condition('u2.status', KW_DJAMBI_FACTION_STATUS_VASSALIZED, '!=')
+    ->condition('u2.status', \Djambi\Faction::STATUS_VASSALIZED, '!=')
     ->groupBy('u2.nid');
   $subquery2->addExpression('COUNT(u2.nid)', 'slots');
   $grid->addTable($subquery2, 'pl', 'inner', 'pl.nid = dn.nid');
@@ -199,7 +198,7 @@ function _djambi_node_list_viewable_games($modes = NULL, $item_id = NULL) {
     'subquery' => "SELECT D.nid, D.cookie, U.* "
       . "FROM {djambi_users} D INNER JOIN {users} U ON U.uid = D.uid AND D.status != :status "
       . "WHERE D.nid IN (:input) ORDER BY U.name",
-    'subquery_args' => array(':status' => KW_DJAMBI_FACTION_STATUS_VASSALIZED),
+    'subquery_args' => array(':status' => \Djambi\Faction::STATUS_VASSALIZED),
     'subquery_callback' => '_djambi_node_list_build_games_users_list',
     'export' => array('with_me'),
     'output_mode' => 'ul',
@@ -254,7 +253,7 @@ function _djambi_node_list_viewable_games($modes = NULL, $item_id = NULL) {
   ));
   $subquery4 = db_select('djambi_users', 'du');
   $subquery4->innerJoin('users', 'u', 'u.uid = du.uid');
-  $subquery4->condition('du.status', KW_DJAMBI_FACTION_STATUS_WINNER);
+  $subquery4->condition('du.status', \Djambi\Faction::STATUS_WINNER);
   $subquery4->addField('du', 'faction');
   $subquery4->addField('du', 'nid');
   $subquery4->fields('u');
@@ -324,7 +323,7 @@ function _djambi_node_list_build_games_users_list($args) {
  *   Code HTML affiché dans la colonne actions
  */
 function _djambi_node_list_build_actions_link($row) {
-  if ($row->status == KW_DJAMBI_STATUS_RECRUITING) {
+  if ($row->status == \Djambi\GameManager::STATUS_RECRUITING) {
     if (isset($row->with_me) && $row->with_me) {
       $label = t('Return to this game');
       $classes = array('icon enter');
@@ -334,7 +333,7 @@ function _djambi_node_list_build_actions_link($row) {
       $classes = array('icon signup');
     }
   }
-  elseif ($row->status != KW_DJAMBI_STATUS_FINISHED) {
+  elseif ($row->status != \Djambi\GameManager::STATUS_FINISHED) {
     if (isset($row->with_me) && $row->with_me) {
       $label = t('Play this game');
       $classes = array('icon signup');
@@ -428,7 +427,6 @@ function _djambi_node_list_build_winnername($name, $uid, $status, $faction) {
 function _djambi_node_list_user_games($nid = 0) {
   $context = \Drupal\kw_djambi\Djambi\DjambiContext::getInstance();
   $elements = array();
-  $auto_refresh = FALSE;
   $playing = FALSE;
   drupal_add_css(drupal_get_path('module', 'kw_djambi') . '/kw_djambi.css', array('every_page' => TRUE));
   if ($context->getCurrentUser()->isRegistered()) {
@@ -453,8 +451,8 @@ function _djambi_node_list_user_games($nid = 0) {
       if (!empty($user_faction) && !$grid->isFinished()) {
         $playing = TRUE;
         $uninteresting_modes = array(
-          KW_DJAMBI_MODE_SANDBOX,
-          KW_DJAMBI_MODE_TRAINING,
+          DjambiGameManager::MODE_SANDBOX,
+          DjambiGameManager::MODE_TRAINING,
         );
         if (!in_array($grid->getMode(), $uninteresting_modes)) {
           $elements['playing'] = array(
@@ -494,7 +492,7 @@ function _djambi_node_list_user_games($nid = 0) {
     $q->condition('n.status', DjambiGameManager::getStatuses(array('with_finished' => FALSE)));
     $q->condition('n.autodelete', time(), '>');
     $q->leftJoin('djambi_users', 'up', 'up.nid = n.nid AND up.status = :status',
-      array(':status' => KW_DJAMBI_FACTION_STATUS_PLAYING));
+      array(':status' => \Djambi\Faction::STATUS_PLAYING));
     $q->leftJoin('users', 'upu', 'upu.uid = up.uid');
     $q->fields('n', array('nid', 'status', 'mode', 'nb_moves', 'changed'));
     $q->addField('upu', 'name', 'playing_name');
@@ -512,8 +510,7 @@ function _djambi_node_list_user_games($nid = 0) {
     $factions_info = \Djambi\Grid::getSidesInfos();
     foreach ($result as $game) {
       $item = l($game->title, 'node/' . $game->nid) . ' (' . _kw_djambi_get_translatable_messages($game->mode) . ')';
-      if ($game->mode != KW_DJAMBI_MODE_SANDBOX) {
-        $auto_refresh = TRUE;
+      if ($game->mode != DjambiGameManager::MODE_SANDBOX) {
         $item .= ' - ' . t('Status : !status', array('!status' => _kw_djambi_get_translatable_messages($game->status)));
         if (in_array($game->status, DjambiGameManager::getStatuses(array(
           'with_recruiting' => FALSE,
@@ -567,7 +564,7 @@ function _djambi_node_list_user_games($nid = 0) {
       $query = db_update('djambi_users');
       $query->fields(array('data' => serialize(\Djambi\Signal::createSignal($context->getCurrentUser(), $context->getIp())->toArray())));
       $query->condition('nid', array_keys($games));
-      $query->condition('status', KW_DJAMBI_MODE_SANDBOX, '!=');
+      $query->condition('status', DjambiGameManager::MODE_SANDBOX, '!=');
       if ($uid > 0) {
         $query->condition('uid', $uid);
       }
@@ -588,7 +585,7 @@ function _djambi_node_list_user_games($nid = 0) {
     );
   }
   elseif (empty($elements['playing'])) {
-    if (!empty($grid) && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX && !$grid->isFinished() && !empty($user_faction)) {
+    if (!empty($grid) && $grid->getMode() == DjambiGameManager::MODE_SANDBOX && !$grid->isFinished() && !empty($user_faction)) {
       $message = t('You are only involved in this sandbox djambi game.');
     }
     else {
@@ -628,7 +625,6 @@ function _djambi_node_list_user_games($nid = 0) {
       'rel' => 'nofollow',
       'class' => array(
         'use-ajax',
-        $auto_refresh ? 'do-auto-refresh' : 'no-auto-refresh',
       ),
     ),
   );

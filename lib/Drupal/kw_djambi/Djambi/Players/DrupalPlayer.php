@@ -82,7 +82,7 @@ class DrupalPlayer extends HumanPlayer {
     if (!empty($games)) {
       foreach ($games as $mode => $mode_games) {
         switch ($mode) {
-          case(KW_DJAMBI_MODE_SANDBOX):
+          case(DrupalGameManager::MODE_SANDBOX):
             $forbidden_statuses = DrupalGameManager::getStatuses(array(
               'with_pending' => TRUE,
               'with_recruiting' => TRUE,
@@ -90,7 +90,7 @@ class DrupalPlayer extends HumanPlayer {
             ));
             break;
 
-          case(KW_DJAMBI_MODE_FRIENDLY):
+          case(DrupalGameManager::MODE_FRIENDLY):
             $forbidden_statuses = DrupalGameManager::getStatuses(array(
               'with_pending' => FALSE,
               'with_recruiting' => TRUE,
@@ -116,13 +116,13 @@ class DrupalPlayer extends HumanPlayer {
     $games = $this->getActiveGames();
     if (!in_array($mode, $this->getNewGameAllowedModes()) && !empty($games[$mode])) {
       $current_game = current($games[$mode]);
-      if ($mode == KW_DJAMBI_MODE_SANDBOX) {
+      if ($mode == DrupalGameManager::MODE_SANDBOX) {
         drupal_set_message(t("You have already begun a !game on !date. This game does not seem to be finished : switching back to the last played move of the game.", array(
           "!date" => format_date($current_game->created),
           "!game" => _kw_djambi_get_translatable_messages($mode),
         )), 'warning');
       }
-      elseif ($mode == KW_DJAMBI_MODE_FRIENDLY) {
+      elseif ($mode == DrupalGameManager::MODE_FRIENDLY) {
         drupal_set_message(t("You are already involved in a !game which is in a recruiting phase : you cannot create a new game.", array(
           "!game" => _kw_djambi_get_translatable_messages($mode),
         )), 'warning');

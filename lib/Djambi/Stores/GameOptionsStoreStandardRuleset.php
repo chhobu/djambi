@@ -1,6 +1,7 @@
 <?php
 
 namespace Djambi\Stores;
+use Djambi\GameManager;
 use Djambi\GameOptions\GameplayElement;
 use Djambi\GameOptions\RuleVariant;
 
@@ -17,7 +18,7 @@ class GameOptionsStoreStandardRuleset extends GameOptionsStore {
       1 => 'OPTION3_YES',
       0 => 'OPTION3_NO',
     ));
-    $option3->setModes(array(KW_DJAMBI_MODE_FRIENDLY));
+    $option3->setModes(array(GameManager::MODE_FRIENDLY));
 
     new GameplayElement($this, 'allowed_skipped_turns_per_user', 'OPTION1', -1, 'select', array(
       0 => 'OPTION1_NEVER',

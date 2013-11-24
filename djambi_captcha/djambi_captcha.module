@@ -39,12 +39,11 @@ function djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
     $grid = $game->getBattlefield();
   }
   else {
-    \Djambi\GameManager::getModes();
     $human_player = $context->getCurrentUser(TRUE);
     $computer_player = new \Djambi\Players\ComputerPlayer();
     $computer_player->useIa('DjambiIADummy');
     $game = \Djambi\GameManager::create(array($human_player, $computer_player), uniqid('Dj'),
-      KW_DJAMBI_MODE_TRAINING, \Djambi\Factories\GameDispositionsFactory::loadDisposition('2mini'));
+      \Djambi\GameManager::MODE_TRAINING, \Djambi\Factories\GameDispositionsFactory::loadDisposition('2mini'));
     $grid = $game->getBattlefield();
     $grid->setOption('turns_before_draw_proposal', -1);
     $game->setInfo('interface', 'minimal');
@@ -60,7 +59,7 @@ function djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
     $game_status_msg = '<div class="messages warning">'
       . t("You have to beat a dummy computer opponent in a mini djambi game to complete your registration !") . ' </div>';
   }
-  elseif ($form_state['kw_djambi']['result'] == KW_DJAMBI_FACTION_STATUS_WINNER) {
+  elseif ($form_state['kw_djambi']['result'] == \Djambi\Faction::STATUS_WINNER) {
     $game_status_msg = '<div class="messages status">'
       . t("Congratulations, you are smarter than a dummy computer. You can now complete your registration.") . ' </div>';
   }
@@ -97,7 +96,7 @@ function djambi_captcha_registration_validate($form, &$form_state) {
       $errors = TRUE;
     }
   }
-  elseif ($form_state['kw_djambi']['result'] != KW_DJAMBI_FACTION_STATUS_WINNER) {
+  elseif ($form_state['kw_djambi']['result'] != \Djambi\Faction::STATUS_WINNER) {
     form_set_error('grid', t("You are not smart enough to register."));
     if (!empty($form_state['values']['name']) && $clicked_button_family != 'grid') {
       watchdog('djambi', 'User !name (!mail) failed succeeding in Djambi game registration validation.',

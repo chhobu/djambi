@@ -201,9 +201,6 @@
             if ($block.length > 0 && ($block.data('user-faction') != result['user-faction'] || $block.data('status') != result['status'])) {
               $('.refresh-my-djambi-panel a').click();
             }
-            else if ($block.length == 0 && $('.refresh-my-djambi-panel a.do-auto-refresh').length == 0) {
-              $('.refresh-my-djambi-panel a').click();
-            }
             if (result.changed == 0) {
               $grid.find('.time-elapsed').html(result['time-elapsed']);
               $grid.find('.time-last-update').html(result['time-last-update']);

@@ -12,14 +12,25 @@ use Djambi\Interfaces\PlayerInterface;
 use Djambi\Players\ComputerPlayer;
 use Djambi\Players\HumanPlayer;
 
-define('KW_DJAMBI_DRAW_STATUS_PROPOSED', 1);
-define('KW_DJAMBI_DRAW_STATUS_ACCEPTED', 2);
-define('KW_DJAMBI_DRAW_STATUS_REJECTED', 0);
-
 /**
  * Class DjambiPoliticalFaction
  */
 class Faction {
+  const DRAW_STATUS_ACCEPTED = 1;
+  const DRAW_STATUS_PROPOSED = 2;
+  const DRAW_STATUS_REJECTED = 0;
+
+  const STATUS_PLAYING = 'playing';
+  const STATUS_WINNER = 'winner';
+  const STATUS_DRAW = 'draw';
+  const STATUS_KILLED = 'killed';
+  const STATUS_WITHDRAW = 'withdraw';
+  const STATUS_VASSALIZED = 'vassalized';
+  const STATUS_SURROUNDED = 'surrounded';
+  const STATUS_DEFECT = 'defect';
+  const STATUS_EMPTY_SLOT = 'empty';
+  const STATUS_READY = 'ready';
+
   /* @var string $status */
   protected $status;
   /* @var int $ranking */
@@ -60,7 +71,7 @@ class Faction {
     $this->class = $class;
     $this->startOrder = $start_order;
     $this->control = $this;
-    $this->setStatus(isset($data['status']) ? $data['status'] : KW_DJAMBI_FACTION_STATUS_READY);
+    $this->setStatus(isset($data['status']) ? $data['status'] : self::STATUS_READY);
     $this->pieces = array();
     $this->playing = FALSE;
     $this->skippedTurns = isset($data['skipped_turns']) ? $data['skipped_turns'] : 0;
@@ -137,15 +148,15 @@ class Faction {
   }
 
   public function setStatus($status) {
-    if ($this->status == KW_DJAMBI_FACTION_STATUS_VASSALIZED) {
+    if ($this->status == self::STATUS_VASSALIZED) {
       return $this;
     }
     $this->status = $status;
     $living_statuses = array(
-      KW_DJAMBI_FACTION_STATUS_PLAYING,
-      KW_DJAMBI_FACTION_STATUS_READY,
-      KW_DJAMBI_FACTION_STATUS_DRAW,
-      KW_DJAMBI_FACTION_STATUS_WINNER,
+      self::STATUS_PLAYING,
+      self::STATUS_READY,
+      self::STATUS_DRAW,
+      self::STATUS_WINNER,
     );
     if (in_array($status, $living_statuses)) {
       $this->setAlive(TRUE);
@@ -187,7 +198,7 @@ class Faction {
     $grid = $this->getBattlefield();
     foreach ($grid->getFactions() as $f) {
       if ($f->getId() != $this->getId() && $f->getControl()->getId() == $this->getId()) {
-        if ($grid->getOption('rule_vassalization') == 'full_control' || $f->getStatus() == KW_DJAMBI_FACTION_STATUS_KILLED) {
+        if ($grid->getOption('rule_vassalization') == 'full_control' || $f->getStatus() == self::STATUS_KILLED) {
           $f->setControl($faction, FALSE);
         }
         elseif ($faction->getId() != $this->id) {
@@ -225,11 +236,11 @@ class Faction {
     $this->playing = $playing;
     if ($playing) {
       foreach ($this->getBattlefield()->getFactions() as $faction) {
-        if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_PLAYING) {
-          $faction->setStatus(KW_DJAMBI_FACTION_STATUS_READY);
+        if ($faction->getStatus() == self::STATUS_PLAYING) {
+          $faction->setStatus(self::STATUS_READY);
         }
       }
-      $this->setStatus(KW_DJAMBI_FACTION_STATUS_PLAYING);
+      $this->setStatus(self::STATUS_PLAYING);
     }
     return $this;
   }
@@ -266,7 +277,7 @@ class Faction {
   public function changePlayer(PlayerInterface $player) {
     $this->player = $player;
     $player->setFaction($this);
-    $this->setStatus(KW_DJAMBI_FACTION_STATUS_READY);
+    $this->setStatus(self::STATUS_READY);
     if ($player instanceof HumanPlayerInterface && is_null($player->getJoined())) {
       $player->setJoined(time());
     }
@@ -277,7 +288,7 @@ class Faction {
       $this->player->removeFaction();
     }
     $this->player = NULL;
-    $this->setStatus(KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT);
+    $this->setStatus(self::STATUS_EMPTY_SLOT);
   }
 
   public function setBattlefield(Battlefield $grid) {
@@ -313,12 +324,12 @@ class Faction {
 
   public function withdraw() {
     $this->getBattlefield()->logEvent('event', 'WITHDRAWAL', array('faction1' => $this->getId()));
-    $this->dieDieDie(KW_DJAMBI_FACTION_STATUS_WITHDRAW);
+    $this->dieDieDie(self::STATUS_WITHDRAW);
     $this->getBattlefield()->updateSummary();
   }
 
   public function canComeBackAfterWithdraw() {
-    if ($this->getStatus() == KW_DJAMBI_FACTION_STATUS_WITHDRAW
+    if ($this->getStatus() == self::STATUS_WITHDRAW
         && $this->getBattlefield()->getOption('rule_comeback') == 'allowed'
         && $this->getControl()->getId() == $this->getId()
         && $this->checkLeaderFreedom()) {
@@ -331,7 +342,7 @@ class Faction {
 
   public function comeBackAfterWithdraw() {
     if ($this->canComeBackAfterWithdraw()) {
-      $this->setStatus(KW_DJAMBI_FACTION_STATUS_READY);
+      $this->setStatus(self::STATUS_READY);
       $this->getBattlefield()->logEvent('event', 'COMEBACK_AFTER_WITHDRAW', array('faction1' => $this->getId()));
       $this->getBattlefield()->updateSummary();
     }
@@ -341,14 +352,14 @@ class Faction {
     $turns = $this->getBattlefield()->getTurns();
     $this->setLastDrawProposal($turns[$this->getBattlefield()->getCurrentTurnId()]['turn']);
     $this->getBattlefield()->logEvent('event', 'DRAW_PROPOSAL', array('faction1' => $this->getId()));
-    $this->getBattlefield()->setStatus(KW_DJAMBI_STATUS_DRAW_PROPOSAL);
-    $this->setDrawStatus(KW_DJAMBI_DRAW_STATUS_PROPOSED);
+    $this->getBattlefield()->setStatus(GameManager::STATUS_DRAW_PROPOSAL);
+    $this->setDrawStatus(self::DRAW_STATUS_PROPOSED);
     $this->getBattlefield()->changeTurn();
   }
 
   public function acceptDraw() {
     $this->getBattlefield()->logEvent('event', 'DRAW_ACCEPTED', array('faction1' => $this->getId()));
-    $this->setDrawStatus(KW_DJAMBI_DRAW_STATUS_ACCEPTED);
+    $this->setDrawStatus(self::DRAW_STATUS_ACCEPTED);
     $factions = $this->getBattlefield()->getFactions();
     $alive_factions = array();
     $accepted_draws = 0;
@@ -370,7 +381,7 @@ class Faction {
 
   public function rejectDraw() {
     $this->getBattlefield()->logEvent('event', 'DRAW_REJECTED', array('faction1' => $this->getId()));
-    $this->getBattlefield()->setStatus(KW_DJAMBI_STATUS_PENDING);
+    $this->getBattlefield()->setStatus(GameManager::STATUS_PENDING);
     $factions = $this->getBattlefield()->getFactions();
     foreach ($factions as $faction) {
       $this->getBattlefield()->getFactionById($faction->getId())->setDrawStatus(NULL);

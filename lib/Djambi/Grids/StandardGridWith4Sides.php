@@ -1,6 +1,7 @@
 <?php
 
 namespace Djambi\Grids;
+use Djambi\Faction;
 use Djambi\Grid;
 
 class StandardGridWith4Sides extends Grid {
@@ -8,12 +9,12 @@ class StandardGridWith4Sides extends Grid {
     $this->useStandardGrid(9, 9);
     $this->useStandardPieces();
     $this->addSide(array('x' => 1, 'y' => 9),
-      isset($settings['start_statuses'][1]) ? $settings['start_statuses'][1] : KW_DJAMBI_FACTION_STATUS_READY);
+      isset($settings['start_statuses'][1]) ? $settings['start_statuses'][1] : Faction::STATUS_READY);
     $this->addSide(array('x' => 9, 'y' => 9),
-      isset($settings['start_statuses'][2]) ? $settings['start_statuses'][2] : KW_DJAMBI_FACTION_STATUS_READY);
+      isset($settings['start_statuses'][2]) ? $settings['start_statuses'][2] : Faction::STATUS_READY);
     $this->addSide(array('x' => 9, 'y' => 1),
-      isset($settings['start_statuses'][3]) ? $settings['start_statuses'][3] : KW_DJAMBI_FACTION_STATUS_READY);
+      isset($settings['start_statuses'][3]) ? $settings['start_statuses'][3] : Faction::STATUS_READY);
     $this->addSide(array('x' => 1, 'y' => 1),
-      isset($settings['start_statuses'][4]) ? $settings['start_statuses'][4] : KW_DJAMBI_FACTION_STATUS_READY);
+      isset($settings['start_statuses'][4]) ? $settings['start_statuses'][4] : Faction::STATUS_READY);
   }
 }

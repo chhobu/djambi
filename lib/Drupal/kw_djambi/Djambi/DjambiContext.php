@@ -102,7 +102,7 @@ class DjambiContext {
         }
       }
     }
-    if (!$grid->isFinished() && !is_null($current_user_faction) && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+    if (!$grid->isFinished() && !is_null($current_user_faction) && $grid->getMode() == GameManager::MODE_SANDBOX) {
       return $grid->getPlayingFaction();
     }
     if (!is_null($current_user_faction)) {

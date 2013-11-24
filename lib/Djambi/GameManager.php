@@ -10,50 +10,20 @@ use Djambi\Factories\GameDispositionsFactory;
 use Djambi\Interfaces\BattlefieldInterface;
 use Djambi\Interfaces\GameManagerInterface;
 
-/**;
- * Déclaration des constantes concernant les différents modes de jeu :
- */
-define('KW_DJAMBI_MODE_SANDBOX', 'bac-a-sable');
-define('KW_DJAMBI_MODE_FRIENDLY', 'amical');
-define('KW_DJAMBI_MODE_TRAINING', 'training');
-
-/**
- * Déclaration des constantes concernant les phases de jeu :
- */
-define('KW_DJAMBI_STATUS_PENDING', 'pending');
-define('KW_DJAMBI_STATUS_FINISHED', 'finished');
-define('KW_DJAMBI_STATUS_DRAW_PROPOSAL', 'draw_proposal');
-define('KW_DJAMBI_STATUS_RECRUITING', 'recruiting');
-
-/**
- * Déclaration des constantes concernant les statuts utilisateurs :
- */
-// Partie en cours :
-define('KW_DJAMBI_FACTION_STATUS_PLAYING', 'playing');
-// Fin du jeu, vainqueur :
-define('KW_DJAMBI_FACTION_STATUS_WINNER', 'winner');
-// Fin du jeu, nul :
-define('KW_DJAMBI_FACTION_STATUS_DRAW', 'draw');
-// Fin du jeu, perdant :
-define('KW_DJAMBI_FACTION_STATUS_KILLED', 'killed');
-// Fin du jeu, abandon :
-define('KW_DJAMBI_FACTION_STATUS_WITHDRAW', 'withdraw');
-// Camp vassalisé :
-define('KW_DJAMBI_FACTION_STATUS_VASSALIZED', 'vassalized');
-// Fin du jeu, encerclement :
-define('KW_DJAMBI_FACTION_STATUS_SURROUNDED', 'surrounded');
-// Fin du jeu, disqualification :
-define('KW_DJAMBI_FACTION_STATUS_DEFECT', 'defect');
-// Création de partie, place libre :
-define('KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT', 'empty');
-// Création de partie, prêt à jouer :
-define('KW_DJAMBI_FACTION_STATUS_READY', 'ready');
-
 /**
  * Class DjambiGameManager
  * Gère la persistance des parties de Djambi.
  */
 class GameManager implements GameManagerInterface {
+  const MODE_SANDBOX = 'bac-a-sable';
+  const MODE_FRIENDLY = 'amical';
+  const MODE_TRAINING = 'training';
+
+  const STATUS_PENDING = 'pending';
+  const STATUS_FINISHED = 'finished';
+  const STATUS_DRAW_PROPOSAL = 'draw_proposal';
+  const STATUS_RECRUITING = 'recruiting';
+
   /** @var Battlefield $battlefield */
   protected $battlefield;
   /** @var bool $persistant */
@@ -148,11 +118,11 @@ class GameManager implements GameManagerInterface {
    */
   public static function getModes($with_description = FALSE, $with_hidden = FALSE) {
     $modes = array(
-      KW_DJAMBI_MODE_FRIENDLY => 'MODE_FRIENDLY_DESCRIPTION',
-      KW_DJAMBI_MODE_SANDBOX => 'MODE_SANDBOX_DESCRIPTION',
+      static::MODE_FRIENDLY => 'MODE_FRIENDLY_DESCRIPTION',
+      static::MODE_SANDBOX => 'MODE_SANDBOX_DESCRIPTION',
     );
     $hidden_modes = array(
-      KW_DJAMBI_MODE_TRAINING => 'MODE_TRAINING_DESCRIPTION',
+      static::MODE_TRAINING => 'MODE_TRAINING_DESCRIPTION',
     );
     if ($with_hidden) {
       $modes = array_merge($modes, $hidden_modes);
@@ -189,14 +159,14 @@ class GameManager implements GameManagerInterface {
     $with_finished = isset($options['with_finished']) ? $options['with_finished'] : TRUE;
     $statuses = array();
     if ($with_recruiting) {
-      $statuses[KW_DJAMBI_STATUS_RECRUITING] = 'STATUS_RECRUITING_DESCRIPTION';
+      $statuses[static::STATUS_RECRUITING] = 'STATUS_RECRUITING_DESCRIPTION';
     }
     if ($with_pending) {
-      $statuses[KW_DJAMBI_STATUS_PENDING] = 'STATUS_PENDING_DESCRIPTION';
-      $statuses[KW_DJAMBI_STATUS_DRAW_PROPOSAL] = 'STATUS_DRAW_PROPOSAL_DESCRIPTION';
+      $statuses[static::STATUS_PENDING] = 'STATUS_PENDING_DESCRIPTION';
+      $statuses[static::STATUS_DRAW_PROPOSAL] = 'STATUS_DRAW_PROPOSAL_DESCRIPTION';
     }
     if ($with_finished) {
-      $statuses[KW_DJAMBI_STATUS_FINISHED] = 'STATUS_FINISHED_DESCRIPTION';
+      $statuses[static::STATUS_FINISHED] = 'STATUS_FINISHED_DESCRIPTION';
     }
     if ($with_description) {
       return $statuses;
@@ -292,23 +262,10 @@ class GameManager implements GameManagerInterface {
   }
 
   /**
-   * Vérifie si une partie est jouable.
-   *
-   * @return bool
-   *   Renvoie TRUE si le statut du jeu est en cours.
-   */
-  public function isPlayable() {
-    if ($this->getBattlefield()->getStatus() == KW_DJAMBI_STATUS_PENDING) {
-      return TRUE;
-    }
-    return FALSE;
-  }
-
-  /**
    * Lance les actions permettant de rendre une partie jouable.
    */
   public function play() {
-    if ($this->isPlayable()) {
+    if ($this->getBattlefield()->getStatus() == static::STATUS_PENDING) {
       $this->getBattlefield()->prepareNewTurn();
     }
     return $this;

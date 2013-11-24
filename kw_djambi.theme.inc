@@ -333,7 +333,7 @@ function theme_djambi_players_table($variables) {
   $grid = $variables['grid'];
   $pheader['sides'] = array('data' => t('Sides'), 'scope' => 'col');
   $pheader['players'] = array('data' => t('Players'), 'scope' => 'col');
-  if ($grid->getMode() == KW_DJAMBI_MODE_FRIENDLY) {
+  if ($grid->getMode() == \Djambi\GameManager::MODE_FRIENDLY) {
     $pheader['ping'] = array('data' => t('Online ?'), 'scope' => 'col');
   }
   $pheader['status'] = array('data' => t('Status'), 'scope' => 'col');
@@ -614,11 +614,11 @@ function theme_djambi_waiting_label($variables) {
     $args = array();
   }
   switch ($grid->getStatus()) {
-    case(KW_DJAMBI_STATUS_RECRUITING):
+    case(\Djambi\GameManager::STATUS_RECRUITING):
       $label = t("Waiting for new players...");
       break;
 
-    case(KW_DJAMBI_STATUS_DRAW_PROPOSAL):
+    case(\Djambi\GameManager::STATUS_DRAW_PROPOSAL):
       $label = t("Waiting for !side decision for !duration...", $args);
       break;
 

@@ -293,7 +293,7 @@ class Grid {
       'id' => 'R',
       'name' => 'Red',
       'class' => 'rouge',
-      'start_order' => 1
+      'start_order' => 1,
     );
     $factions['B'] = array(
       'id' => 'B',
@@ -326,7 +326,7 @@ class Grid {
     }
   }
 
-  protected function addSide($start_origin, $start_status = KW_DJAMBI_FACTION_STATUS_READY) {
+  protected function addSide($start_origin, $start_status = Faction::STATUS_READY) {
     $nb_sides = count($this->sides) + 1;
     $side_info = array_merge(self::getSidesInfos($nb_sides), $start_origin);
     $side_info['start_status'] = $start_status;

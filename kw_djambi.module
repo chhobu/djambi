@@ -180,9 +180,9 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
     $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
   }
   // Cas d'une partie à joueur unique.
-  if ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+  if ($grid->getMode() == \Djambi\GameManager::MODE_SANDBOX) {
     foreach ($grid->getFactions() as $random_faction) {
-      if ($random_faction->getStatus() != KW_DJAMBI_FACTION_STATUS_VASSALIZED) {
+      if ($random_faction->getStatus() != \Djambi\Faction::STATUS_VASSALIZED) {
         break;
       }
     }
@@ -210,7 +210,7 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
       "!color" =>
         theme('djambi_faction_name', array('faction' => $now_playing_faction)),
     ));
-    if ($grid->getStatus() != KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
+    if ($grid->getStatus() != \Djambi\GameManager::STATUS_DRAW_PROPOSAL) {
       $infos_lines[t("Playing next")] = t("!color1 side, then !color2 side, then !color3 side", array(
         "!color1" => theme('djambi_faction_name', array('faction' => $playing_next_faction1)),
         "!color2" => theme('djambi_faction_name', array('faction' => $playing_next_faction2)),
@@ -593,9 +593,6 @@ function _kw_djambi_get_duration($seconds_count) {
  * Traduit les chaînes de caractères présentes dans les classes du dossier lib.
  */
 function _kw_djambi_get_translatable_messages($message, $args = array(), \Djambi\Battlefield $grid = NULL) {
-  if (!defined('KW_DJAMBI_MODE_FRIENDLY')) {
-    \Djambi\GameManager::getModes();
-  }
   if (isset($args['faction1']) && !is_null($grid)) {
     $faction1 = $grid->getFactionById($args['faction1']);
     $args['!faction1'] = theme('djambi_faction_name', array('faction' => $faction1));
@@ -688,15 +685,19 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), \Djambi
       $txt = t("!faction1 skipps his turn.", $args);
       break;
 
-    case(KW_DJAMBI_MODE_SANDBOX):
+    case(\Djambi\GameManager::MODE_SANDBOX):
       $txt = t("Sandbox game");
       break;
 
-    case(KW_DJAMBI_MODE_FRIENDLY):
+    case(\Djambi\GameManager::MODE_FRIENDLY):
       $txt = t("Friendly game");
       break;
 
-    case(KW_DJAMBI_STATUS_RECRUITING):
+    case(\Djambi\GameManager::MODE_TRAINING):
+      $txt = t("Training game");
+      break;
+
+    case(\Djambi\GameManager::STATUS_RECRUITING):
       $txt = t("Waiting for new players...");
       break;
 
@@ -704,7 +705,7 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), \Djambi
       $txt = t("recruiting");
       break;
 
-    case(KW_DJAMBI_STATUS_PENDING):
+    case(\Djambi\GameManager::STATUS_PENDING):
       $txt = t("Game in progress...");
       break;
 
@@ -712,7 +713,7 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), \Djambi
       $txt = t("pending");
       break;
 
-    case(KW_DJAMBI_STATUS_FINISHED):
+    case(\Djambi\GameManager::STATUS_FINISHED):
       $txt = t("Game over !");
       break;
 
@@ -720,7 +721,7 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), \Djambi
       $txt = t("finished");
       break;
 
-    case(KW_DJAMBI_STATUS_DRAW_PROPOSAL):
+    case(\Djambi\GameManager::STATUS_DRAW_PROPOSAL):
       $txt = t("Peace negociation...");
       break;
 
@@ -987,43 +988,43 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), \Djambi
       $txt = t("No, only registered users can play");
       break;
 
-    case(KW_DJAMBI_FACTION_STATUS_PLAYING):
+    case(\Djambi\Faction::STATUS_PLAYING):
       $txt = t('playing');
       break;
 
-    case(KW_DJAMBI_FACTION_STATUS_WINNER):
+    case(\Djambi\Faction::STATUS_WINNER):
       $txt = t('winner');
       break;
 
-    case(KW_DJAMBI_FACTION_STATUS_DRAW):
+    case(\Djambi\Faction::STATUS_DRAW):
       $txt = t('draw');
       break;
 
-    case(KW_DJAMBI_FACTION_STATUS_KILLED):
+    case(\Djambi\Faction::STATUS_KILLED):
       $txt = t('killed');
       break;
 
-    case(KW_DJAMBI_FACTION_STATUS_WITHDRAW):
+    case(\Djambi\Faction::STATUS_WITHDRAW):
       $txt = t('withdrawn');
       break;
 
-    case(KW_DJAMBI_FACTION_STATUS_SURROUNDED):
+    case(\Djambi\Faction::STATUS_SURROUNDED):
       $txt = t('surrounded');
       break;
 
-    case(KW_DJAMBI_FACTION_STATUS_DEFECT):
+    case(\Djambi\Faction::STATUS_DEFECT):
       $txt = t('defect');
       break;
 
-    case(KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT):
+    case(\Djambi\Faction::STATUS_EMPTY_SLOT):
       $txt = t('empty');
       break;
 
-    case(KW_DJAMBI_FACTION_STATUS_READY):
+    case(\Djambi\Faction::STATUS_READY):
       $txt = t('waiting');
       break;
 
-    case(KW_DJAMBI_FACTION_STATUS_VASSALIZED):
+    case(\Djambi\Faction::STATUS_VASSALIZED):
       $txt = t('vassalized');
       break;
 

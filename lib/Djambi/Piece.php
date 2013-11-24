@@ -428,7 +428,7 @@ class Piece {
         'faction1' => $victim->getFaction()->getId(),
         'piece' => $victim->getId(),
       ));
-      $victim->getFaction()->dieDieDie(KW_DJAMBI_FACTION_STATUS_KILLED);
+      $victim->getFaction()->dieDieDie(Faction::STATUS_KILLED);
       $victim->getFaction()->setControl($this->faction->getControl());
       $victim->getFaction()->setMaster($this->faction->getControl()->getId());
       $this->faction->getBattlefield()->updateSummary();

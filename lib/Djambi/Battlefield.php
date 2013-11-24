@@ -101,16 +101,16 @@ class Battlefield implements BattlefieldInterface {
     // Construction des factions :
     $ready = TRUE;
     foreach ($battlefield->getDisposition()->getGrid()->getSides() as $side) {
-      if ($side['start_status'] == KW_DJAMBI_FACTION_STATUS_READY) {
+      if ($side['start_status'] == Faction::STATUS_READY) {
         /* @var HumanPlayer $player */
-        if ($battlefield->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+        if ($battlefield->getMode() == GameManager::MODE_SANDBOX) {
           $player = current($players);
         }
         else {
           $player = array_shift($players);
         }
         if (empty($player)) {
-          $side['start_status'] = KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT;
+          $side['start_status'] = Faction::STATUS_EMPTY_SLOT;
           $ready = FALSE;
         }
       }
@@ -177,7 +177,7 @@ class Battlefield implements BattlefieldInterface {
       $faction->createPieces($scheme->getPieceScheme(), $start_scheme);
     }
     $battlefield->logEvent('info', 'NEW_DJAMBI_GAME');
-    $battlefield->setStatus($ready ? KW_DJAMBI_STATUS_PENDING : KW_DJAMBI_STATUS_RECRUITING);
+    $battlefield->setStatus($ready ? GameManager::STATUS_PENDING : GameManager::STATUS_RECRUITING);
     return $battlefield;
   }
 
@@ -443,7 +443,7 @@ class Battlefield implements BattlefieldInterface {
    * @return bool
    */
   public function isPending() {
-    if (in_array($this->getStatus(), array(KW_DJAMBI_STATUS_PENDING, KW_DJAMBI_STATUS_DRAW_PROPOSAL))) {
+    if (in_array($this->getStatus(), array(GameManager::STATUS_PENDING, GameManager::STATUS_DRAW_PROPOSAL))) {
       return TRUE;
     }
     else {
@@ -455,7 +455,7 @@ class Battlefield implements BattlefieldInterface {
    * @return bool
    */
   public function isFinished() {
-    if ($this->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
+    if ($this->getStatus() == GameManager::STATUS_FINISHED) {
       return TRUE;
     }
     else {
@@ -467,7 +467,7 @@ class Battlefield implements BattlefieldInterface {
    * @return bool
    */
   public function isNotBegin() {
-    if ($this->getStatus() == KW_DJAMBI_STATUS_RECRUITING) {
+    if ($this->getStatus() == GameManager::STATUS_RECRUITING) {
       return TRUE;
     }
     else {
@@ -823,7 +823,7 @@ class Battlefield implements BattlefieldInterface {
     if ($nb_living_factions == 1) {
       $winner_id = current($living_factions);
       $winner = $this->getFactionById($winner_id);
-      $winner->setStatus(KW_DJAMBI_FACTION_STATUS_WINNER);
+      $winner->setStatus(Faction::STATUS_WINNER);
       $winner->setRanking(1);
       $this->logEvent('event', 'THE_WINNER_IS', array('faction1' => $winner->getId()));
     }
@@ -831,11 +831,11 @@ class Battlefield implements BattlefieldInterface {
       $this->logEvent("event", "DRAW");
       foreach ($living_factions as $faction_id) {
         $faction = $this->getFactionById($faction_id);
-        $faction->setStatus(KW_DJAMBI_FACTION_STATUS_DRAW);
+        $faction->setStatus(Faction::STATUS_DRAW);
         $faction->setRanking($nb_living_factions);
       }
     }
-    $this->setStatus(KW_DJAMBI_STATUS_FINISHED);
+    $this->setStatus(GameManager::STATUS_FINISHED);
     $this->updateSummary();
     $this->buildFinalRanking($nb_living_factions);
     $this->logEvent("event", "END");
@@ -867,7 +867,7 @@ class Battlefield implements BattlefieldInterface {
               }
             }
           }
-          $faction->dieDieDie(KW_DJAMBI_FACTION_STATUS_SURROUNDED);
+          $faction->dieDieDie(Faction::STATUS_SURROUNDED);
           $changes = TRUE;
         }
         else {
@@ -876,10 +876,10 @@ class Battlefield implements BattlefieldInterface {
       }
       elseif ($this->getOption('rule_comeback') == 'surrounded' ||
           ($this->getOption('rule_comeback') == 'allowed' && empty($kings))) {
-        if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_SURROUNDED) {
+        if ($faction->getStatus() == Faction::STATUS_SURROUNDED) {
           $control_leader = $faction->checkLeaderFreedom();
           if ($control_leader) {
-            $faction->setStatus(KW_DJAMBI_FACTION_STATUS_READY);
+            $faction->setStatus(Faction::STATUS_READY);
             $this->logEvent("event", "COMEBACK_AFTER_SURROUND", array('faction1' => $faction->getId()));
             $changes = TRUE;
           }
@@ -918,9 +918,9 @@ class Battlefield implements BattlefieldInterface {
         foreach ($this->getFactions() as $faction) {
           if (!$faction->isAlive()) {
             $allowed_statuses = array(
-              KW_DJAMBI_FACTION_STATUS_DEFECT,
-              KW_DJAMBI_FACTION_STATUS_WITHDRAW,
-              KW_DJAMBI_FACTION_STATUS_SURROUNDED,
+              Faction::STATUS_DEFECT,
+              Faction::STATUS_WITHDRAW,
+              Faction::STATUS_SURROUNDED,
             );
             if (in_array($faction->getStatus(), $allowed_statuses) && $faction->getControl()->getId() != $faction->getId()) {
               $faction->setControl($faction);
@@ -1026,7 +1026,7 @@ class Battlefield implements BattlefieldInterface {
       }
     }
     $rulers = array();
-    if (!empty($thrones) && $this->getStatus() == KW_DJAMBI_STATUS_PENDING) {
+    if (!empty($thrones) && $this->getStatus() == GameManager::STATUS_PENDING) {
       foreach ($thrones as $throne) {
         $cell = $this->cells[$throne];
         $piece = $cell->getOccupant();
@@ -1065,7 +1065,7 @@ class Battlefield implements BattlefieldInterface {
         $turn_scheme[$last_playable_turn_scheme]["playable"] = FALSE;
       }
     }
-    elseif ($this->getStatus() == KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
+    elseif ($this->getStatus() == GameManager::STATUS_DRAW_PROPOSAL) {
       foreach ($turn_scheme as $key => $turn) {
         if (!empty($turn['side']) && $turn['playable']) {
           $side = $this->getFactionById($turn['side']);
@@ -1312,7 +1312,7 @@ class Battlefield implements BattlefieldInterface {
     $vassals = array();
     $players = array();
     foreach ($this->factions as $faction) {
-      if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_VASSALIZED) {
+      if ($faction->getStatus() == Faction::STATUS_VASSALIZED) {
         $vassals[] = $faction->getId();
       }
       else {

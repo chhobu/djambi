@@ -154,7 +154,7 @@ function djambi_node_node_view($node, $view_mode) {
     /* @var $datagrid \Djambi\Battlefield */
     $datagrid = $form['grid']['#grid'];
     module_load_include('inc', 'djambi_node', 'djambi_node.blocks');
-    if ($datagrid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
+    if ($datagrid->getMode() != DjambiGameManager::MODE_SANDBOX) {
       if (!$datagrid->isNotBegin()) {
         $node->content['navigation'] = _djambi_node_list_viewable_games(NULL, $node->nid);
       }
@@ -223,7 +223,7 @@ function djambi_node_form_djambi_node_form_alter(&$form, &$form_state) {
       $default_mode = $_GET['mode'];
     }
     else {
-      $default_mode = KW_DJAMBI_MODE_FRIENDLY;
+      $default_mode = DjambiGameManager::MODE_FRIENDLY;
     }
     $form['basics']['mode'] = array(
       '#type' => 'radios',
@@ -455,7 +455,7 @@ function djambi_node_start_game() {
   $new_game = db_query('SELECT dn.nid FROM {djambi_node} dn
       WHERE dn.status = :status AND dn.autodelete > :time
       ORDER BY dn.changed DESC LIMIT 0,1',
-    array(':status' => KW_DJAMBI_STATUS_RECRUITING, ':time' => time()))->fetch();
+    array(':status' => DjambiGameManager::STATUS_RECRUITING, ':time' => time()))->fetch();
   if (!empty($new_game) && count($allowed_modes) > 0) {
     drupal_set_message(t("We found a game still recruiting players. You may also !create_link.",
       array('!create_link' => l(t('create your own new game'), 'node/add/djambi')))

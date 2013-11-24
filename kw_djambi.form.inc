@@ -35,8 +35,8 @@ function _kw_djambi_build_game_form(&$form, &$form_state, \Djambi\Battlefield $g
   }
   if (!$replay && !$grid->isFinished()) {
     $is_refresh_modes = !in_array($grid->getMode(), array(
-      KW_DJAMBI_MODE_SANDBOX,
-      KW_DJAMBI_MODE_TRAINING,
+      \Djambi\GameManager::MODE_SANDBOX,
+      \Djambi\GameManager::MODE_TRAINING,
     ));
     if ($is_refresh_modes && !is_null($current_user_faction)) {
       $context->sendSignal();
@@ -77,7 +77,7 @@ function _kw_djambi_build_game_form(&$form, &$form_state, \Djambi\Battlefield $g
     elseif ($faction && !is_null($faction->getPlayer()) && !$faction->getPlayer()->isHuman()) {
       $do_refresh = 'force';
     }
-    elseif ($faction && $grid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
+    elseif ($faction && $grid->getMode() != \Djambi\GameManager::MODE_SANDBOX) {
       $do_refresh = $faction->getId() != $current_user_faction->getId() ? 'check' : 'minimal';
     }
   }
@@ -148,7 +148,7 @@ function _kw_djambi_build_game_form(&$form, &$form_state, \Djambi\Battlefield $g
   if ($show_stats && !$grid->isNotBegin()) {
     $form['stats'] = array(
       '#type' => 'fieldset',
-      '#title' => $grid->getStatus() == KW_DJAMBI_STATUS_FINISHED ? t('Stats and awards') : t('Stats'),
+      '#title' => $grid->getStatus() == \Djambi\GameManager::STATUS_FINISHED ? t('Stats and awards') : t('Stats'),
       '#weight' => 5,
     );
   }
@@ -175,10 +175,10 @@ function _kw_djambi_build_game_form(&$form, &$form_state, \Djambi\Battlefield $g
   }
   if (!isset($form_state['show_replay']) && $grid->isPending()) {
     // Interface de réponse sur proposition de partie nulle :
-    if ($faction && $grid->getStatus() == KW_DJAMBI_STATUS_DRAW_PROPOSAL) {
+    if ($faction && $grid->getStatus() == \Djambi\GameManager::STATUS_DRAW_PROPOSAL) {
       _kw_djambi_build_part_draw_proposal($form['grid'], $grid, $faction, $ajax_settings, $is_user_playing_current_faction);
     }
-    elseif ($faction && $grid->getStatus() == KW_DJAMBI_STATUS_PENDING && $is_user_playing_current_faction) {
+    elseif ($faction && $grid->getStatus() == \Djambi\GameManager::STATUS_PENDING && $is_user_playing_current_faction) {
       _kw_djambi_build_part_player_actions($form, $form_state, $grid, $faction, $ajax_settings);
       _kw_djambi_build_part_pieces_controls($form['grid'], $form_state, $grid, $faction, $ajax_settings);
     }
@@ -225,17 +225,17 @@ function _kw_djambi_build_part_recruiting(&$form, \Djambi\Battlefield $grid, $cu
   );
   /* @var $faction \Djambi\Faction */
   foreach ($grid->getFactions() as $faction) {
-    if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_VASSALIZED) {
+    if ($faction->getStatus() == \Djambi\Faction::STATUS_VASSALIZED) {
       continue;
     }
     $form['grid']['factions'][$faction->getId()]['label'] = array(
       '#type' => 'item',
       '#title' => theme('djambi_faction_name', array('faction' => $faction)),
-      '#markup' => $faction->getStatus() == KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT ?
+      '#markup' => $faction->getStatus() == \Djambi\Faction::STATUS_EMPTY_SLOT ?
       t('Empty') : $faction->getPlayer()->displayName(),
     );
     $me = $context->getCurrentUser()->isPlayingFaction($faction);
-    if ($faction->getStatus() != KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT) {
+    if ($faction->getStatus() != \Djambi\Faction::STATUS_EMPTY_SLOT) {
       $form['grid']['factions'][$faction->getId()]['infos'] = array(
         '#type' => 'value',
         '#value' => array(
@@ -252,7 +252,7 @@ function _kw_djambi_build_part_recruiting(&$form, \Djambi\Battlefield $grid, $cu
         '#submit' => array('kw_djambi_game_form_cancel_participation_submit'),
       );
     }
-    elseif ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT) {
+    elseif ($faction->getStatus() == \Djambi\Faction::STATUS_EMPTY_SLOT) {
       if ($allow_anonymous || !$context->isAnonymous()) {
         $form['grid']['factions'][$faction->getId()]['action'] = array(
           '#type' => 'submit',
@@ -572,7 +572,7 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, \Djambi\Batt
     );
   }
   // Annulation d'un mouvement :
-  elseif ($grid->getMode() == KW_DJAMBI_MODE_SANDBOX && count($grid->getTurns()) > 1) {
+  elseif ($grid->getMode() == \Djambi\GameManager::MODE_SANDBOX && count($grid->getTurns()) > 1) {
     $actions['cancel_last_turn'] = array(
       '#type' => 'submit',
       '#name' => 'action',
@@ -644,7 +644,7 @@ function _kw_djambi_build_part_player_actions(&$form, &$form_state, \Djambi\Batt
     '#ajax' => $ajax_settings,
   );
   // Retour après abandon :
-  if ($grid->getOption('rule_comeback') == 'allowed' && $grid->getMode() == KW_DJAMBI_MODE_SANDBOX) {
+  if ($grid->getOption('rule_comeback') == 'allowed' && $grid->getMode() == \Djambi\GameManager::MODE_SANDBOX) {
     /* @var $withdrawn_faction \Djambi\Faction */
     foreach ($grid->getFactions() as $withdrawn_faction) {
       if ($withdrawn_faction->canComeBackAfterWithdraw()) {
@@ -1199,7 +1199,7 @@ function _kw_djambi_build_part_stats(&$form, \Djambi\Battlefield $grid) {
     if (is_null($faction->getPlayer())) {
       continue;
     }
-    if ($grid->getMode() != KW_DJAMBI_MODE_SANDBOX) {
+    if ($grid->getMode() != \Djambi\GameManager::MODE_SANDBOX) {
       $username = $faction->getPlayer()->displayName();
       $players[$faction->getId()] = $username;
     }
@@ -1261,7 +1261,7 @@ function _kw_djambi_build_part_stats(&$form, \Djambi\Battlefield $grid) {
       $stats_necromobility[$move['acting_faction']]++;
     }
   }
-  if ($grid->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
+  if ($grid->getStatus() == \Djambi\GameManager::STATUS_FINISHED) {
     $header = array(
       array('data' => t('Award')),
       array('data' => t('Awarded to')),
@@ -1413,8 +1413,8 @@ function _kw_djambi_build_part_stats(&$form, \Djambi\Battlefield $grid) {
   );
   $global_total_data = 0;
   $stop_status = array(
-    KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT,
-    KW_DJAMBI_FACTION_STATUS_VASSALIZED,
+    \Djambi\Faction::STATUS_EMPTY_SLOT,
+    \Djambi\Faction::STATUS_VASSALIZED,
   );
   foreach ($factions as $faction) {
     if (in_array($faction->getStatus(), $stop_status)) {
@@ -1434,13 +1434,8 @@ function _kw_djambi_build_part_stats(&$form, \Djambi\Battlefield $grid) {
       'header' => TRUE,
     );
     $total = 0;
-    /* @var $subfaction \Djambi\Faction */
     foreach ($factions as $subfaction) {
-      if (in_array($subfaction->getStatus(), array(
-        KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT,
-        KW_DJAMBI_FACTION_STATUS_VASSALIZED,
-      ))
-      ) {
+      if (in_array($subfaction->getStatus(), $stop_status)) {
         continue;
       }
       $murders = $stats_murders[$faction->getId()][$subfaction->getId()];
@@ -1502,11 +1497,7 @@ function _kw_djambi_build_part_stats(&$form, \Djambi\Battlefield $grid) {
     ),
   );
   foreach ($factions as $faction) {
-    if (in_array($faction->getStatus(), array(
-      KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT,
-      KW_DJAMBI_FACTION_STATUS_VASSALIZED,
-    ))
-    ) {
+    if (in_array($faction->getStatus(), $stop_status)) {
       continue;
     }
     $row = array();
@@ -1929,7 +1920,7 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
   if (!is_null($gm)) {
     $grid = $gm->reload()->getBattlefield();
   }
-  if ($grid->getStatus() != KW_DJAMBI_STATUS_RECRUITING) {
+  if ($grid->getStatus() != \Djambi\GameManager::STATUS_RECRUITING) {
     return;
   }
   $form_state['rebuild'] = TRUE;
@@ -1944,27 +1935,25 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
   $clicked_button = $form_state['clicked_button'];
   $faction_id = $clicked_button['#array_parents'][2];
   $nb_empty_factions = 0;
-
-  /* @var $faction \Djambi\Faction */
   foreach ($grid->getFactions() as $faction) {
     if ($faction->getId() != $faction_id) {
       if ($context->checkUserPlayingFaction($faction)) {
         $faction->removePlayer();
       }
-      if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT) {
+      if ($faction->getStatus() == \Djambi\Faction::STATUS_EMPTY_SLOT) {
         $nb_empty_factions++;
       }
     }
   }
   $faction = $grid->getFactionById($faction_id);
-  if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT) {
+  if ($faction->getStatus() == \Djambi\Faction::STATUS_EMPTY_SLOT) {
     $player = $context->getCurrentUser(TRUE);
     $faction->changePlayer($player);
     if (is_null($player->getLastSignal())) {
       \Djambi\Signal::createSignal($player, $context->getIp());
     }
     if ($nb_empty_factions == 0) {
-      $grid->setStatus(KW_DJAMBI_STATUS_PENDING);
+      $grid->setStatus(\Djambi\GameManager::STATUS_PENDING);
     }
     $grid->logEvent('info', 'NEW_TEAM', array(
       'faction1' => $faction->getId(),
@@ -1986,7 +1975,7 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
 function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
   /* @var $grid \Djambi\Battlefield */
   $grid = $form['grid']['#grid'];
-  if ($grid->getStatus() == KW_DJAMBI_STATUS_RECRUITING) {
+  if ($grid->getStatus() == \Djambi\GameManager::STATUS_RECRUITING) {
     $nb_playing_factions = 0;
     $context = \Drupal\kw_djambi\Djambi\DjambiContext::getInstance();
     /* @var $faction \Djambi\Faction */
@@ -1994,7 +1983,7 @@ function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
       if ($context->checkUserPlayingFaction($faction)) {
         $faction->removePlayer();
       }
-      if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_READY) {
+      if ($faction->getStatus() == \Djambi\Faction::STATUS_READY) {
         $nb_playing_factions++;
       }
     }

@@ -35,7 +35,7 @@ class DrupalGameManager extends GameManager {
     if (is_null($this->autodeleteTime)) {
       $conservation_longue = FALSE;
       $modes_longue_conservation_finished = array(
-        KW_DJAMBI_MODE_FRIENDLY,
+        static::MODE_FRIENDLY,
       );
       if (in_array($this->getBattlefield()->getMode(), $modes_longue_conservation_finished)
         && $this->getBattlefield()->isFinished()) {
@@ -156,7 +156,7 @@ class DrupalGameManager extends GameManager {
     else {
       $disposition = GameDispositionsFactory::loadDisposition($form_state['values']['nb_players'], $settings);
     }
-    if ($mode == KW_DJAMBI_MODE_SANDBOX) {
+    if ($mode == static::MODE_SANDBOX) {
       array_fill(1, $disposition->getNbPlayers(), $player1);
     }
     else {
@@ -180,7 +180,7 @@ class DrupalGameManager extends GameManager {
   public function save() {
     $grid = $this->getBattlefield();
     $compress = FALSE;
-    if ($grid->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
+    if ($grid->getStatus() == static::STATUS_FINISHED) {
       $compress = TRUE;
     }
     $data = $grid->toArray();

@@ -175,7 +175,7 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
         $this->fail(t("Fail to load Djambi game."));
         return;
       }
-      elseif ($grid->getStatus() == KW_DJAMBI_STATUS_FINISHED) {
+      elseif ($grid->getStatus() == \Djambi\GameManager::STATUS_FINISHED) {
         $finished = TRUE;
         $this->pass(t("Djambi game is finished."));
         break;
@@ -266,7 +266,7 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
 
   protected function djambiPlaySandboxGame($disposal, $options = array()) {
     // Création par un joueur anonyme d'une nouvelle partie :
-    $node = $this->djambiCreateGame(KW_DJAMBI_MODE_SANDBOX, $disposal, $options);
+    $node = $this->djambiCreateGame(\Djambi\GameManager::MODE_SANDBOX, $disposal, $options);
     if (!$node) {
       return;
     }
@@ -295,7 +295,7 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
     foreach ($users as $key => $user) {
       $this->djambiLogin($user);
       if ($key == 0) {
-        $node = $this->djambiCreateGame(KW_DJAMBI_MODE_FRIENDLY, $disposal, $options);
+        $node = $this->djambiCreateGame(\Djambi\GameManager::MODE_FRIENDLY, $disposal, $options);
         if (!$node) {
           return;
         }
@@ -303,18 +303,18 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
         $alias = drupal_lookup_path('alias', 'node/' . $node->nid);
         $grid = DjambiGameManagerNode::loadGameFromNid($node->nid)->getBattlefield();
         $factions = $grid->getFactions();
-        $this->assertDjambiGameInformations('status', KW_DJAMBI_STATUS_RECRUITING);
+        $this->assertDjambiGameInformations('status', \Djambi\GameManager::STATUS_RECRUITING);
         $empty_factions = array();
         $default_faction = $grid->getGameManager()->getUserFaction(array(
           'uid' => $user->uid,
-          'cookie' => _kw_djambi_cookie()
+          'cookie' => _kw_djambi_cookie(),
         ));
         if (is_null($default_faction)) {
           $this->fail(t("The current user doesn't control any faction."));
           return;
         }
         foreach ($factions as $faction) {
-          if ($faction->getStatus() == KW_DJAMBI_FACTION_STATUS_EMPTY_SLOT) {
+          if ($faction->getStatus() == \Djambi\Faction::STATUS_EMPTY_SLOT) {
             $empty_factions[] = $faction->getId();
           }
         }
@@ -344,7 +344,7 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
       }
     }
     // Vérification du changement de statut de la partie...
-    $this->assertDjambiGameInformations('status', KW_DJAMBI_STATUS_PENDING);
+    $this->assertDjambiGameInformations('status', \Djambi\GameManager::STATUS_PENDING);
     $this->simulateGame($node, $factions_map);
   }
 }
