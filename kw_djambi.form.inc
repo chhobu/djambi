@@ -2073,7 +2073,7 @@ function kw_djambi_game_form_validate($form, &$form_state) {
     $piece = $grid->getSelectedPiece();
     // Annulation de la sélection...
     /* @var \Djambi\Piece $old_selection */
-    $old_selection = $form_state["kw_djambi"]["selected_piece"];
+    $old_selection = !empty($form_state["kw_djambi"]["selected_piece"]) ? $form_state["kw_djambi"]["selected_piece"] : NULL;
     if (!is_null($piece) && !empty($old_selection) && $piece->getId() == $old_selection->getId()) {
       unset($form_state["kw_djambi"]["selected_piece"]);
       $form_state["kw_djambi"]["phase"] = "piece_selection";
