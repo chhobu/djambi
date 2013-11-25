@@ -227,7 +227,7 @@ function theme_djambi_grid($variables) {
     );
   }
   // Cases spéciales :
-  $thrones = $grid->getSpecialCells('throne');
+  $thrones = $grid->getSpecialCells(\Djambi\Cell::TYPE_THRONE);
   if (!empty($thrones)) {
     foreach ($thrones as $throne) {
       $rows[$cells[$throne]->getX()]["data"][$cells[$throne]->getY()]["title"] = t("Throne case !");

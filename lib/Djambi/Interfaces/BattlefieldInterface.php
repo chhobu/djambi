@@ -11,5 +11,5 @@ interface BattlefieldInterface {
   public function toArray();
   public function getStatus();
   public function changeTurn();
-  public function prepareNewTurn();
+  public function prepareTurn();
 }

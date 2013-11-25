@@ -7,12 +7,15 @@
  */
 
 namespace Djambi;
-use Djambi\Exceptions\BadGridException;
+use Djambi\Exceptions\GridInvalidException;
 
 /**
  * Class DjambiBattlefieldScheme
  */
 class Grid {
+  const DISPOSITION_HEXAGONAL = 'hexagonal';
+  const DISPOSITION_CARDINAL = 'cardinal';
+
   /* @var PieceDescription[] $pieceScheme */
   protected $pieceScheme = array();
   /* @var string $disposition */
@@ -26,7 +29,7 @@ class Grid {
   /* @var array $sides */
   protected $sides;
   /* @var array $allowableDispotions */
-  protected $allowableDispositions = array('cardinal', 'hexagonal');
+  protected $allowableDispositions = array(self::DISPOSITION_CARDINAL, self::DISPOSITION_HEXAGONAL);
   /* @var array $directions */
   protected $directions = array();
   /* @var array $settings */
@@ -35,7 +38,7 @@ class Grid {
   public function __construct($settings = NULL) {
     $cols = isset($settings['cols']) ? $settings['cols'] : 9;
     $rows = isset($settings['rows']) ? $settings['rows'] : 9;
-    if (isset($settings['disposition']) && $settings['disposition'] == 'hexagonal') {
+    if (isset($settings['disposition']) && $settings['disposition'] == self::DISPOSITION_HEXAGONAL) {
       $this->useHexagonalGrid($rows, $cols);
     }
     else {
@@ -61,16 +64,16 @@ class Grid {
   protected function useStandardGrid($cols = 9, $rows = 9) {
     $this->setCols($cols);
     $this->setRows($rows);
-    $this->setDispostion('cardinal');
-    $this->addSpecialCell('throne', array('x' => ceil($rows / 2), 'y' => ceil($cols / 2)));
+    $this->setDispostion(self::DISPOSITION_CARDINAL);
+    $this->addSpecialCell(Cell::TYPE_THRONE, array('x' => ceil($rows / 2), 'y' => ceil($cols / 2)));
     $this->useCardinalDirections(TRUE);
   }
 
   protected function useHexagonalGrid($cols = 9, $rows = 9) {
     $this->setCols($cols);
     $this->setRows($rows);
-    $this->setDispostion('hexagonal');
-    $this->addSpecialCell('throne', array('x' => ceil($rows / 2), 'y' => ceil($cols / 2)));
+    $this->setDispostion(self::DISPOSITION_HEXAGONAL);
+    $this->addSpecialCell(Cell::TYPE_THRONE, array('x' => ceil($rows / 2), 'y' => ceil($cols / 2)));
     $this->useHexagonalDirections();
     return $this;
   }
@@ -234,7 +237,7 @@ class Grid {
 
   protected function setDispostion($disposition) {
     if (!in_array($disposition, $this->allowableDispositions)) {
-      throw new BadGridException('Unknown disposition');
+      throw new GridInvalidException('Unknown disposition');
     }
     else {
       $this->disposition = $disposition;
@@ -247,10 +250,10 @@ class Grid {
 
   protected function setRows($nb) {
     if ($nb <= 0) {
-      throw new BadGridException('Not enough rows');
+      throw new GridInvalidException('Not enough rows');
     }
     elseif ($nb > 26) {
-      throw new BadGridException('Too many rows');
+      throw new GridInvalidException('Too many rows');
     }
     else {
       $this->rows = $nb;
@@ -263,10 +266,10 @@ class Grid {
 
   protected function setCols($nb) {
     if ($nb <= 0) {
-      throw new BadGridException('Not enough columns');
+      throw new GridInvalidException('Not enough columns');
     }
     elseif ($nb > 26) {
-      throw new BadGridException('Too many colums');
+      throw new GridInvalidException('Too many colums');
     }
     else {
       $this->cols = $nb;
@@ -322,7 +325,7 @@ class Grid {
           return $faction;
         }
       }
-      throw new BadGridException("Undescribed faction : #" . $i);
+      throw new GridInvalidException("Undescribed faction : #" . $i);
     }
   }
 
@@ -358,7 +361,7 @@ class Grid {
       return $directions[$orientation];
     }
     else {
-      throw new BadGridException('Unknown direction.');
+      throw new GridInvalidException('Unknown direction.');
     }
   }
 

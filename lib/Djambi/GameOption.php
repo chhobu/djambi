@@ -5,7 +5,7 @@
  */
 
 namespace Djambi;
-use Djambi\Exceptions\BadGameOptionException;
+use Djambi\Exceptions\GameOptionInvalidException;
 use Djambi\Stores\GameOptionsStore;
 
 class GameOption {
@@ -142,7 +142,7 @@ class GameOption {
 
   public function setValue($value) {
     if (is_array($this->choices) && !isset($this->choices[$value])) {
-      throw new BadGameOptionException('Wrong choice in game option ' . get_class($this) . ' : ' . $value);
+      throw new GameOptionInvalidException('Wrong choice in game option ' . get_class($this) . ' : ' . $value);
     }
     $this->value = $value;
     return $this;

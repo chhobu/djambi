@@ -1634,63 +1634,72 @@ function kw_djambi_game_form_submit($form, &$form_state) {
   /* @var $grid \Djambi\Battlefield */
   $grid = $form['grid']['#grid'];
   $form_state['rebuild'] = TRUE;
-  switch ($form_state['kw_djambi']['phase']) {
-    case('interaction_result'):
-      $interaction = current($form_state['kw_djambi']['interactions']);
-      /* @var $piece \Djambi\Piece */
-      $piece = $form_state['kw_djambi']['selected_piece'];
-      $grid = $piece->getBattlefield();
-      if ($interaction['type'] == 'murder') {
-        $victim_piece = $interaction['target'];
-        $piece->kill($victim_piece, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
-      }
-      elseif ($interaction['type'] == 'necromobility') {
-        $victim_piece = $interaction['target'];
-        $piece->necromove($victim_piece, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
-      }
-      elseif ($interaction['type'] == 'manipulation') {
-        $manipulated_piece = $interaction['target'];
-        $piece->manipulate($manipulated_piece, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
-      }
-      elseif ($interaction['type'] == 'reportage') {
-        $cells = $piece->getBattlefield()->getCells();
-        $victim = $cells[$form_state['kw_djambi']['selected_interaction']]->getOccupant();
-        $piece->kill($victim, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
-      }
-      elseif ($interaction['type'] == 'throne_evacuation') {
-        $piece->evacuate($grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
-      }
-      $interaction_key = key($form_state['kw_djambi']['interactions']);
-      unset($form_state['kw_djambi']['interactions'][$interaction_key]);
-      unset($form_state['kw_djambi']['selected_interaction']);
-      if (empty($form_state['kw_djambi']['interactions'])) {
-        $change_turn = TRUE;
-      }
-      else {
-        $form_state['kw_djambi']['phase'] = 'move_interactions';
-      }
-      break;
+  try {
+    switch ($form_state['kw_djambi']['phase']) {
+      case('interaction_result'):
+        $interaction = current($form_state['kw_djambi']['interactions']);
+        /* @var $piece \Djambi\Piece */
+        $piece = $form_state['kw_djambi']['selected_piece'];
+        $grid = $piece->getBattlefield();
+        if ($interaction['type'] == 'murder') {
+          $victim_piece = $interaction['target'];
+          $piece->kill($victim_piece, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
+        }
+        elseif ($interaction['type'] == 'necromobility') {
+          $victim_piece = $interaction['target'];
+          $piece->necromove($victim_piece, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
+        }
+        elseif ($interaction['type'] == 'manipulation') {
+          $manipulated_piece = $interaction['target'];
+          $piece->manipulate($manipulated_piece, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
+        }
+        elseif ($interaction['type'] == 'reportage') {
+          $cells = $piece->getBattlefield()->getCells();
+          $victim = $cells[$form_state['kw_djambi']['selected_interaction']]->getOccupant();
+          $piece->kill($victim, $grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
+        }
+        elseif ($interaction['type'] == 'throne_evacuation') {
+          $piece->evacuate($grid->findCellByName($form_state['kw_djambi']['selected_interaction']));
+        }
+        $interaction_key = key($form_state['kw_djambi']['interactions']);
+        unset($form_state['kw_djambi']['interactions'][$interaction_key]);
+        unset($form_state['kw_djambi']['selected_interaction']);
+        if (empty($form_state['kw_djambi']['interactions'])) {
+          $change_turn = TRUE;
+        }
+        else {
+          $form_state['kw_djambi']['phase'] = 'move_interactions';
+        }
+        break;
 
-    case('move_result'):
-      /* @var $piece \Djambi\Piece */
-      $piece = $form_state['kw_djambi']['selected_piece'];
-      $grid = $piece->getBattlefield();
-      $move_results = $piece->move($grid->findCellByName($form_state['kw_djambi']['selected_destination']));
-      if (!empty($move_results)) {
-        $form_state['kw_djambi']['phase'] = 'move_interactions';
-        $form_state['kw_djambi']['interactions'] = $move_results;
-      }
-      else {
-        $change_turn = TRUE;
-      }
-      break;
+      case('move_result'):
+        /* @var $piece \Djambi\Piece */
+        $piece = $form_state['kw_djambi']['selected_piece'];
+        $grid = $piece->getBattlefield();
+        $move_results = $piece->move($grid->findCellByName($form_state['kw_djambi']['selected_destination']));
+        if (!empty($move_results)) {
+          $form_state['kw_djambi']['phase'] = 'move_interactions';
+          $form_state['kw_djambi']['interactions'] = $move_results;
+        }
+        else {
+          $change_turn = TRUE;
+        }
+        break;
 
+    }
+    if ($change_turn) {
+      $grid->changeTurn();
+      $form_state['saved_grid'] = $grid->getGameManager()->save();
+    }
+    $form_state['kw_djambi']['change_turn'] = $change_turn;
   }
-  if ($change_turn) {
-    $grid->changeTurn();
-    $form_state['saved_grid'] = $grid->getGameManager()->save();
+  catch (\Djambi\Exceptions\DisallowedActionException $e) {
+    unset($form_state['kw_djambi']);
+    watchdog('djambi', "Disallowed action detected in djambi game #:num : %message", array(
+      ':num' => $grid->getId(),
+      '%message' => $e->getMessage(),
+    ), WATCHDOG_WARNING);
   }
-  $form_state['kw_djambi']['change_turn'] = $change_turn;
 }
 
 /**
@@ -2014,44 +2023,30 @@ function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
  *   Identifiant d'une pièce
  * @param \Djambi\Battlefield $grid
  *   Grille de Djambi
- *
- * @return \Djambi\Piece
- *   Renvoie la pièce sélectionnée si correct, FALSE sinon.
  */
 function kw_djambi_piece_selection_validate(&$errors, $piece_id, \Djambi\Battlefield $grid) {
   $errors = array();
   $piece_form_locator = "grid[pieces][movable][" . $piece_id;
-  $faction = $grid->getPlayingFaction();
-  $context = \Drupal\kw_djambi\Djambi\DjambiContext::getInstance();
-  if (!empty($faction) && !$context->checkUserPlayingFaction($faction)) {
+  try {
+    $piece = $grid->getPieceById($piece_id);
+    try {
+      $grid->selectPiece($piece);
+    }
+    catch (\Djambi\Exceptions\DisallowedActionException $e2) {
+      $errors[] = array(
+        "location" => $piece_form_locator,
+        "msg" => t("You are not allowed to select piece !piece.", array(
+          "!piece" => _kw_djambi_get_full_piece_name($piece),
+        )),
+      );
+    }
+  }
+  catch(\Djambi\Exceptions\PieceNotFoundException $e1) {
     $errors[] = array(
-      "location" => $piece_form_locator,
-      "msg" => t("You do not own the !faction pieces.", array(
-        "!faction",
-        _kw_djambi_get_translatable_messages($faction->getName()),
-      )),
-    );
-    return FALSE;
-  }
-  $pieces = $faction->getControlledPieces();
-  if (!isset($pieces[$piece_id])) {
-    $errors[] = array(
-      "location" => $piece_form_locator,
-      "msg" => t("Unrecognized piece."),
-    );
-    return FALSE;
-  }
-  $piece = $pieces[$piece_id];
-  if (!$piece->isMovable()) {
-    $errors = array(
-      "location" => $piece_form_locator,
-      "msg" => t("The piece !piece cannot be moved now.", array("!piece" => _kw_djambi_get_full_piece_name($piece))),
+      'location' => $piece_form_locator,
+      'msg' => t('Piece @piece not found', array('@piece' => $piece_id)),
     );
   }
-  if (!empty($errors)) {
-    return FALSE;
-  }
-  return $piece;
 }
 
 /**
@@ -2064,19 +2059,27 @@ function kw_djambi_game_form_validate($form, &$form_state) {
   // Détection du bouton cliqué :
   $button = $form_state["triggering_element"];
   $type_button = isset($button["#array_parents"][2]) ? $button["#array_parents"][2] : NULL;
+  // Vérification : utilisateur courant = joueur de la faction en jeu
+  $is_current_user = \Drupal\kw_djambi\Djambi\DjambiContext::getInstance()->checkUserPlayingFaction($grid->getPlayingFaction());
+  if (!$is_current_user) {
+    $errors[] = array(
+      'location' => "grid[pieces][movable][" . $button['#return_value'],
+      'message' => t("It is not your turn to play !"),
+    );
+  }
   // Traitement des différents cas :
-  if ($type_button == "movable") {
-    $piece = kw_djambi_piece_selection_validate($errors, $button["#return_value"], $grid);
-    if ($piece && isset($form_state["kw_djambi"]["selected_piece"])) {
-      /* @var $selected_piece \Djambi\Piece */
-      $selected_piece = $form_state["kw_djambi"]["selected_piece"];
-      if ($piece->getId() == $selected_piece->getId()) {
-        $piece = FALSE;
-        unset($form_state["kw_djambi"]["selected_piece"]);
-        $form_state["kw_djambi"]["phase"] = "piece_selection";
-      }
+  elseif ($type_button == "movable") {
+    kw_djambi_piece_selection_validate($errors, $button["#return_value"], $grid);
+    $piece = $grid->getSelectedPiece();
+    // Annulation de la sélection...
+    /* @var \Djambi\Piece $old_selection */
+    $old_selection = $form_state["kw_djambi"]["selected_piece"];
+    if (!is_null($piece) && !empty($old_selection) && $piece->getId() == $old_selection->getId()) {
+      unset($form_state["kw_djambi"]["selected_piece"]);
+      $form_state["kw_djambi"]["phase"] = "piece_selection";
+      $grid->unselectPiece();
     }
-    if ($piece) {
+    elseif (!is_null($piece)) {
       $form_state["kw_djambi"]["phase"] = "piece_destination";
       $form_state["kw_djambi"]["selected_piece"] = $piece;
       if (!empty($form_state["input"]["piece_destination"])) {

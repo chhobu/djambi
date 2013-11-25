@@ -127,6 +127,7 @@ class Faction {
 
   public function addSkippedTurn() {
     $this->skippedTurns++;
+    return $this;
   }
 
   public function getLastDrawProposal() {
@@ -281,6 +282,7 @@ class Faction {
     if ($player instanceof HumanPlayerInterface && is_null($player->getJoined())) {
       $player->setJoined(time());
     }
+    return $this;
   }
 
   public function removePlayer() {
@@ -289,10 +291,12 @@ class Faction {
     }
     $this->player = NULL;
     $this->setStatus(self::STATUS_EMPTY_SLOT);
+    return $this;
   }
 
   public function setBattlefield(Battlefield $grid) {
     $this->battlefield = $grid;
+    return $this;
   }
 
   public function createPieces($pieces_scheme, $start_scheme, $deads = NULL) {
@@ -311,6 +315,7 @@ class Faction {
       $piece = new Piece($piece_description, $this, $original_faction_id, $start_cell, $alive);
       $this->pieces[$key] = $piece;
     }
+    return $this;
   }
 
   public function skipTurn() {
@@ -320,12 +325,15 @@ class Faction {
       '!nb' => $this->getSkippedTurns(),
     ));
     $this->getBattlefield()->changeTurn();
+    return $this;
   }
 
   public function withdraw() {
     $this->getBattlefield()->logEvent('event', 'WITHDRAWAL', array('faction1' => $this->getId()));
     $this->dieDieDie(self::STATUS_WITHDRAW);
     $this->getBattlefield()->updateSummary();
+    $this->getBattlefield()->changeTurn();
+    return $this;
   }
 
   public function canComeBackAfterWithdraw() {
@@ -346,6 +354,7 @@ class Faction {
       $this->getBattlefield()->logEvent('event', 'COMEBACK_AFTER_WITHDRAW', array('faction1' => $this->getId()));
       $this->getBattlefield()->updateSummary();
     }
+    return $this;
   }
 
   public function callForADraw() {
@@ -355,6 +364,7 @@ class Faction {
     $this->getBattlefield()->setStatus(GameManager::STATUS_DRAW_PROPOSAL);
     $this->setDrawStatus(self::DRAW_STATUS_PROPOSED);
     $this->getBattlefield()->changeTurn();
+    return $this;
   }
 
   public function acceptDraw() {
@@ -377,6 +387,7 @@ class Faction {
     else {
       $this->getBattlefield()->changeTurn();
     }
+    return $this;
   }
 
   public function rejectDraw() {
@@ -386,6 +397,7 @@ class Faction {
     foreach ($factions as $faction) {
       $this->getBattlefield()->getFactionById($faction->getId())->setDrawStatus(NULL);
     }
+    return $this;
   }
 
   public function checkLeaderFreedom() {
@@ -410,7 +422,7 @@ class Faction {
       return FALSE;
     }
     // Contrôle 3 : case pouvoir atteignable par le chef ?
-    $thrones = $this->getBattlefield()->getSpecialCells("throne");
+    $thrones = $this->getBattlefield()->getSpecialCells(Cell::TYPE_THRONE);
     $nb_factions = $this->getBattlefield()->countLivingFactions();
     $checked = array();
     /* @var $leader Piece */
@@ -464,7 +476,7 @@ class Faction {
             if (!isset($checked[$alternate_cell->getName()])) {
               $occupant = $alternate_cell->getOccupant();
               if (!empty($occupant)) {
-                if (!$occupant->isAlive() && $alternate_cell->getType() != "throne") {
+                if (!$occupant->isAlive() && $alternate_cell->getType() != Cell::TYPE_THRONE) {
                   $blocked = TRUE;
                 }
                 elseif (in_array($alternate_cell->getName(), $thrones)) {

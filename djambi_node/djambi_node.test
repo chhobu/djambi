@@ -219,7 +219,7 @@ class DjambiNodeLiveTestCase extends DrupalWebTestCase {
       $this->pass(t('The piece !piece is selected.', array('!piece' => _kw_djambi_get_full_piece_name($selected_piece))));
       $this->drupalPostAJAX(NULL, NULL, 'selection-' . $selected_piece->getId());
       // Déplacement d'une pièce
-      $throne = $grid->getSpecialCells('throne');
+      $throne = $grid->getSpecialCells(\Djambi\Cell::TYPE_THRONE);
       $allowed_moves = $selected_piece->getAllowableMoves();
       $suggested_moves = array();
       foreach ($allowed_moves as $cell) {

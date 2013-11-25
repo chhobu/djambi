@@ -6,53 +6,35 @@
 
 namespace Djambi;
 
+use Djambi\Exceptions\GridInvalidException;
+
 class Cell {
-  /**
-   * Nom de la cellule
-   * @var string $name
-   */
+  const TYPE_STANDARD = 'std';
+  const TYPE_THRONE = 'throne';
+  const TYPE_DISABLED = 'disabled';
+  const TYPE_FORTRESS = 'fortress';
+
+  /** @var string : Nom de la cellule */
   protected $name;
-
-  /**
-   * Coordonnée verticale de la cellule
-   * @var int $x
-   */
+  /** @var int : Coordonnée verticale de la cellule */
   protected $x;
-
-  /**
-   * Coordonnée horizontale de la cellule
-   * @var int $y
-   */
+  /** @var int : Coordonnée horizontale de la cellule */
   protected $y;
-
-  /**
-   * Pièce placée sur la cellule
-   * @var Piece $occupant
-   */
+  /** @var Piece : Pièce placée sur la cellule */
   protected $occupant;
-
-  /**
-   * Type de cellule. Par défaut : 'std' (standard).
-   * @var string $type
-   */
-  protected $type = 'std';
-
-  /**
-   * Liste des cellules voisines
-   * @var Cell[] $neighbours
-   */
+  /** @var string : Type de cellule. Par défaut : 'std' (standard). */
+  protected $type = self::TYPE_STANDARD;
+  /** @var array : liste des types implémentés */
+  protected $implementedTypes = array(
+    self::TYPE_STANDARD,
+    self::TYPE_DISABLED,
+    self::TYPE_THRONE,
+  );
+  /** @var Cell[] : liste des cellules voisines */
   protected $neighbours = array();
-
-  /**
-   * Définit si une cellule est accessible par une pièce sélectionnée
-   * @var bool $reachable
-   */
+  /** @var bool : définit si une cellule est accessible par une pièce sélectionnée */
   protected $reachable = FALSE;
-
-  /**
-   * Nom de la colonne sur laquelle se trouve la cellule
-   * @var string $columnName
-   */
+  /** @var string : Nom de la colonne sur laquelle se trouve la cellule */
   protected $columnName;
 
   /**
@@ -117,12 +99,17 @@ class Cell {
    *
    * @param string $type
    *   Type de cellule. Par défaut : std (standard).
-   *   Valeurs possibles : throne, disabled, std, fortress, bastion
    *
+   * @throws Exceptions\GridInvalidException
    * @return $this
    */
   public function setType($type) {
-    $this->type = $type;
+    if (in_array($type, $this->implementedTypes)) {
+      $this->type = $type;
+    }
+    else {
+      throw new GridInvalidException("Unimplemented cell type : " . $type);
+    }
     return $this;
   }
 
@@ -148,9 +135,6 @@ class Cell {
     return $this;
   }
 
-  /**
-   * @return bool
-   */
   public function isReachable() {
     return $this->reachable;
   }

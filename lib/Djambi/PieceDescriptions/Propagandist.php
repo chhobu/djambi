@@ -6,9 +6,9 @@ use Djambi\PieceDescription;
 class Propagandist extends PieceDescription {
   public function __construct($num, $start_position) {
     $this->setHabilities(array(
-      'convert_pieces' => TRUE,
-      'cannot_defect' => TRUE,
-      'signature' => TRUE,
+      self::HABILITY_CONVERT_PIECES => TRUE,
+      self::HABILITY_UNCONVERTIBLE => TRUE,
+      self::HABILITY_SIGNATURE => TRUE,
     ));
     parent::__construct('propagandist', 'P', 'Propagandist', $num, $start_position, 3);
   }

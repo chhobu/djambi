@@ -94,71 +94,78 @@ class PieceDescription {
     return $this;
   }
 
+  const HABILITY_LIMITED_MOVE = 'limited_move';
   public function hasHabilityLimitedMove() {
-    return $this->getHability('limited_move');
+    return $this->getHability(self::HABILITY_LIMITED_MOVE);
   }
 
+  const HABILITY_ACCESS_THRONE = 'access_throne';
   public function hasHabilityAccessThrone() {
-    return $this->getHability('access_throne');
+    return $this->getHability(self::HABILITY_ACCESS_THRONE);
   }
 
+  const HABILITY_KILL_THRONE_LEADER = 'kill_throne_leader';
   public function hasHabilityKillThroneLeader() {
-    return $this->getHability('kill_throne_leader');
+    return $this->getHability(self::HABILITY_KILL_THRONE_LEADER);
   }
 
+  const HABILITY_MOVE_DEAD_PEACES = 'move_dead_pieces';
   public function hasHabilityMoveDeadPieces() {
-    return $this->getHability('move_dead_pieces');
+    return $this->getHability(self::HABILITY_MOVE_DEAD_PEACES);
   }
 
+  const HABILITITY_MOVE_LIVING_PIECES = 'move_living_pieces';
   public function hasHabilityMoveLivingPieces() {
-    return $this->getHability('move_living_pieces');
+    return $this->getHability(self::HABILITITY_MOVE_LIVING_PIECES);
   }
 
+  const HABILITY_KILL_BY_PROXIMITY = 'kill_by_proximity';
   public function hasHabilityKillByProximity() {
-    return $this->getHability('kill_by_proximity');
+    return $this->getHability(self::HABILITY_KILL_BY_PROXIMITY);
   }
 
+  const HABILITY_KILL_BY_ATTACK = 'kill_by_attack';
   public function hasHabilityKillByAttack() {
-    return $this->getHability('kill_by_attack');
+    return $this->getHability(self::HABILITY_KILL_BY_ATTACK);
   }
 
+  const HABILITY_SIGNATURE = 'signature';
   public function hasHabilitySignature() {
-    return $this->getHability('signature');
+    return $this->getHability(self::HABILITY_SIGNATURE);
   }
 
+  const HABILITY_MUST_LIVE = 'must_live';
   public function hasHabilityMustLive() {
-    return $this->getHability('must_live');
+    return $this->getHability(self::HABILITY_MUST_LIVE);
   }
 
+  const HABILIITY_BLOCK_BY_PROXIMITY = 'block_by_proximity';
   public function hasHabilityBlockAdjacentPieces() {
-    return $this->getHability('block_adjacent_pieces');
+    return $this->getHability(self::HABILIITY_BLOCK_BY_PROXIMITY);
   }
 
+  const HABILITY_CONVERT_PIECES = 'convert_pieces';
   public function hasHabilityConvertPieces() {
-    return $this->getHability('convert_pieces');
+    return $this->getHability(self::HABILITY_CONVERT_PIECES);
   }
 
+  const HABILITY_UNCONVERTIBLE = 'unconvertible';
   public function hasHabilityCanDefect() {
-    return $this->getHability('cannot_defect');
+    return $this->getHability(self::HABILITY_UNCONVERTIBLE);
   }
 
+  const HABILITY_PROTECT_BY_PROXIMITY = 'protect_by_proximity';
   public function hasHabilityProtectAdjacentPieces() {
-    return $this->getHability('protect_adjacent_pieces');
+    return $this->getHability(self::HABILITY_PROTECT_BY_PROXIMITY);
   }
 
+  const HABILITY_KAMIKAZE = 'kamikaze';
   public function hasHabilityKamikaze() {
-    return $this->getHability('kamikaze');
+    return $this->getHability(self::HABILITY_KAMIKAZE);
   }
 
-  public function hasHabilityGainPromotion() {
-    return $this->getHability('gain_promotion');
-  }
-
-  public function hasHabilityRaiseDeadPieces() {
-    return $this->getHability('raise_dead_pieces');
-  }
-
+  const HABILITY_KILL_FORTIFIED_PIECES = 'enter_fortress';
   public function hasHabilityEnterFortress() {
-    return $this->getHability('enter_fortress');
+    return $this->getHability(self::HABILITY_KILL_FORTIFIED_PIECES);
   }
 }

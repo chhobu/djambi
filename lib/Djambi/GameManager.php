@@ -159,14 +159,14 @@ class GameManager implements GameManagerInterface {
     $with_finished = isset($options['with_finished']) ? $options['with_finished'] : TRUE;
     $statuses = array();
     if ($with_recruiting) {
-      $statuses[static::STATUS_RECRUITING] = 'STATUS_RECRUITING_DESCRIPTION';
+      $statuses[self::STATUS_RECRUITING] = 'STATUS_RECRUITING_DESCRIPTION';
     }
     if ($with_pending) {
-      $statuses[static::STATUS_PENDING] = 'STATUS_PENDING_DESCRIPTION';
-      $statuses[static::STATUS_DRAW_PROPOSAL] = 'STATUS_DRAW_PROPOSAL_DESCRIPTION';
+      $statuses[self::STATUS_PENDING] = 'STATUS_PENDING_DESCRIPTION';
+      $statuses[self::STATUS_DRAW_PROPOSAL] = 'STATUS_DRAW_PROPOSAL_DESCRIPTION';
     }
     if ($with_finished) {
-      $statuses[static::STATUS_FINISHED] = 'STATUS_FINISHED_DESCRIPTION';
+      $statuses[self::STATUS_FINISHED] = 'STATUS_FINISHED_DESCRIPTION';
     }
     if ($with_description) {
       return $statuses;
@@ -265,8 +265,8 @@ class GameManager implements GameManagerInterface {
    * Lance les actions permettant de rendre une partie jouable.
    */
   public function play() {
-    if ($this->getBattlefield()->getStatus() == static::STATUS_PENDING) {
-      $this->getBattlefield()->prepareNewTurn();
+    if ($this->getBattlefield()->getStatus() == self::STATUS_PENDING) {
+      $this->getBattlefield()->prepareTurn();
     }
     return $this;
   }

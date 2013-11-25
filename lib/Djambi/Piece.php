@@ -6,7 +6,9 @@
  */
 
 namespace Djambi;
+use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\Exception;
+use Djambi\Exceptions\GridInvalidException;
 
 /**
  * Class DjambiPiece
@@ -36,7 +38,6 @@ class Piece {
     $this->id = $faction->getId() . '-' . $piece->getShortname();
     $this->alive = $alive;
     $this->setPosition($position);
-    $this->getBattlefield()->addHabilitiesInStore($piece->getHabilities());
   }
 
   public function getId() {
@@ -79,24 +80,19 @@ class Piece {
     return $this->getDescription()->getImagePattern();
   }
 
-  public function getHability($name) {
-    if ($this->getBattlefield()->isHabilityInStore($name)) {
-      $habilities = $this->getDescription()->getHabilities();
-      return isset($habilities[$name]) ? $habilities[$name] : FALSE;
-    }
-    else {
-      throw new Exception('Undeclared hability');
-    }
-  }
-
   public function getPosition() {
     return $this->position;
   }
 
-  public function setPosition(Cell $position) {
-    $current_position = isset($this->position) ? $this->position : NULL;
-    $this->position = $position;
-    $this->faction->getBattlefield()->placePiece($this, $current_position);
+  public function setPosition(Cell $new_position) {
+    $old_position = isset($this->position) ? $this->position : NULL;
+    $this->position = $new_position;
+    $new_position->setOccupant($this);
+    if (!is_null($old_position) && $new_position->getName() != $old_position->getName()) {
+      if (!is_null($old_position->getOccupant()) && $old_position->getOccupant()->getId() == $this->getId()) {
+        $old_position->emptyOccupant();
+      }
+    }
     return $this;
   }
 
@@ -190,7 +186,7 @@ class Piece {
               }
             }
           }
-          if ($cell->getType() == 'throne' && !$this->getDescription()->hasHabilityAccessThrone()) {
+          if ($cell->getType() == Cell::TYPE_THRONE && !$this->getDescription()->hasHabilityAccessThrone()) {
             unset($next_cases[$direction]);
           }
         }
@@ -264,6 +260,10 @@ class Piece {
     if ($return['allowed']) {
       $this->executeMove($return['cell'], $return['kills'], $return['events']);
     }
+    else {
+      throw new DisallowedActionException("Unauthorized move : piece " . $this->getId()
+      . " from " . $this->getPosition()->getName() . " to " . $destination->getName());
+    }
     return $return['interactions'];
   }
 
@@ -278,7 +278,7 @@ class Piece {
     // lors d'une évacuation de trône :
     if (!$allow_interactions && $this->getBattlefield()->getOption('rule_throne_interactions') == 'extended') {
       $target = $destination->getOccupant();
-      if ($current_cell->getType() == 'throne' && !empty($target) && $target->getDescription()->hasHabilityAccessThrone()) {
+      if ($current_cell->getType() == Cell::TYPE_THRONE && !empty($target) && $target->getDescription()->hasHabilityAccessThrone()) {
         $extra_interaction = TRUE;
       }
     }
@@ -383,7 +383,7 @@ class Piece {
     if (!$move_ok) {
       $interactions[] = array("type" => "piece_destination", "target" => $this);
     }
-    elseif (!$this->getDescription()->hasHabilityAccessThrone() && $destination->getType() == "throne") {
+    elseif (!$this->getDescription()->hasHabilityAccessThrone() && $destination->getType() == Cell::TYPE_THRONE) {
       $interactions[] = array("type" => "throne_evacuation", "target" => $this);
     }
     return array(
@@ -450,7 +450,7 @@ class Piece {
     $move_ok = FALSE;
     $occupant = $cell->getOccupant();
     if ($force_empty || empty($occupant)) {
-      if ($cell->getType() != 'throne' || $this->getDescription()->hasHabilityAccessThrone()) {
+      if ($cell->getType() != Cell::TYPE_THRONE || $this->getDescription()->hasHabilityAccessThrone()) {
         $move_ok = TRUE;
       }
     }
@@ -470,7 +470,7 @@ class Piece {
       else {
         if ($occupant->isAlive() && ($can_attack || $can_manipulate)) {
           if ($can_attack) {
-            if ($cell->getType() == 'throne') {
+            if ($cell->getType() == Cell::TYPE_THRONE) {
               if ($this->getDescription()->hasHabilityKillThroneLeader()) {
                 $move_ok = TRUE;
               }
