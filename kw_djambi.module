@@ -541,7 +541,7 @@ function _kw_djambi_format_ping_infos($ping_time) {
   $ping['title'] = t("Last connection information sent by this player : !time",
     array('!time' => format_date($ping_time, 'short')));
   $ping_interval = time() - $ping_time;
-  if ($ping_interval <= 60) {
+  if ($ping_interval <= 90) {
     $ping['status'] = t('Online');
     $ping['class'] = 'ok';
   }

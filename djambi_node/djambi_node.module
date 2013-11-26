@@ -440,7 +440,10 @@ function djambi_node_game_form($form, &$form_state, $node) {
       else {
         $navigation = _djambi_node_list_recruiting_games($node->nid);
       }
-      $form['navigation'] = array('#markup' => $navigation);
+      $form['navigation'] = array(
+        '#markup' => drupal_render($navigation),
+        '#weight' => 100,
+      );
     }
   }
   return $form;

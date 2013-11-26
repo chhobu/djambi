@@ -202,17 +202,23 @@
               $('.refresh-my-djambi-panel a').click();
             }
             if (result.changed == 0) {
-              $grid.find('.time-elapsed').html(result['time-elapsed']);
-              $grid.find('.time-last-update').html(result['time-last-update']);
-              if(typeof result['pings'] != 'undefined') {
-                var $players_table = $grid.find('.players');
-                for (key in result['pings']) {
-                  var value = result.pings[key];
-                  var $tr = $players_table.find('tr[data-faction="'+ key +'"]');
-                  $tr.find('td.ping-info').html(value['status'])
-                    .removeClass().addClass('ping-info').addClass(value['class'])
-                    .attr('title', value['title']);
-                  $tr.find('td.joined').html(value['joined']);
+              if (result.status == null) {
+                clearInterval(DjambiRefreshInterval);
+                $(location).attr('href', Drupal.settings.basePath);
+              }
+              else {
+                $grid.find('.time-elapsed').html(result['time-elapsed']);
+                $grid.find('.time-last-update').html(result['time-last-update']);
+                if(typeof result['pings'] != 'undefined') {
+                  var $players_table = $grid.find('.players');
+                  for (var key in result['pings']) {
+                    var value = result.pings[key];
+                    var $tr = $players_table.find('tr[data-faction="'+ key +'"]');
+                    $tr.find('td.ping-info').html(value['status'])
+                      .removeClass().addClass('ping-info').addClass(value['class'])
+                      .attr('title', value['title']);
+                    $tr.find('td.joined').html(value['joined']);
+                  }
                 }
               }
             }
@@ -240,8 +246,10 @@
               }
               $djambi.addClass('animated');
               var ends = launchAnimations(false);
+              console.log("Animation launched !");
               setTimeout(function() {
                 $('.djambi .refresh-button').show().attr('value', Drupal.t('Refreshing...')).mousedown();
+                console.log('Click refreh button !');
               }, ends);
             }
           });
