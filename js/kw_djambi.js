@@ -246,10 +246,8 @@
               }
               $djambi.addClass('animated');
               var ends = launchAnimations(false);
-              console.log("Animation launched !");
               setTimeout(function() {
                 $('.djambi .refresh-button').show().attr('value', Drupal.t('Refreshing...')).mousedown();
-                console.log('Click refreh button !');
               }, ends);
             }
           });
