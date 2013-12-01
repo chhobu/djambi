@@ -91,7 +91,7 @@ span.faction {
 .djambigrid .cell.unselectable.with-selected-piece {
   background-color: #000;}
 .djambigrid .dragging .cell.reachable.selectable, .djambigrid .dragging .cell.reachable.selectable.with-piece .piece {
-  background: #ddd url(img/apply.png) no-repeat center center;}
+  background: #ddd url(../img/apply.png) no-repeat center center;}
 .djambigrid .cell.reachable.selectable:hover, .djambigrid .dragging .cell.reachable.selected, .djambigrid .dragging .cell.reachable.selected.with-piece .piece {
   background-color: #666;}
 .djambigrid div.destination-layer {
@@ -106,25 +106,26 @@ span.faction {
   width: 36px;}
 .djambigrid .cell.with-piece div.destination-layer {
   margin-bottom: -42px;}
+.djambigrid div.destination-layer:hover {
+  background-color: rgba(0,0,0,0.5);}
 .djambigrid .cell.throne {
-  background: #000 url(img/throne.png) no-repeat center center;}
-.djambigrid input[type=image] {
-  padding: 0;
-  margin: 0;
-  border: 0;}
+  background: #000 url(../img/throne.png) no-repeat center center;}
+.djambigrid input.form-submit[type=image], .djambigrid input.form-submit[type=image]:hover {
+  background-color: transparent;
+  padding: 0;}
 /* Pièces */
 .piece.militant, .links li a.add-djambi-game, a.play-djambi-game {
-  background: url(img/militant16.png) no-repeat 2px 50%;}
+  background: url(../img/militant16.png) no-repeat 2px 50%;}
 .piece.leader {
-  background: url(img/leader16.png) no-repeat 2px 50%;}
+  background: url(../img/leader16.png) no-repeat 2px 50%;}
 .piece.necromobile {
-  background: url(img/necromobile16.png) no-repeat 2px 50%;}
+  background: url(../img/necromobile16.png) no-repeat 2px 50%;}
 .piece.diplomate {
-  background: url(img/diplomate16.png) no-repeat 2px 50%;}
+  background: url(../img/diplomate16.png) no-repeat 2px 50%;}
 .piece.assassin {
-  background: url(img/assassin16.png) no-repeat 2px 50%;}
+  background: url(../img/assassin16.png) no-repeat 2px 50%;}
 .piece.reporter {
-  background: url(img/reporter16.png) no-repeat 2px 50%;}
+  background: url(../img/reporter16.png) no-repeat 2px 50%;}
 .piece {
   padding: 0 2px 0 20px;
   white-space: nowrap;}
@@ -132,7 +133,7 @@ span.faction {
 ========= AUTRES STYLES SUR LA PAGE ========
 ===========================================*/
 .faction {
-  background: url(img/leader16.png) no-repeat 4px 50%;
+  background: url(../img/leader16.png) no-repeat 4px 50%;
   padding-left: 22px;
   white-space: nowrap;}
 td.faction {
@@ -386,7 +387,7 @@ span.rule-variant, span.game-option {
 .hexagonal-grid .cell.unselectable.with-selected-piece .cell-bottom-inside {
   border-top-color: #000;}
 .hexagonal-grid .cell.throne {
-  background-image: url(img/throne30.png);
+  background-image: url(../img/throne30.png);
   background-color: #fff;}
 .hexagonal-grid .cell.throne .cell-top-inside {
   border-bottom-color: #fff;}
@@ -409,7 +410,7 @@ span.rule-variant, span.game-option {
 .hexagonal-grid .cell.past-move.vert .cell-bottom-inside {
   border-top-color: #cf6;}
 .hexagonal-grid.dragging .cell.reachable.selectable, .hexagonal-grid.dragging .cell.reachable.selectable.with-piece .piece {
-  background: #ddd url(img/apply.png) no-repeat center center;}
+  background: #ddd url(../img/apply.png) no-repeat center center;}
 .hexagonal-grid.dragging .cell.reachable.selectable .cell-top-inside {
   border-bottom-color: #ddd;}
 .hexagonal-grid.dragging .cell.reachable.selectable .cell-bottom-inside {
@@ -454,11 +455,11 @@ span.rule-variant, span.game-option {
   ================== DECORATION ==============
   ===========================================*/
 .sidebar-first #block-views-citation-du-jour-block, .two-sidebars #block-views-citation-du-jour-block {
-  background: url(img/background-sd.png) scroll no-repeat 0 0 transparent;
+  background: url(../img/background-sd.png) scroll no-repeat 0 0 transparent;
   padding-top: 1460px;}
 .machiavel {
   border-radius: 0.5em 1em 0.5em 1em;
-  background: #EEEEEE url("img/machiavel.png") no-repeat -6px -6px;
+  background: #EEEEEE url("../img/machiavel.png") no-repeat -6px -6px;
   font-weight: bold;
   min-height: 25px;
   padding: 0.5em 1em 0.5em 60px;}

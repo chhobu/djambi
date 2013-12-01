@@ -6,21 +6,25 @@
 
 namespace Djambi;
 use Djambi\Exceptions\PlayerNotFoundException;
+use Djambi\Exceptions\PlayerInvalidException;
 
 /**
  * Class DjambiPlayer
  */
 abstract class Player implements Interfaces\PlayerInterface {
+  const TYPE_HUMAN = 'human';
+  const TYPE_COMPUTER = 'computer';
+
   /* @var string $type */
-  protected $type = 'human';
+  private $type = 'human';
   /* @var string $className */
   protected $className;
   /* @var string $id */
-  protected $id;
+  private $id;
   /* @var string $name; */
-  protected $name;
+  private $name;
   /* @var Faction $faction */
-  protected $faction;
+  private $faction;
 
   protected function __construct() {}
 
@@ -69,11 +73,27 @@ abstract class Player implements Interfaces\PlayerInterface {
   }
 
   public function isHuman() {
-    return $this->type == 'human';
+    return $this->type == self::TYPE_HUMAN;
+  }
+
+  protected function setType($type) {
+    switch ($type) {
+      case (self::TYPE_COMPUTER):
+      case (self::TYPE_HUMAN):
+        $this->type = $type;
+        break;
+
+      default:
+        throw new PlayerInvalidException("Invalid player type : " . $type);
+    }
   }
 
   public function getClassName() {
     return $this->className;
+  }
+
+  protected function setClassName() {
+    $this->className = get_class($this);
   }
 
   /**

@@ -10,29 +10,29 @@ use Djambi\Stores\GameOptionsStore;
 
 class GameOption {
   /* @var string */
-  protected $name;
+  private $name;
   /* @var string */
-  protected $title;
+  private $title;
   /* @var string */
-  protected $widget;
+  private $widget;
   /* @var string */
-  protected $type;
+  private $type;
   /* @var array */
-  protected $choices;
+  private $choices;
   /* @var bool */
-  protected $configurable = TRUE;
+  private $configurable = TRUE;
   /* @var array */
-  protected $modes;
+  private $modes;
   /* @var mixed */
-  protected $default;
+  private $default;
   /* @var mixed */
-  protected $value;
+  private $value;
   /* @var string */
-  protected $cssClass;
+  private $cssClass;
   /* @var string */
-  protected $genericLabel;
+  private $genericLabel;
   /* @var array */
-  protected $genericLabelArgs;
+  private $genericLabelArgs;
 
   /**
    * @param GameOptionsStore $store

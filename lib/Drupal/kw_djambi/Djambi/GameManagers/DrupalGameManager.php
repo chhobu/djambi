@@ -5,40 +5,39 @@
  */
 
 namespace Drupal\kw_djambi\Djambi\GameManagers;
+
+use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\GameNotFoundException;
+use Djambi\Exceptions\PlayerInvalidException;
+use Djambi\Faction;
 use Djambi\Factories\GameDispositionsFactory;
 use Djambi\GameManager;
+use Djambi\Player;
 use Djambi\Players\ComputerPlayer;
 use Djambi\Signal;
+use Djambi\Stores\StandardRuleset;
 use Drupal\kw_djambi\Djambi\DjambiContext;
+use Drupal\kw_djambi\Djambi\Players\DrupalAnonymousPlayer;
 use Drupal\kw_djambi\Djambi\Players\DrupalPlayer;
 
 /**
  * Class DjambiGameManagerNode
  */
 class DrupalGameManager extends GameManager {
-  protected $autodeleteTime;
-
-  /**
-   * Fonction constructeur (statique) de la class DjambiGameManagerNode.
-   * Ne pas appeler directement cette fonction.
-   */
-  protected function __construct() {
-    parent::__construct();
-    $this->setPersistant(TRUE);
-  }
+  /** @var int */
+  private $autodeleteTime;
 
   /**
    * Fixe le temps de conservation d'une partie.
    */
-  public function getAutodeleteTime() {
-    if (is_null($this->autodeleteTime)) {
+  public function getAutodeleteTime($reset = FALSE) {
+    if (is_null($this->autodeleteTime) || ($reset && $this->autodeleteTime > 0)) {
       $conservation_longue = FALSE;
       $modes_longue_conservation_finished = array(
         static::MODE_FRIENDLY,
       );
-      if (in_array($this->getBattlefield()->getMode(), $modes_longue_conservation_finished)
-        && $this->getBattlefield()->isFinished()) {
+      if (in_array($this->getMode(), $modes_longue_conservation_finished)
+        && $this->isFinished()) {
         $conservation_longue = TRUE;
       }
       if ($conservation_longue) {
@@ -162,9 +161,9 @@ class DrupalGameManager extends GameManager {
     else {
       array_fill(1, $disposition->getNbPlayers(), NULL);
     }
-    $game = static::create($players, $game_id, $mode, $disposition);
+    $game = static::createGame($players, $game_id, $mode, $disposition);
     foreach ($form_state['values']['advanced'] as $option => $value) {
-      $game->getBattlefield()->setOption($option, $value);
+      $game->setOption($option, $value);
     }
     $game->setInfo('sequence', $game_id);
     variable_set('kw_djambi_game_sequence', $game_id);
@@ -173,19 +172,16 @@ class DrupalGameManager extends GameManager {
 
   /**
    * Sauve la partie de Djambi courante dans un type de contenu djambi_node.
-   *
-   * @return int
-   *   Renvoie le timestamp de mise à jour en BdD de la partie.
    */
-  public function save() {
+  public function save($called_from) {
     $grid = $this->getBattlefield();
     $compress = FALSE;
-    if ($grid->getStatus() == static::STATUS_FINISHED) {
+    if ($this->getStatus() == static::STATUS_FINISHED) {
       $compress = TRUE;
     }
-    $data = $grid->toArray();
-    $data['infos'] = $this->infos;
-    $data = serialize($data);
+    $unserialized_data = $grid->toArray();
+    $unserialized_data['infos'] = $this->infos;
+    $data = serialize($unserialized_data);
     if ($compress) {
       $data = gzcompress($data);
     }
@@ -197,20 +193,21 @@ class DrupalGameManager extends GameManager {
     }
     $time = time();
     $this->setChanged($time);
+    $this->setInitialState($unserialized_data);
     $nrecord = array(
       'nb_moves' => $moves,
       'data' => $data,
       'changed' => $time,
-      'status' => $grid->getStatus(),
-      'autodelete' => $this->getAutodeleteTime(),
+      'status' => $this->getStatus(),
+      'autodelete' => $this->getAutodeleteTime(TRUE),
       'compressed' => $compress,
       'nid' => $this->getInfo('nid'),
     );
     if ($this->isNew()) {
-      $nrecord['mode'] = $grid->getMode();
+      $nrecord['mode'] = $this->getMode();
       $nrecord['points'] = 0;
       $nrecord['begin'] = $this->getBegin();
-      $nrecord['disposition'] = $grid->getDisposition()->getName();
+      $nrecord['disposition'] = $this->getDisposition()->getName();
       drupal_write_record('djambi_node', $nrecord);
     }
     else {
@@ -244,7 +241,7 @@ class DrupalGameManager extends GameManager {
           }
         }
         elseif ($player instanceof ComputerPlayer) {
-          $precord['ia'] = $player->getIa()->getClassName();
+          $precord['ia'] = get_class($player->getIa());
         }
       }
       if ($this->isNew()) {
@@ -295,5 +292,21 @@ class DrupalGameManager extends GameManager {
     $data = $query->execute()->fetchAssoc();
     return $data['changed'] > $version ? TRUE : FALSE;
   }
+
+  public function addNewPlayer(Player $player, Faction $target) {
+    if ($this->getStatus() == self::STATUS_RECRUITING) {
+      $allow_anonymous = $this->getOption(StandardRuleset::GAMEPLAY_ELEMENT_ANONYMOUS_PLAYERS);
+      if (!$allow_anonymous && $player instanceof DrupalAnonymousPlayer) {
+        $exception = new PlayerInvalidException("Game not open for anonymous players", 101);
+        throw $exception;
+      }
+      parent::addNewPlayer($player, $target);
+      return $this;
+    }
+    else {
+      throw new DisallowedActionException("Cannot add new player after game begin.", 1);
+    }
+  }
+
 
 }

@@ -85,12 +85,12 @@ function kw_djambi_theme() {
  */
 function kw_djambi_preprocess_djambi_grid(&$variables) {
   $form = $variables["form"];
-  /* @var $grid \Djambi\Battlefield */
   // Récupération de la grille.
-  $grid = $form["#grid"];
+  /* @var \Djambi\GameManager $game */
+  $game = $form['#game'];
   // Affichage du bloc événement ?
-  $display_events = $grid->isPending();
-  if ($grid->getGameManager()->getInfo('interface') == 'minimal') {
+  $display_events = $game->isPending();
+  if ($game->getInfo('interface') == 'minimal') {
     $display_events = FALSE;
   }
   $variables['show_events'] = $display_events;
@@ -101,7 +101,7 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
   // Affichage de l'aide ?
   $show_help = $form['controls']['show_help']['#value'];
   if ($show_help || isset($form['pieces'])) {
-    $variables['helps'] = _kw_djambi_load_rule_nodes($grid);
+    $variables['helps'] = _kw_djambi_load_rule_nodes($game);
   }
   // Détermination de la phase de jeu :
   if (isset($form["pieces"])) {
@@ -120,6 +120,7 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
   }
   $variables['current_form_action'] = $current_form_action;
   // Récupération des données concernant le tour de jeu :
+  $grid = $game->getBattlefield();
   $turns = $grid->getTurns();
   $displayed_turn_id = $grid->getDisplayedTurnId();
   $current_turn_id = $grid->getCurrentTurnId();
@@ -147,7 +148,7 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
   // En-tête dans le cas d'une grille classique.
   $header = array();
   $rows = array();
-  if ($grid->getDisposition()->getGrid()->getDisposition() != 'hexagonal') {
+  if ($game->getDisposition()->getGrid()->getShape() != 'hexagonal') {
     for ($i = 0; $i <= $grid->getDimensions(); $i++) {
       $header[] = array(
         "data" => $i > 0 ? $grid->findCell($i, 1)->getColumnName() : '#',
@@ -176,11 +177,11 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
 
   // Génération des lignes d'information
   $infos_lines = array();
-  if ($grid->getGameManager()->getInfo('interface') != 'minimal') {
-    $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
+  if ($game->getInfo('interface') != 'minimal') {
+    $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($game->getMode());
   }
   // Cas d'une partie à joueur unique.
-  if ($grid->getMode() == \Djambi\GameManager::MODE_SANDBOX) {
+  if ($game->getMode() == \Djambi\GameManager::MODE_SANDBOX) {
     foreach ($grid->getFactions() as $random_faction) {
       if ($random_faction->getStatus() != \Djambi\Faction::STATUS_VASSALIZED) {
         break;
@@ -192,10 +193,10 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
     }
   }
   // Cas d'une partie en cours : génération du tableau des joueurs...
-  elseif ($grid->isPending()) {
+  elseif ($game->isPending()) {
     $infos_lines[t('Players')] = theme('djambi_players_table', array('grid' => $grid));
   }
-  if ($grid->isPending()) {
+  if ($game->isPending()) {
     // Puis affichage de l'ordre de jeu.
     $play_order = $grid->getPlayOrder();
     $current_play_order = current($play_order);
@@ -210,7 +211,7 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
       "!color" =>
         theme('djambi_faction_name', array('faction' => $now_playing_faction)),
     ));
-    if ($grid->getStatus() != \Djambi\GameManager::STATUS_DRAW_PROPOSAL) {
+    if ($game->getStatus() != \Djambi\GameManager::STATUS_DRAW_PROPOSAL) {
       $infos_lines[t("Playing next")] = t("!color1 side, then !color2 side, then !color3 side", array(
         "!color1" => theme('djambi_faction_name', array('faction' => $playing_next_faction1)),
         "!color2" => theme('djambi_faction_name', array('faction' => $playing_next_faction2)),
@@ -236,10 +237,10 @@ function kw_djambi_preprocess_djambi_grid(&$variables) {
           continue;
         }
         $faction_name = theme('djambi_faction_name', array('faction' => $playing_faction));
-        if ($playing_faction->getDrawStatus() == 1) {
+        if ($playing_faction->getDrawStatus() == \Djambi\Faction::DRAW_STATUS_PROPOSED) {
           $peacemonger = $faction_name;
         }
-        elseif ($playing_faction->getDrawStatus() == 2) {
+        elseif ($playing_faction->getDrawStatus() == \Djambi\Faction::DRAW_STATUS_ACCEPTED) {
           $accepted[] = $faction_name;
         }
         elseif (is_null($playing_faction->getDrawStatus())) {
@@ -342,18 +343,18 @@ function kw_djambi_node_view($node, $view_mode) {
 /**
  * Charge les noeuds de type règle du jeu correspondant aux pièces de la partie.
  *
- * @param \Djambi\Battlefield $grid
+ * @param \Djambi\GameManager $game
  *   grille de Djambi courante
  *
  * @return array
  *   tableau de noeuds
  */
-function _kw_djambi_load_rule_nodes(\Djambi\Battlefield $grid) {
+function _kw_djambi_load_rule_nodes(\Djambi\GameManager $game) {
   $nodes = array();
   if (!node_type_load('rule_element')) {
     return $nodes;
   }
-  $scheme = $grid->getDisposition()->getGrid();
+  $scheme = $game->getDisposition()->getGrid();
   $types = array();
   foreach ($scheme->getPieceScheme() as $piece) {
     $types[] = $piece->getRulePattern();
@@ -1029,11 +1030,11 @@ function _kw_djambi_get_translatable_messages($message, $args = array(), \Djambi
       break;
 
     case('NEW_TEAM');
-      $txt = t('!faction1 side is now controlled by !user', $args);
+      $txt = t('!faction1 side is now controlled by !player', $args);
       break;
 
     case('TEAM_EXIT'):
-      $txt = t('!user left the game.', $args);
+      $txt = t('!player left the game.', $args);
       break;
 
     case('event');

@@ -41,8 +41,9 @@ function theme_djambi_faction_name($variables) {
  */
 function theme_djambi_grid($variables) {
   $form = $variables["form"];
-  /* @var $grid \Djambi\Battlefield */
-  $grid = $form["#grid"];
+  /* @var \Djambi\GameManager $game */
+  $game = $form['#game'];
+  $grid = $game->getBattlefield();
   $cells = $grid->getCells();
   $moves = $grid->getMoves();
   $image_folder = base_path() . drupal_get_path('module', 'kw_djambi') . '/img/';
@@ -239,8 +240,8 @@ function theme_djambi_grid($variables) {
 
   // Affichage de la grille :
   $grid_classes = array('djambigrid');
-  $grid_id = 'DjambiGrid' . $grid->getId();
-  if ($grid->getDisposition()->getGrid()->getDisposition() == 'hexagonal') {
+  $grid_id = 'DjambiGrid' . $grid->getGameManager()->getId();
+  if ($grid->getGameManager()->getDisposition()->getGrid()->getShape() == \Djambi\Grid::SHAPE_HEXAGONAL) {
     $markup = theme('hexagonal_grid', array(
       'rows' => $rows,
       'attributes' => array('class' => $grid_classes, 'id' => $grid_id),
@@ -333,7 +334,7 @@ function theme_djambi_players_table($variables) {
   $grid = $variables['grid'];
   $pheader['sides'] = array('data' => t('Sides'), 'scope' => 'col');
   $pheader['players'] = array('data' => t('Players'), 'scope' => 'col');
-  if ($grid->getMode() == \Djambi\GameManager::MODE_FRIENDLY) {
+  if ($grid->getGameManager()->getMode() == \Djambi\GameManager::MODE_FRIENDLY) {
     $pheader['ping'] = array('data' => t('Online ?'), 'scope' => 'col');
   }
   $pheader['status'] = array('data' => t('Status'), 'scope' => 'col');
@@ -411,13 +412,13 @@ function theme_djambi_grid_caption($variables) {
   $animated_moves = $variables['animated_moves'];
   $turns = $grid->getTurns();
   $max_turn = end($turns);
-  $caption_title = _kw_djambi_get_translatable_messages($grid->getStatus());
-  if (!$show_changes && $grid->isPending()) {
+  $caption_title = _kw_djambi_get_translatable_messages($grid->getGameManager()->getStatus());
+  if (!$show_changes && $grid->getGameManager()->isPending()) {
     $current_turn = end($turns);
     $caption_title .= ' - <span class="turn">' . t("Turn #%turn", array("%turn" => $current_turn["turn"])) . '</span>';
   }
   else {
-    if ($grid->isPending()) {
+    if ($grid->getGameManager()->isPending()) {
       $caption_title .= ' <span class="warning">' . t("Replay mode : you are currently watching a past state ot the battlefield !") . '</span>';
     }
     $caption_title .= ' - <span class="turn">' . t("Turn #%displayed_turn out of #%max_turn",
@@ -439,7 +440,7 @@ function theme_djambi_grid_caption($variables) {
         }
       }
     }
-    if ($grid->isFinished()) {
+    if ($grid->getGameManager()->isFinished()) {
       $final_time = isset($max_turn['end']) ? $max_turn['end'] : $max_turn['begin'];
       $caption_title .= "<br /><span class='recap'>" . t("Finished on %date, game total duration : %duration", array(
           '%date' => format_date($final_time, 'short'),
@@ -457,7 +458,7 @@ function theme_djambi_recent_events($variables) {
   $html = '';
   /* @var $grid \Djambi\Battlefield */
   $grid = $variables['grid'];
-  $display_events = $grid->isPending();
+  $display_events = $grid->getGameManager()->isPending();
   if ($grid->getGameManager()->getInfo('interface') == 'minimal') {
     $display_events = FALSE;
   }
@@ -489,8 +490,9 @@ function theme_djambi_recent_events($variables) {
 function theme_djambi_recruiting_phase($variables) {
   $form = $variables["form"];
   // Détermination de la phase de jeu
-  /* @var $grid \Djambi\Battlefield */
-  $grid = $form["#grid"];
+  /* @var \Djambi\GameManager $game */
+  $game = $form['#game'];
+  $grid = $game->getBattlefield();
   $header = array(
     0 => array('data' => t('Faction')),
     1 => array('data' => t('User')),
@@ -540,7 +542,7 @@ function theme_djambi_recruiting_phase($variables) {
   $caption = t('Waiting for other players : !remaining', array(
     '!remaining' => format_plural($empty, '1 empty slot remaining', '!nb empty slots remaining', array('!nb' => $empty)))
   );
-  $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getMode());
+  $infos_lines[t("Mode")] = _kw_djambi_get_translatable_messages($grid->getGameManager()->getMode());
   $infos_lines[t("Unbegun game")] = theme('djambi_waiting_label', array('faction' => NULL, 'grid' => $grid));
   $prefix = theme('djambi_game_description', array('infos_lines' => $infos_lines, 'grid' => $grid));
   $html = $prefix . theme('table', array(
@@ -613,7 +615,7 @@ function theme_djambi_waiting_label($variables) {
   else {
     $args = array();
   }
-  switch ($grid->getStatus()) {
+  switch ($grid->getGameManager()->getStatus()) {
     case(\Djambi\GameManager::STATUS_RECRUITING):
       $label = t("Waiting for new players...");
       break;

@@ -1,26 +1,37 @@
 <?php
 namespace Djambi;
 
+use Djambi\Exceptions\GridInvalidException;
+
 class PieceDescription {
-  protected $type;
+  /** @var string : type de pièce */
+  private $type;
+  /** @var string : nom court de la pièce */
   protected $shortname;
+  /** @var int : nom complet de la pièce */
   protected $num;
+  /** @var string : nom générique du type de pièce */
   protected $genericName;
-  protected $imagePattern;
-  protected $rulePattern;
-  protected $startPosition;
-  protected $value;
+  /** @var string : libellé permettant de charger l'image associée */
+  private $imagePattern;
+  /** @var string : libellé permettant de charger la règle associée */
+  private $rulePattern;
+  /** @var array : position de départ (par rapport au chef, coordonnées x, y) */
+  private $startPosition;
+  /** @var int : valeur de la pièce */
+  private $value;
+  /** @var array : liste des capacités de la pièce */
   protected $habilities = array();
 
   public function __construct($type, $generic_shortname, $generic_name, $num, $start_position, $value) {
     $this->type = $type;
     $this->num = $num;
     $this->shortname = $num == 0 ? $generic_shortname : $generic_shortname . $num;
-    $this->startPosition = $start_position;
     $this->genericName = $generic_name;
-    $this->imagePattern = $type;
-    $this->rulePattern = $type;
-    $this->value = $value;
+    $this->setStartPosition($start_position);
+    $this->setImagePattern($type);
+    $this->setRulePattern($type);
+    $this->setValue($value);
   }
 
   public function getType() {
@@ -56,6 +67,10 @@ class PieceDescription {
     return $this->rulePattern;
   }
 
+  public function getRuleUrl() {
+    return 'http://djambi.net/regles/' . $this->rulePattern;
+  }
+
   public function setImagePattern($image_pattern) {
     $this->imagePattern = $image_pattern;
     return $this;
@@ -70,8 +85,21 @@ class PieceDescription {
     return $this->startPosition;
   }
 
+  protected function setStartPosition($position) {
+    if (!is_array($position) || !isset($position['x']) || !isset($position['y'])) {
+      throw new GridInvalidException("Invalid start position for piece " . $this->getShortname());
+    }
+    $this->startPosition = $position;
+    return $this;
+  }
+
   public function getValue() {
     return $this->value;
+  }
+
+  protected function setValue($value) {
+    $this->value = $value;
+    return $this;
   }
 
   public function setHabilities($habilities) {
@@ -86,7 +114,7 @@ class PieceDescription {
   }
 
   protected function getHability($name) {
-    return isset($this->habilities[$name]) ? $this->habilities[$name] : FALSE;
+    return !empty($this->habilities[$name]) ? $this->habilities[$name] : FALSE;
   }
 
   protected function giveHability($name, $value) {

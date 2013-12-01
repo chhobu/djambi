@@ -11,13 +11,14 @@ use Djambi\Interfaces\HumanPlayerInterface;
 use Djambi\Interfaces\PlayerInterface;
 use Djambi\Players\ComputerPlayer;
 use Djambi\Players\HumanPlayer;
+use Djambi\Stores\StandardRuleset;
 
 /**
  * Class DjambiPoliticalFaction
  */
 class Faction {
-  const DRAW_STATUS_ACCEPTED = 1;
-  const DRAW_STATUS_PROPOSED = 2;
+  const DRAW_STATUS_ACCEPTED = 2;
+  const DRAW_STATUS_PROPOSED = 1;
   const DRAW_STATUS_REJECTED = 0;
 
   const STATUS_PLAYING = 'playing';
@@ -32,37 +33,37 @@ class Faction {
   const STATUS_READY = 'ready';
 
   /* @var string $status */
-  protected $status;
+  private $status;
   /* @var int $ranking */
-  protected $ranking;
+  private $ranking;
   /* @var string $id */
-  protected $id;
+  private $id;
   /* @var string $name */
-  protected $name;
+  private $name;
   /* @var string $class */
-  protected $class;
+  private $class;
   /* @var Faction $control */
-  protected $control;
+  private $control;
   /* @var bool $alive */
-  protected $alive = FALSE;
+  private $alive = FALSE;
   /* @var Piece[] $pieces */
-  protected $pieces;
+  private $pieces;
   /* @var Battlefield $battlefield */
-  protected $battlefield;
+  private $battlefield;
   /* @var int $startOrder; */
-  protected $startOrder;
+  private $startOrder;
   /* @var bool $playing */
-  protected $playing = FALSE;
+  private $playing = FALSE;
   /* @var int $skippedTurns */
-  protected $skippedTurns;
+  private $skippedTurns;
   /* @var int $lastDrawProposal */
-  protected $lastDrawProposal;
+  private $lastDrawProposal;
   /* @var int $drawStatus */
-  protected $drawStatus;
+  private $drawStatus;
   /* @var string $master */
-  protected $master;
+  private $master;
   /* @var PlayerInterface $player */
-  protected $player;
+  private $player;
 
   public function __construct(Battlefield $battlefield, $id, $name, $class, $start_order, $data, PlayerInterface $player = NULL) {
     $this->battlefield = $battlefield;
@@ -199,7 +200,8 @@ class Faction {
     $grid = $this->getBattlefield();
     foreach ($grid->getFactions() as $f) {
       if ($f->getId() != $this->getId() && $f->getControl()->getId() == $this->getId()) {
-        if ($grid->getOption('rule_vassalization') == 'full_control' || $f->getStatus() == self::STATUS_KILLED) {
+        if ($grid->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control'
+        || $f->getStatus() == self::STATUS_KILLED) {
           $f->setControl($faction, FALSE);
         }
         elseif ($faction->getId() != $this->id) {
@@ -338,7 +340,7 @@ class Faction {
 
   public function canComeBackAfterWithdraw() {
     if ($this->getStatus() == self::STATUS_WITHDRAW
-        && $this->getBattlefield()->getOption('rule_comeback') == 'allowed'
+        && $this->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'allowed'
         && $this->getControl()->getId() == $this->getId()
         && $this->checkLeaderFreedom()) {
       return TRUE;
@@ -353,6 +355,7 @@ class Faction {
       $this->setStatus(self::STATUS_READY);
       $this->getBattlefield()->logEvent('event', 'COMEBACK_AFTER_WITHDRAW', array('faction1' => $this->getId()));
       $this->getBattlefield()->updateSummary();
+      $this->getBattlefield()->getGameManager(__METHOD__);
     }
     return $this;
   }
@@ -361,7 +364,7 @@ class Faction {
     $turns = $this->getBattlefield()->getTurns();
     $this->setLastDrawProposal($turns[$this->getBattlefield()->getCurrentTurnId()]['turn']);
     $this->getBattlefield()->logEvent('event', 'DRAW_PROPOSAL', array('faction1' => $this->getId()));
-    $this->getBattlefield()->setStatus(GameManager::STATUS_DRAW_PROPOSAL);
+    $this->getBattlefield()->getGameManager()->setStatus(GameManager::STATUS_DRAW_PROPOSAL);
     $this->setDrawStatus(self::DRAW_STATUS_PROPOSED);
     $this->getBattlefield()->changeTurn();
     return $this;
@@ -392,11 +395,12 @@ class Faction {
 
   public function rejectDraw() {
     $this->getBattlefield()->logEvent('event', 'DRAW_REJECTED', array('faction1' => $this->getId()));
-    $this->getBattlefield()->setStatus(GameManager::STATUS_PENDING);
+    $this->getBattlefield()->getGameManager()->setStatus(GameManager::STATUS_PENDING);
     $factions = $this->getBattlefield()->getFactions();
     foreach ($factions as $faction) {
       $this->getBattlefield()->getFactionById($faction->getId())->setDrawStatus(NULL);
     }
+    $this->getBattlefield()->getGameManager()->save(__METHOD__);
     return $this;
   }
 
@@ -432,9 +436,9 @@ class Faction {
         return TRUE;
       }
       // Règle d'encerclement strict :
-      $strict_rule = in_array($this->getBattlefield()->getOption('rule_surrounding'), array('strict', 'loose'));
+      $strict_rule = in_array($this->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_SURROUNDING), array('strict', 'loose'));
       if ($strict_rule && $nb_factions > 2) {
-        if ($has_necromobile && $this->getBattlefield()->getOption('rule_surrounding') == 'loose') {
+        if ($has_necromobile && $this->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_SURROUNDING) == 'loose') {
           return TRUE;
         }
         $escorte[$position->getName()] = $leader->getId();

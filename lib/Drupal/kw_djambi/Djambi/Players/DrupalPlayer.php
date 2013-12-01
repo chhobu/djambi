@@ -6,7 +6,7 @@ use Drupal\kw_djambi\Djambi\GameManagers\DrupalGameManager;
 
 class DrupalPlayer extends HumanPlayer {
   /** @var \stdClass $user */
-  protected $user;
+  private $user;
   /** @var array $games */
   protected $games;
 

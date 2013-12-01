@@ -14,8 +14,8 @@ class HumanPlayer extends Player implements HumanPlayerInterface {
   protected $joined;
 
   public function __construct($id, $prefix = '') {
-    $this->type = 'human';
-    $this->className = get_class($this);
+    $this->setType(self::TYPE_HUMAN);
+    $this->setClassName();
     $this->setId($id, $prefix);
   }
 

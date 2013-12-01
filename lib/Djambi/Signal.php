@@ -6,18 +6,12 @@ namespace Djambi;
 use Djambi\Interfaces\HumanPlayerInterface;
 
 class Signal {
-  /**
-   * @var HumanPlayerInterface
-   */
-  protected $player;
-  /**
-   * @var int
-   */
-  protected $ping;
-  /**
-   * @var string
-   */
-  protected $ip;
+  /** @var HumanPlayerInterface */
+  private $player;
+  /** @var int */
+  private $ping;
+  /** @var string */
+  private $ip;
 
   protected function __construct(HumanPlayerInterface $player, $ip, $ping) {
     $this->player = $player;
@@ -59,5 +53,17 @@ class Signal {
       'ping' => $this->ping,
     );
     return $array;
+  }
+
+  protected function setIp($ip) {
+    $this->ip = $ip;
+  }
+
+  protected function setPlayer(HumanPlayerInterface $player) {
+    $this->player = $player;
+  }
+
+  protected function setPing($ping) {
+    $this->ping = $ping;
   }
 }

@@ -1,4 +1,5 @@
 <?php
+
 namespace Djambi\Exceptions;
 
 /**

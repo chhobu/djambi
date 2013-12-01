@@ -5,6 +5,8 @@
  * création de nouveau compte) pour éviter les actions de spam bots.
  */
 
+use Drupal\kw_djambi\Djambi\Factories\DjambiCaptchaGameFactory;
+
 /**
  * Vérifie si l'utilisateur courant n'effectue pas trop de requêtes incorrectes.
  */
@@ -20,46 +22,18 @@ function _djambi_captcha_check_flood() {
  * Implements hook_form_FORM_ID_alter().
  */
 function djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
-  $context = \Drupal\kw_djambi\Djambi\DjambiContext::getInstance();
-  if ($context->getCurrentUser()->getUser()->uid > 0) {
-    return;
-  }
   _djambi_captcha_check_flood();
-  form_load_include($form_state, 'inc', 'kw_djambi', 'kw_djambi.form');
-  if (!empty($form_state['kw_djambi']['selected_piece']) && !$form_state['kw_djambi']['change_turn']) {
-    /* @var $piece \Djambi\Piece */
-    $piece = $form_state['kw_djambi']['selected_piece'];
-    $grid = $piece->getFaction()->getBattlefield();
-  }
-  elseif (isset($form_state['saved_grid'])) {
-    if (isset($form_state['kw_djambi']['change_turn'])) {
-      unset($form_state['kw_djambi']);
-    }
-    $game = \Djambi\GameManager::loadGame($form_state['saved_grid'])->play();
-    $grid = $game->getBattlefield();
-  }
-  else {
-    $human_player = $context->getCurrentUser(TRUE);
-    $computer_player = new \Djambi\Players\ComputerPlayer();
-    $computer_player->useIa('DjambiIADummy');
-    $game = \Djambi\GameManager::create(array($human_player, $computer_player), uniqid('Dj'),
-      \Djambi\GameManager::MODE_TRAINING, \Djambi\Factories\GameDispositionsFactory::loadDisposition('2mini'));
-    $grid = $game->getBattlefield();
-    $grid->setOption('turns_before_draw_proposal', -1);
-    $game->setInfo('interface', 'minimal');
-    $game->play();
-    $form_state['saved_grid'] = $game->save();
-  }
-  _kw_djambi_build_game_form($form, $form_state, $grid, array(
+  $factory = new DjambiCaptchaGameFactory();
+  $game = $factory->generateGameUsingDrupalForm($form, $form_state, array(
     'show_rules' => FALSE,
     'show_stats' => FALSE,
     'show_log' => FALSE,
   ));
-  if (!$grid->isFinished()) {
+  if (!$game->isFinished()) {
     $game_status_msg = '<div class="messages warning">'
       . t("You have to beat a dummy computer opponent in a mini djambi game to complete your registration !") . ' </div>';
   }
-  elseif ($form_state['kw_djambi']['result'] == \Djambi\Faction::STATUS_WINNER) {
+  elseif ($form_state['djambi']['result'] == \Djambi\Faction::STATUS_WINNER) {
     $game_status_msg = '<div class="messages status">'
       . t("Congratulations, you are smarter than a dummy computer. You can now complete your registration.") . ' </div>';
   }
@@ -87,7 +61,7 @@ function djambi_captcha_form_user_register_form_alter(&$form, &$form_state) {
 function djambi_captcha_registration_validate($form, &$form_state) {
   $errors = FALSE;
   $clicked_button_family = $form_state['clicked_button']['#array_parents'][0];
-  if (!isset($form_state['kw_djambi']['result'])) {
+  if (!isset($form_state['djambi']['result'])) {
     form_set_error('grid', t("Computer is still alive !"));
     if (!empty($form_state['values']['name']) && $clicked_button_family != 'grid') {
       watchdog('djambi', 'User !name (!mail) tried to register without finishing Djambi game validation.',
@@ -96,7 +70,7 @@ function djambi_captcha_registration_validate($form, &$form_state) {
       $errors = TRUE;
     }
   }
-  elseif ($form_state['kw_djambi']['result'] != \Djambi\Faction::STATUS_WINNER) {
+  elseif ($form_state['djambi']['result'] != \Djambi\Faction::STATUS_WINNER) {
     form_set_error('grid', t("You are not smart enough to register."));
     if (!empty($form_state['values']['name']) && $clicked_button_family != 'grid') {
       watchdog('djambi', 'User !name (!mail) failed succeeding in Djambi game registration validation.',
@@ -115,6 +89,5 @@ function djambi_captcha_registration_validate($form, &$form_state) {
  */
 function djambi_captcha_retry_submit($form, &$form_state) {
   $form_state['rebuild'] = TRUE;
-  unset($form_state['saved_grid']);
-  unset($form_state['kw_djambi']);
+  unset($form_state['djambi']);
 }

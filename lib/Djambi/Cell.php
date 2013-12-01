@@ -15,15 +15,15 @@ class Cell {
   const TYPE_FORTRESS = 'fortress';
 
   /** @var string : Nom de la cellule */
-  protected $name;
+  private $name;
   /** @var int : Coordonnée verticale de la cellule */
-  protected $x;
+  private $x;
   /** @var int : Coordonnée horizontale de la cellule */
-  protected $y;
+  private $y;
   /** @var Piece : Pièce placée sur la cellule */
-  protected $occupant;
+  private $occupant;
   /** @var string : Type de cellule. Par défaut : 'std' (standard). */
-  protected $type = self::TYPE_STANDARD;
+  private $type = self::TYPE_STANDARD;
   /** @var array : liste des types implémentés */
   protected $implementedTypes = array(
     self::TYPE_STANDARD,
@@ -31,11 +31,11 @@ class Cell {
     self::TYPE_THRONE,
   );
   /** @var Cell[] : liste des cellules voisines */
-  protected $neighbours = array();
+  private $neighbours = array();
   /** @var bool : définit si une cellule est accessible par une pièce sélectionnée */
-  protected $reachable = FALSE;
+  private $reachable = FALSE;
   /** @var string : Nom de la colonne sur laquelle se trouve la cellule */
-  protected $columnName;
+  private $columnName;
 
   /**
    * Ajoute une cellule dans la grille.

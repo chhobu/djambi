@@ -5,7 +5,7 @@ use Djambi\GameOption;
 
 
 class GameOptionsStore {
-  protected $stores;
+  private $stores;
 
   public function __construct() {
     $this->stores = array();

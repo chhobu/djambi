@@ -1,5 +1,5 @@
 <?php
-namespace Djambi\Exceptions;
 
+namespace Djambi\Exceptions;
 
 class GridInvalidException extends Exception {}

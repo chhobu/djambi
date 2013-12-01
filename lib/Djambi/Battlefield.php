@@ -6,77 +6,65 @@
  */
 
 namespace Djambi;
+
 use Djambi\Exceptions\GameOptionInvalidException;
 use Djambi\Exceptions\GridInvalidException;
 use Djambi\Exceptions\CellNotFoundException;
-use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\FactionNotFoundException;
 use Djambi\Exceptions\PieceNotFoundException;
 use Djambi\Interfaces\BattlefieldInterface;
 use Djambi\Interfaces\GameManagerInterface;
 use Djambi\Interfaces\PlayerInterface;
 use Djambi\Players\HumanPlayer;
+use Djambi\Stores\StandardRuleset;
 
 /**
  * Class DjambiBattlefield
  */
 class Battlefield implements BattlefieldInterface {
-  protected $id;
+
   /* @var GameManagerInterface */
-  protected $gameManager;
-  /** @var GameDisposition */
-  protected $disposition;
+  private $gameManager;
   /** @var Cell[] */
-  protected $cells = array();
+  private $cells = array();
   /** @var Faction[] */
-  protected $factions = array();
+  private $factions = array();
   /** @var array */
-  protected $moves = array();
+  private $moves = array();
   /** @var array */
-  protected $turns = array();
+  private $turns = array();
   /** @var array */
-  protected $events = array();
+  private $events = array();
   /** @var array */
-  protected $summary = array();
-  /** @var string */
-  protected $mode;
-  /** @var string */
-  protected $status;
+  private $summary = array();
   /** @var array */
-  protected $playOrder;
+  private $playOrder;
   /** @var int */
-  protected $displayedTurnId;
+  private $displayedTurnId;
   /** @var array */
-  protected $cellsIndex = array();
-  /** @var Piece */
-  protected $selectedPiece;
+  private $cellsIndex = array();
   /** @var bool */
-  protected $readyToPlay = FALSE;
+  private $readyToPlay = FALSE;
+  /** @var Move */
+  private $currentMove;
+  /** @var bool */
+  private $dirty;
 
   /**
    * Construction de l'objet DjambiBattlefield.
    *
    * @param GameManagerInterface $gm
    *   Objet de gestion du jeu
-   * @param string $id
-   *   Identifiant du jeu
-   * @param string $mode
-   *   Mode de jeu
-   * @param GameDisposition $disposition
-   *   Disposition de jeu
    *
    * @return Battlefield
    *   Nouvel objet plateau de jeu
    */
-  protected function __construct(GameManagerInterface $gm, $id, $mode, GameDisposition $disposition) {
+  protected function __construct(GameManagerInterface $gm) {
     $this->gameManager = $gm;
-    $this->id = $id;
-    $this->disposition = $disposition;
     $this->setDefaultOptions();
     $this->moves = array();
     $this->events = array();
     $this->summary = array();
-    $this->mode = $mode;
   }
 
   /**
@@ -86,26 +74,19 @@ class Battlefield implements BattlefieldInterface {
    *   Objet de gestion de la partie
    * @param PlayerInterface[] $players
    *   Liste des joueurs
-   * @param string $id
-   *   Identifiant de la grille
-   * @param string $mode
-   *   Mode de jeu
-   * @param GameDisposition $disposition
-   *   Disposition de la grille
    *
    * @throws GridInvalidException
    * @return Battlefield
    *   Nouvelle grille de Djambi
    */
-  public static function createNewBattlefield(GameManagerInterface $gm, $players, $id, $mode, GameDisposition $disposition) {
-    $battlefield = new self($gm, $id, $mode, $disposition);
-
+  public static function createNewBattlefield(GameManagerInterface $gm, $players) {
+    $battlefield = new self($gm);
     // Construction des factions :
     $ready = TRUE;
-    foreach ($battlefield->getDisposition()->getGrid()->getSides() as $side) {
+    foreach ($gm->getDisposition()->getGrid()->getSides() as $side) {
       if ($side['start_status'] == Faction::STATUS_READY) {
         /* @var HumanPlayer $player */
-        if ($battlefield->getMode() == GameManager::MODE_SANDBOX) {
+        if ($gm->getMode() == GameManager::MODE_SANDBOX) {
           $player = current($players);
         }
         else {
@@ -126,7 +107,7 @@ class Battlefield implements BattlefieldInterface {
 
     // Construction de la grille :
     $battlefield->buildField();
-    $scheme = $battlefield->getDisposition()->getGrid();
+    $scheme = $gm->getDisposition()->getGrid();
     $directions = $scheme->getDirections();
     $scheme_sides = $scheme->getSides();
     foreach ($battlefield->factions as $faction) {
@@ -179,7 +160,7 @@ class Battlefield implements BattlefieldInterface {
       $faction->createPieces($scheme->getPieceScheme(), $start_scheme);
     }
     $battlefield->logEvent('info', 'NEW_DJAMBI_GAME');
-    $battlefield->setStatus($ready ? GameManager::STATUS_PENDING : GameManager::STATUS_RECRUITING);
+    $gm->setStatus($ready ? GameManager::STATUS_PENDING : GameManager::STATUS_RECRUITING);
     return $battlefield;
   }
 
@@ -188,8 +169,6 @@ class Battlefield implements BattlefieldInterface {
    *
    * @param GameManagerInterface $gm
    *   Objet GameManager lié
-   * @param GameDisposition $disposition
-   *   Disposition de jeu
    * @param array $data
    *   Tableau de données permettant de recréer la partie
    *
@@ -197,9 +176,9 @@ class Battlefield implements BattlefieldInterface {
    * @return Battlefield
    *   Grille de Djambi courante
    */
-  public static function loadBattlefield(GameManagerInterface $gm, GameDisposition $disposition, $data) {
-    $battlefield = new self($gm, $data['id'], $data['mode'], $disposition);
-    $battlefield->setStatus($data['status']);
+  public static function loadBattlefield(GameManagerInterface $gm, $data) {
+    $battlefield = new self($gm);
+    $gm->setStatus($data['status']);
     $battlefield->moves = isset($data['moves']) ? $data['moves'] : $battlefield->moves;
     $battlefield->turns = isset($data['turns']) ? $data['turns'] : $battlefield->turns;
     $battlefield->events = isset($data['events']) ? $data['events'] : $battlefield->events;
@@ -207,11 +186,14 @@ class Battlefield implements BattlefieldInterface {
     $battlefield->factions = array();
     if (isset($data['options']) && is_array($data['options'])) {
       foreach ($data['options'] as $option => $value) {
-        $battlefield->setOption($option, $value);
+        try {
+          $gm->setOption($option, $value);
+        }
+        catch (GameOptionInvalidException $e) {}
       }
     }
     $battlefield->buildField();
-    $scheme = $battlefield->getDisposition()->getGrid();
+    $scheme = $gm->getDisposition()->getGrid();
     $pieces_scheme = $scheme->getPieceScheme();
     $sides_scheme = $scheme->getSides();
     foreach ($data['factions'] as $key => $faction_data) {
@@ -271,7 +253,7 @@ class Battlefield implements BattlefieldInterface {
    *   Grille de Djambi courante
    */
   protected function buildField() {
-    $special_cells = $this->getDisposition()->getGrid()->getSpecialCells();
+    $special_cells = $this->getGameManager()->getDisposition()->getGrid()->getSpecialCells();
     for ($x = 1; $x <= $this->getCols(); $x++) {
       for ($y = 1; $y <= $this->getRows(); $y++) {
         Cell::createByXY($this, $x, $y);
@@ -285,7 +267,7 @@ class Battlefield implements BattlefieldInterface {
       if ($cell->getType() == Cell::TYPE_DISABLED) {
         continue;
       }
-      foreach ($this->getDisposition()->getGrid()->getDirections() as $d => $direction) {
+      foreach ($this->getGameManager()->getDisposition()->getGrid()->getDirections() as $d => $direction) {
         $new_x = $cell->getX() + $direction['x'];
         $new_y = $cell->getY() + $direction['y'];
         if (!empty($direction['modulo_x'])) {
@@ -322,18 +304,10 @@ class Battlefield implements BattlefieldInterface {
    *   Grille de Djambi courante
    */
   protected function setDefaultOptions() {
-    foreach ($this->getDisposition()->getOptionsStore()->getAllGameOptions() as $object) {
+    foreach ($this->getGameManager()->getDisposition()->getOptionsStore()->getAllGameOptions() as $object) {
       $object->setValue($object->getDefault());
     }
     return $this;
-  }
-
-  public function getDisposition() {
-    return $this->disposition;
-  }
-
-  public function getId() {
-    return $this->id;
   }
 
   /**
@@ -370,47 +344,11 @@ class Battlefield implements BattlefieldInterface {
    *   Faction si trouvé, NULL sinon.
    */
   public function getPlayingFaction() {
-    if (!$this->isPending()) {
+    if (!$this->getGameManager()->isPending()) {
       return NULL;
     }
     $play_order = current($this->getPlayOrder());
     return $this->getFactionById($play_order["side"]);
-  }
-
-  /**
-   * @return bool
-   */
-  public function isPending() {
-    if (in_array($this->getStatus(), array(GameManager::STATUS_PENDING, GameManager::STATUS_DRAW_PROPOSAL))) {
-      return TRUE;
-    }
-    else {
-      return FALSE;
-    }
-  }
-
-  /**
-   * @return bool
-   */
-  public function isFinished() {
-    if ($this->getStatus() == GameManager::STATUS_FINISHED) {
-      return TRUE;
-    }
-    else {
-      return FALSE;
-    }
-  }
-
-  /**
-   * @return bool
-   */
-  public function isNotBegin() {
-    if ($this->getStatus() == GameManager::STATUS_RECRUITING) {
-      return TRUE;
-    }
-    else {
-      return FALSE;
-    }
   }
 
   /**
@@ -435,27 +373,6 @@ class Battlefield implements BattlefieldInterface {
     }
   }
 
-  public function selectPiece(Piece $piece) {
-    $faction = $this->getPlayingFaction();
-    $piece_is_movable = $piece->isMovable() && $piece->isAlive();
-    $has_control = !is_null($faction) && $piece->getFaction()->getControl()->getId() == $faction->getId();
-    if ($piece_is_movable && $has_control) {
-      $this->selectedPiece = $piece;
-      return $this;
-    }
-    throw new DisallowedActionException("Player " . $player->getName() . " is trying to select an "
-    . "unauthorized piece (" . $piece->getId() . ")");
-  }
-
-  public function getSelectedPiece() {
-    return $this->selectedPiece;
-  }
-
-  public function unselectPiece() {
-    $this->selectedPiece = NULL;
-    return $this;
-  }
-
   public function getMoves() {
     return $this->moves;
   }
@@ -465,11 +382,11 @@ class Battlefield implements BattlefieldInterface {
   }
 
   public function getRows() {
-    return $this->getDisposition()->getGrid()->getRows();
+    return $this->getGameManager()->getDisposition()->getGrid()->getRows();
   }
 
   public function getCols() {
-    return $this->getDisposition()->getGrid()->getCols();
+    return $this->getGameManager()->getDisposition()->getGrid()->getCols();
   }
 
   public function getCells() {
@@ -515,22 +432,31 @@ class Battlefield implements BattlefieldInterface {
     }
   }
 
-  /**
-   * Réinitialise l'état "Reachable" des cellules de jeu.
-   */
-  public function resetCells() {
+  public function cleanupMovableStates() {
+    foreach ($this->getFactions() as $faction) {
+      foreach ($faction->getPieces() as $piece) {
+        $piece->setMovable(FALSE);
+        $piece->setAllowableMoves(array());
+      }
+    }
     foreach ($this->cells as $cell) {
       $cell->setReachable(FALSE);
     }
     return $this;
   }
 
-  public function getStatus() {
-    return $this->status;
+  public function isDirty() {
+    return $this->dirty;
   }
 
-  public function getMode() {
-    return $this->mode;
+  public function setDirty() {
+    $this->dirty = TRUE;
+    return $this;
+  }
+
+  public function setNotDirty() {
+    $this->dirty = FALSE;
+    return $this;
   }
 
   public function getDimensions() {
@@ -541,17 +467,18 @@ class Battlefield implements BattlefieldInterface {
     return $this->turns;
   }
 
+  /**
+   * @deprecated
+   */
   public function getOption($option_key) {
-    try {
-      return $this->getDisposition()->getOptionsStore()->retrieve($option_key)->getValue();
-    }
-    catch(GameOptionInvalidException $e) {
-      return NULL;
-    }
+    return $this->getGameManager()->getOption($option_key);
   }
 
+  /**
+   * @deprecated
+   */
   public function setOption($option_key, $value) {
-    $this->getDisposition()->getOptionsStore()->retrieve($option_key)->setValue($value);
+    $this->getGameManager()->setOption($option_key, $value);
     return $this;
   }
 
@@ -574,6 +501,10 @@ class Battlefield implements BattlefieldInterface {
     $last_turn['end'] = NULL;
     $this->turns[$last_turn_key] = $last_turn;
     $this->viewTurnHistory($last_turn_key, TRUE);
+    $this->resetCurrentMove();
+    $this->setNotReadyToPlay();
+    $this->prepareTurn();
+    $this->getGameManager()->save(__METHOD__);
     return $this;
   }
 
@@ -590,9 +521,6 @@ class Battlefield implements BattlefieldInterface {
     foreach ($inverted_moves as $key => $move) {
       if ($move['turn'] >= $turn) {
         $piece = $this->getPieceById($move['target']);
-        if (!$piece) {
-          continue;
-        }
         $position = $this->findCellByName($move['from']);
         $piece->setPosition($position);
         if ($move['type'] == 'murder' || $move['type'] == 'elimination') {
@@ -780,22 +708,21 @@ class Battlefield implements BattlefieldInterface {
     if ($nb_living_factions == 1) {
       $winner_id = current($living_factions);
       $winner = $this->getFactionById($winner_id);
-      $winner->setStatus(Faction::STATUS_WINNER);
-      $winner->setRanking(1);
+      $winner->setStatus(Faction::STATUS_WINNER)->setRanking(1);
       $this->logEvent('event', 'THE_WINNER_IS', array('faction1' => $winner->getId()));
     }
     else {
       $this->logEvent("event", "DRAW");
       foreach ($living_factions as $faction_id) {
         $faction = $this->getFactionById($faction_id);
-        $faction->setStatus(Faction::STATUS_DRAW);
-        $faction->setRanking($nb_living_factions);
+        $faction->setStatus(Faction::STATUS_DRAW)->setRanking($nb_living_factions);
       }
     }
-    $this->setStatus(GameManager::STATUS_FINISHED);
+    $this->getGameManager()->setStatus(GameManager::STATUS_FINISHED);
     $this->updateSummary();
     $this->buildFinalRanking($nb_living_factions);
     $this->logEvent("event", "END");
+    $this->getGameManager()->save(__METHOD__);
     return $this;
   }
 
@@ -804,20 +731,21 @@ class Battlefield implements BattlefieldInterface {
    *   Grille de Djambi courante
    */
   public function changeTurn() {
-    $this->readyToPlay = FALSE;
+    $this->setNotReadyToPlay();
     $changes = FALSE;
+    $this->resetCurrentMove();
     // Log de la fin du tour :
     $last_turn_key = $this->getCurrentTurnId();
     $this->turns[$last_turn_key]["end"] = time();
     // Vérification des conditions de victoire :
     $living_factions = array();
-    /* @var $faction Faction */
     foreach ($this->getFactions() as $faction) {
       if ($faction->isAlive()) {
         $control_leader = $faction->checkLeaderFreedom();
         if (!$control_leader) {
           $this->logEvent("event", "SURROUNDED", array('faction1' => $faction->getId()));
-          if ($this->getOption('rule_comeback') == 'never' && $this->getOption('rule_vassalization') == 'full_control') {
+          if ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'never'
+          && $this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control') {
             foreach ($faction->getPieces() as $piece) {
               if ($piece->isAlive() && $piece->getDescription()->hasHabilityMustLive() && $piece->getFaction()->getId() == $faction->getId()) {
                 $this->logMove($piece, $piece->getPosition(), 'elimination');
@@ -832,8 +760,8 @@ class Battlefield implements BattlefieldInterface {
           $living_factions[] = $faction->getId();
         }
       }
-      elseif ($this->getOption('rule_comeback') == 'surrounded' ||
-          ($this->getOption('rule_comeback') == 'allowed' && empty($kings))) {
+      elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'surrounded'
+      || ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'allowed' && empty($kings))) {
         if ($faction->getStatus() == Faction::STATUS_SURROUNDED) {
           $control_leader = $faction->checkLeaderFreedom();
           if ($control_leader) {
@@ -859,7 +787,7 @@ class Battlefield implements BattlefieldInterface {
               // lors de la prise de pouvoir, retrait de l'ancien chef.
               $pieces = $faction->getPieces();
               foreach ($pieces as $piece) {
-                if ($this->getOption('rule_vassalization') == 'full_control'
+                if ($this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control'
                   && $piece->isAlive() && $piece->getDescription()->hasHabilityMustLive()) {
                   $piece->setAlive(FALSE);
                   $this->logMove($piece, $piece->getPosition(), 'elimination');
@@ -872,7 +800,7 @@ class Battlefield implements BattlefieldInterface {
           }
         }
       }
-      elseif ($this->getOption('rule_vassalization') != 'full_control') {
+      elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) != 'full_control') {
         foreach ($this->getFactions() as $faction) {
           if (!$faction->isAlive()) {
             $allowed_statuses = array(
@@ -887,10 +815,11 @@ class Battlefield implements BattlefieldInterface {
           }
         }
       }
-      $this->definePlayOrder();
       if ($changes) {
         $this->updateSummary();
       }
+      $this->getGameManager()->save(__METHOD__);
+      $this->prepareTurn();
     }
     return $this;
   }
@@ -923,11 +852,6 @@ class Battlefield implements BattlefieldInterface {
     }
     reset($this->playOrder);
     return $this->playOrder;
-  }
-
-  public function setStatus($status) {
-    $this->status = $status;
-    return $this;
   }
 
   /**
@@ -982,7 +906,7 @@ class Battlefield implements BattlefieldInterface {
       }
     }
     $rulers = array();
-    if (!empty($thrones) && $this->getStatus() == GameManager::STATUS_PENDING) {
+    if (!empty($thrones) && $this->getGameManager()->getStatus() == GameManager::STATUS_PENDING) {
       foreach ($thrones as $throne) {
         $cell = $this->cells[$throne];
         $piece = $cell->getOccupant();
@@ -1021,7 +945,7 @@ class Battlefield implements BattlefieldInterface {
         $turn_scheme[$last_playable_turn_scheme]["playable"] = FALSE;
       }
     }
-    elseif ($this->getStatus() == GameManager::STATUS_DRAW_PROPOSAL) {
+    elseif ($this->getGameManager()->getStatus() == GameManager::STATUS_DRAW_PROPOSAL) {
       foreach ($turn_scheme as $key => $turn) {
         if (!empty($turn['side']) && $turn['playable']) {
           $side = $this->getFactionById($turn['side']);
@@ -1145,6 +1069,9 @@ class Battlefield implements BattlefieldInterface {
   }
 
   protected function defineMovablePieces() {
+    if ($this->isDirty()) {
+      $this->cleanupMovableStates();
+    }
     $current_order = current($this->playOrder);
     $active_faction = $this->getFactionById($current_order["side"]);
     $can_move = FALSE;
@@ -1154,7 +1081,10 @@ class Battlefield implements BattlefieldInterface {
         $can_move = TRUE;
       }
     }
-    if (!$can_move && $active_faction->getSkippedTurns() == $this->getOption('allowed_skipped_turns_per_user')) {
+    if ($can_move) {
+      $this->setDirty();
+    }
+    elseif (!$can_move && $active_faction->getSkippedTurns() == $this->getGameManager()->getOption(StandardRuleset::GAMEPLAY_ELEMENT_SKIPPED_TURNS)) {
       $active_faction->withdraw();
     }
     return $this;
@@ -1188,7 +1118,7 @@ class Battlefield implements BattlefieldInterface {
   public function findNeighbourCells(Cell $cell, $use_diagonals = TRUE) {
     $next_positions = array();
     foreach ($cell->getNeighbours() as $direction_key => $neighbour) {
-      $direction = $this->getDisposition()->getGrid()->getDirection($direction_key);
+      $direction = $this->getGameManager()->getDisposition()->getGrid()->getDirection($direction_key);
       if ($use_diagonals || !$direction['diagonal']) {
         $next_positions[] = array(
           'x' => $neighbour->getX(),
@@ -1218,46 +1148,87 @@ class Battlefield implements BattlefieldInterface {
    *   TRUE si la pièce reste vivante
    * @param bool $murder
    *   TRUE si la pièce à déplacer vient d'être tuée
-   * @param Cell $force_free_cell
-   *   Cellule libre même si déjà occupée
+   * @param Cell $exclude_cell
+   *   Force le caractère occupé d'une pièce
    *
-   * @return array
+   * @return Cell[]
    *   Liste de cases libres
    */
-  public function getFreeCells(Piece $piece, $keep_alive = TRUE, $murder = FALSE, Cell $force_free_cell = NULL) {
+  public function getFreeCells(Piece $piece, $keep_alive = TRUE, $murder = FALSE, Cell $exclude_cell = NULL) {
     $freecells = array();
     foreach ($this->cells as $key => $cell) {
       $occupant = $cell->getOccupant();
-      if (empty($occupant) || (!is_null($force_free_cell) && $force_free_cell->getName() == $key)) {
+      if (empty($occupant) && (!is_null($exclude_cell) || $exclude_cell->getName() != $key)) {
         if ($cell->getType() == Cell::TYPE_THRONE) {
           // Un leader peut être manipulé au pouvoir dans tous les cas :
           if ($piece->getDescription()->hasHabilityAccessThrone() && $piece->isAlive() && $keep_alive) {
-            $freecells[] = $key;
+            $freecells[$key] = $cell;
           }
           // Un leader mort peut être placé au pouvoir si variante activée :
-          elseif ($this->getOption('rule_throne_interactions') == 'extended' && $murder
+          elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_EXTRA_INTERACTIONS) == 'extended' && $murder
             && $piece->getDescription()->hasHabilityAccessThrone()) {
-            $freecells[] = $key;
+            $freecells[$key] = $cell;
           }
         }
         else {
-          $freecells[] = $key;
+          $freecells[$key] = $cell;
         }
       }
     }
     return $freecells;
   }
 
+  protected function setCurrentMove(Move $move) {
+    $this->currentMove = $move;
+    return $this;
+  }
+
+  public function getCurrentMove() {
+    if (is_null($this->currentMove) && $this->getGameManager()->isPending()) {
+      $faction = $this->getPlayingFaction();
+      $this->setCurrentMove(new Move($faction));
+    }
+    return $this->currentMove;
+  }
+
+  public function resetCurrentMove() {
+    $this->currentMove = NULL;
+    return $this;
+  }
+
   public function prepareTurn() {
-    if (!$this->readyToPlay) {
+    if (!$this->isReadyToPlay()) {
       $summary = $this->getSummary();
       if (empty($summary)) {
         $this->prepareSummary();
       }
       $this->definePlayOrder();
       $this->defineMovablePieces();
-      $this->readyToPlay = TRUE;
+      $this->setReadyToPlay();
     }
+    return $this;
+  }
+
+  protected function setReadyToPlay() {
+    $this->readyToPlay = TRUE;
+    return $this;
+  }
+
+  protected function setNotReadyToPlay() {
+    $this->readyToPlay = FALSE;
+    return $this;
+  }
+
+  protected function isReadyToPlay() {
+    return $this->readyToPlay;
+  }
+
+  protected function getCellsIndex() {
+    return $this->cellsIndex;
+  }
+
+  protected function setCellsIndex(array $cells) {
+    $this->cells = $cells;
     return $this;
   }
 
@@ -1470,7 +1441,7 @@ class Battlefield implements BattlefieldInterface {
       $factions[$faction->getId()] = $faction->toArray();
     }
     $return = array(
-      'id' => $this->id,
+      'id' => $this->getGameManager()->getId(),
       'positions' => $positions,
       'factions' => $factions,
       'moves' => $this->moves,
@@ -1478,12 +1449,12 @@ class Battlefield implements BattlefieldInterface {
       'points' => isset($this->points) ? $this->points : 0,
       'deads' => $deads,
       'events' => $this->events,
-      'options' => $this->getDisposition()->getOptionsStore()->getAllGameOptionsValues(),
+      'options' => $this->getGameManager()->getDisposition()->getOptionsStore()->getAllGameOptionsValues(),
       'summary' => $this->summary,
-      'mode' => $this->getMode(),
-      'status' => $this->getStatus(),
-      'disposition' => $this->getDisposition()->getName(),
-      'scheme_settings' => $this->getDisposition()->getGrid()->getSettings(),
+      'mode' => $this->getGameManager()->getMode(),
+      'status' => $this->getGameManager()->getStatus(),
+      'disposition' => $this->getGameManager()->getDisposition()->getName(),
+      'scheme_settings' => $this->getGameManager()->getDisposition()->getGrid()->getSettings(),
     );
     return $return;
   }

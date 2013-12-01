@@ -3,13 +3,55 @@
 namespace Djambi\Interfaces;
 
 
-use Djambi\GameDisposition;
+use Djambi\Faction;
+use Djambi\Player;
 
 interface BattlefieldInterface {
-  public static function createNewBattlefield(GameManagerInterface $gm, $players, $id, $mode, GameDisposition $disposition);
-  public static function loadBattlefield(GameManagerInterface $gm, GameDisposition $disposition, $data);
+
+  /**
+   * @return GameManagerInterface
+   */
+  public function getGameManager();
+
+  /**
+   * @param GameManagerInterface $gm
+   * @param Player[] $players
+   *
+   * @return BattlefieldInterface
+   */
+  public static function createNewBattlefield(GameManagerInterface $gm, $players);
+
+  /**
+   * @param GameManagerInterface $gm
+   * @param array $data
+   *
+   * @return BattlefieldInterface
+   */
+  public static function loadBattlefield(GameManagerInterface $gm, $data);
+
+  /**
+   * @return array
+   */
   public function toArray();
-  public function getStatus();
+
+  /**
+   * @return BattlefieldInterface
+   */
   public function changeTurn();
+
+  /**
+   * @return BattlefieldInterface
+   */
   public function prepareTurn();
+
+  /**
+   * @return Faction[]
+   */
+  public function getFactions();
+
+  /**
+   * @return Faction
+   */
+  public function getPlayingFaction();
+
 }

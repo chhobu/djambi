@@ -6,29 +6,23 @@
 
 namespace Djambi;
 use Djambi\Stores\GameOptionsStore;
-use Djambi\Stores\GameOptionsStoreStandardRuleset;
+use Djambi\Stores\StandardRuleset;
 
 /**
  * Class DjambiGameDisposition
  */
 abstract class GameDisposition  {
   /** @var Grid $grid */
-  protected $grid;
+  private $grid;
   /** @var int $nb */
-  protected $nbPlayers = 4;
+  private $nbPlayers = 4;
   /** @var GameOptionsStore $optionsStore */
-  protected $optionsStore;
+  private $optionsStore;
 
-  /**
-   * @return int
-   */
   public function getNbPlayers() {
     return $this->nbPlayers;
   }
 
-  /**
-   * @return Grid
-   */
   public function getGrid() {
     return $this->grid;
   }
@@ -48,7 +42,7 @@ abstract class GameDisposition  {
   }
 
   protected function useStandardRuleset() {
-    $this->optionsStore = new GameOptionsStoreStandardRuleset();
+    $this->optionsStore = new StandardRuleset();
   }
 
   public function getOptionsStore() {

@@ -2,21 +2,19 @@
 namespace Drupal\kw_djambi\Djambi;
 
 
-use Djambi\Battlefield;
 use Djambi\Faction;
 use Djambi\GameManager;
+use Djambi\Interfaces\BattlefieldInterface;
+use Djambi\Interfaces\GameManagerInterface;
 use Djambi\Signal;
 use Drupal\kw_djambi\Djambi\Players\DrupalPlayer;
 
 class DjambiContext {
-  /**
-   * @var DrupalPlayer
-   */
-  protected $currentUser;
-  /**
-   * @var GameManager
-   */
-  protected $currentGame;
+  /** @var DrupalPlayer */
+  private $currentUser;
+  /** @var GameManager */
+  private $currentGame;
+  /** @var DjambiContext */
   protected static $instance;
 
   protected function __construct() {
@@ -34,7 +32,7 @@ class DjambiContext {
     return $this->currentGame;
   }
 
-  public function setCurrentGame(GameManager $gm) {
+  public function setCurrentGame(GameManagerInterface $gm) {
     $this->currentGame = $gm;
     $this->getUserFaction($gm->getBattlefield());
     return $this;
@@ -54,6 +52,11 @@ class DjambiContext {
     else {
       $this->currentUser = $visitor->setUser($user);
     }
+    return $this;
+  }
+
+  protected function setCurrentUser(DrupalPlayer $player) {
+    $this->currentUser = $player;
     return $this;
   }
 
@@ -86,27 +89,30 @@ class DjambiContext {
   /**
    * Détermine si un utilisateur courant contrôle une faction dans une partie.
    *
-   * @param Battlefield $grid
+   * @param BattlefieldInterface $grid
    *   Grille de Djambi à examiner
    *
    * @return Faction
    *   Renvoie le camp contrôlé par l'utilisateur si trouvé.
    *   Si rien n'est trouvé, renvoie une valeur nulle.
    */
-  public function getUserFaction(Battlefield $grid) {
+  public function getUserFaction(BattlefieldInterface $grid) {
     $current_user_faction = NULL;
-    if (is_array($grid->getFactions())) {
-      foreach ($grid->getFactions() as $faction) {
-        if ($this->checkUserPlayingFaction($faction, FALSE)) {
-          $current_user_faction = $faction;
+    if (!$grid->getGameManager()->isFinished() && $grid->getGameManager()->getMode() == GameManager::MODE_SANDBOX
+    && $this->checkUserPlayingFaction($grid->getPlayingFaction())) {
+      $current_user_faction = $grid->getPlayingFaction();
+      $this->currentUser = $current_user_faction->getPlayer();
+    }
+    else {
+      if (is_array($grid->getFactions())) {
+        foreach ($grid->getFactions() as $faction) {
+          if ($this->checkUserPlayingFaction($faction, FALSE)) {
+            $current_user_faction = $faction;
+            $this->currentUser = $current_user_faction->getPlayer();
+            break;
+          }
         }
       }
-    }
-    if (!$grid->isFinished() && !is_null($current_user_faction) && $grid->getMode() == GameManager::MODE_SANDBOX) {
-      return $grid->getPlayingFaction();
-    }
-    if (!is_null($current_user_faction)) {
-      $this->currentUser = $current_user_faction->getPlayer();
     }
     return $current_user_faction;
   }

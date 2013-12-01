@@ -4,8 +4,14 @@
  * Contient les hooks utilisés pour gérer une partie de Djambi dans un noeud.
  */
 
-use Drupal\kw_djambi\Djambi\GameManagers\DrupalGameManager as DjambiGameManager;
-use Drupal\kw_djambi\Djambi\DjambiContext as DjambiContext;
+use Djambi\Factories\GameDispositionsFactory;
+use Djambi\GameManager;
+use Djambi\Signal;
+use Djambi\Stores\StandardRuleset;
+use Drupal\kw_djambi\Djambi\Factories\DjambiCaptchaGameFactory;
+use Drupal\kw_djambi\Djambi\Factories\DjambiNodeGameFactory;
+use Drupal\kw_djambi\Djambi\GameManagers\DrupalGameManager;
+use Drupal\kw_djambi\Djambi\DjambiContext;
 
 /**
  * Implements hook_menu().
@@ -89,7 +95,7 @@ function djambi_node_block_view_alter(&$data, $block) {
   if (($block->module == 'user' || $block->delta == 'user-menu') && module_exists('xautoload')) {
     $context = DjambiContext::getInstance();
     $current_game = $context->getCurrentGame();
-    if (!empty($current_game) && !$current_game->getBattlefield()->isFinished()) {
+    if (!empty($current_game) && !$current_game->isFinished()) {
       $check = $context->getUserFaction($current_game->getBattlefield());
       if (!is_null($check)) {
         $data = array();
@@ -140,7 +146,7 @@ function djambi_node_node_insert($node) {
     /* @var \Drupal\kw_djambi\Djambi\GameManagers\DrupalGameManager $gm */
     $gm = $context->getCurrentGame();
     $gm->setInfo('nid', $node->nid);
-    $gm->save();
+    $gm->save('node_creation');
   }
 }
 
@@ -184,7 +190,7 @@ function djambi_node_form_djambi_node_form_alter(&$form, &$form_state) {
       '#type' => 'fieldset',
       '#title' => t('Game presets'),
     );
-    $dispositions = \Djambi\Factories\GameDispositionsFactory::listPublicDispositions();
+    $dispositions = GameDispositionsFactory::listPublicDispositions();
     foreach ($dispositions as $option => $description) {
       $dispositions[$option] = _kw_djambi_get_translatable_messages($description);
     }
@@ -196,7 +202,7 @@ function djambi_node_form_djambi_node_form_alter(&$form, &$form_state) {
       '#required' => TRUE,
     );
     $mode_options = array();
-    $mode_descriptions = \Djambi\GameManager::getModes(TRUE);
+    $mode_descriptions = GameManager::getModes(TRUE);
     $allowed_modes = $context->getCurrentUser()->getNewGameAllowedModes();
     foreach ($allowed_modes as $mode) {
       if (isset($mode_descriptions[$mode])) {
@@ -211,7 +217,7 @@ function djambi_node_form_djambi_node_form_alter(&$form, &$form_state) {
       $default_mode = $_GET['mode'];
     }
     else {
-      $default_mode = DjambiGameManager::MODE_FRIENDLY;
+      $default_mode = DrupalGameManager::MODE_FRIENDLY;
     }
     $form['basics']['mode'] = array(
       '#type' => 'radios',
@@ -227,8 +233,8 @@ function djambi_node_form_djambi_node_form_alter(&$form, &$form_state) {
       '#collapsible' => TRUE,
       '#collapsed' => TRUE,
     );
-    $form['#attached']['css'][] = drupal_get_path('module', 'kw_djambi') . '/kw_djambi.css';
-    $options_store = new \Djambi\Stores\GameOptionsStoreStandardRuleset();
+    $form['#attached']['css'][] = drupal_get_path('module', 'kw_djambi') . '/css/kw_djambi.css';
+    $options_store = new StandardRuleset();
     $nb_rule = 0;
     $nb_option = 0;
     /* @var \Djambi\GameOption $data */
@@ -284,7 +290,7 @@ function djambi_node_form_djambi_node_form_alter(&$form, &$form_state) {
     $node = $form["#node"];
     if (user_access('administer djambi games')) {
       try {
-        $gm = DjambiGameManager::loadGame(array('nid' => $node->nid));
+        $gm = DrupalGameManager::loadGame(array('nid' => $node->nid));
       }
       catch (Exception $e) {
         $gm = FALSE;
@@ -327,9 +333,8 @@ function djambi_node_form_djambi_node_extra_submit($form, &$form_state) {
  * Création d'une nouvelle partie
  */
 function djambi_node_form_djambi_node_new_game_submit($form, &$form_state) {
-  $gm = DjambiGameManager::createFromNodeForm($form_state, $form['#node']);
-  $context = DjambiContext::getInstance();
-  $context->setCurrentGame($gm);
+  $gm = DrupalGameManager::createFromNodeForm($form_state, $form['#node']);
+  DjambiContext::getInstance()->setCurrentGame($gm);
 }
 
 /**
@@ -340,7 +345,7 @@ function djambi_node_check_update($nid, $version) {
     return;
   }
   $result = array('nid' => $nid);
-  $return['changed'] = DjambiGameManager::isReadyForUpdate($result, $version);
+  $return['changed'] = DrupalGameManager::isReadyForUpdate($result, $version);
   if (!$return['changed']) {
     $context = DjambiContext::getInstance();
     $return['status'] = $result['status'];
@@ -356,7 +361,7 @@ function djambi_node_check_update($nid, $version) {
       $data = unserialize($player['data']);
       if (($player['uid'] > 0 && $context->getCurrentUser()->getUser()->uid == $player['uid'])
         || (!empty($cookie) && $player['cookie'] == $cookie)) {
-        $record['data'] = \Djambi\Signal::createSignal($context->getCurrentUser(), $context->getIp())->toArray();
+        $record['data'] = Signal::createSignal($context->getCurrentUser(), $context->getIp())->toArray();
         $record['nid'] = $nid;
         $record['faction'] = $player['faction'];
         drupal_write_record('djambi_users', $record, array('nid', 'faction'));
@@ -378,7 +383,7 @@ function djambi_node_check_update($nid, $version) {
   else {
     // Récupération des données concernant le dernier mouvement :
     try {
-      $grid = DjambiGameManager::loadGame(array('nid' => $nid))->getBattlefield();
+      $grid = DrupalGameManager::loadGame(array('nid' => $nid))->getBattlefield();
     }
     catch (Exception $e) {
       drupal_json_output($return);
@@ -403,38 +408,12 @@ function djambi_node_check_update($nid, $version) {
  * Formulaire créant une grille de Djambi à partir d'un noeud.
  */
 function djambi_node_game_form($form, &$form_state, $node) {
-  // Chargement de la grille :
-  try {
-    if (!empty($form_state['kw_djambi']['selected_piece']) && !$form_state['kw_djambi']['change_turn']) {
-      /* @var $piece \Djambi\Piece */
-      $piece = $form_state['kw_djambi']['selected_piece'];
-      $game = $piece->getFaction()->getBattlefield()->getGameManager();
-    }
-    elseif (isset($form_state['kw_djambi']['change_turn'])) {
-      $game = DjambiGameManager::loadGame(array('nid' => $node->nid));
-      $game->play();
-      unset($form_state['kw_djambi']);
-    }
-    else {
-      $game = DjambiGameManager::loadGame(array('nid' => $node->nid));
-      $game->play();
-    }
-  }
-  catch (Exception $e) {
-    watchdog('djambi', 'Unable to load Djambi game from node !nid : exception type %exc with message @message', array(
-      '!nid' => $node->nid,
-      '%exc' => get_class($e),
-      '@message' => $e->getMessage(),
-    ), WATCHDOG_WARNING);
-    drupal_not_found();
-    die();
-  }
-  if (!empty($game) && $game instanceof \Djambi\GameManager) {
-    form_load_include($form_state, 'inc', 'kw_djambi', 'kw_djambi.form');
-    _kw_djambi_build_game_form($form, $form_state, $game->getBattlefield());
+  $factory = new DjambiNodeGameFactory($node);
+  $game = $factory->generateGameUsingDrupalForm($form, $form_state);
+  if (!empty($game)) {
     module_load_include('inc', 'djambi_node', 'djambi_node.blocks');
-    if ($game->getBattlefield()->getMode() != DjambiGameManager::MODE_SANDBOX) {
-      if (!$game->getBattlefield()->isNotBegin()) {
+    if ($game->getMode() != DrupalGameManager::MODE_SANDBOX) {
+      if (!$game->isNotBegin()) {
         $navigation = _djambi_node_list_viewable_games(NULL, $node->nid);
       }
       else {
@@ -459,7 +438,7 @@ function djambi_node_start_game() {
   $new_game = db_query('SELECT dn.nid FROM {djambi_node} dn
       WHERE dn.status = :status AND dn.autodelete > :time
       ORDER BY dn.changed DESC LIMIT 0,1',
-    array(':status' => DjambiGameManager::STATUS_RECRUITING, ':time' => time()))->fetch();
+    array(':status' => DrupalGameManager::STATUS_RECRUITING, ':time' => time()))->fetch();
   if (!empty($new_game) && count($allowed_modes) > 0) {
     drupal_set_message(t("We found a game still recruiting players. You may also !create_link.",
       array('!create_link' => l(t('create your own new game'), 'node/add/djambi')))

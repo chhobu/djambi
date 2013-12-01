@@ -1,7 +1,7 @@
 <?php
 namespace Drupal\kw_djambi\Djambi\Players;
 
-use Drupal\kw_djambi\Djambi\Exceptions\InvalidDrupalPlayerException;
+use Djambi\Exceptions\PlayerInvalidException;
 
 class DrupalAnonymousPlayer extends DrupalPlayer {
 
@@ -11,7 +11,7 @@ class DrupalAnonymousPlayer extends DrupalPlayer {
 
   public function register(array $data = NULL) {
     if (empty($data['user']) || !is_object($data['user']) && $data['user']->uid !== 0) {
-      throw new InvalidDrupalPlayerException("DrupalAnonymousPlayer must be an anonymous Drupal user object.");
+      throw new PlayerInvalidException("DrupalAnonymousPlayer must be an anonymous Drupal user object.");
     }
     $user = $data['user'];
     $this->setRegistered(TRUE);
@@ -26,9 +26,9 @@ class DrupalAnonymousPlayer extends DrupalPlayer {
 
   public function getName() {
     if (!is_null($this->getLastSignal())) {
-      return $this->name . " (" . check_plain($this->getLastSignal()->getIp()) . ")";
+      return parent::getName() . " (" . check_plain($this->getLastSignal()->getIp()) . ")";
     }
-    return $this->name;
+    return parent::getName();
   }
 
   public function displayName() {

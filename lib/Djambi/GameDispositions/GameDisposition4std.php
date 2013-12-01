@@ -1,13 +1,11 @@
 <?php
 
 namespace Djambi\GameDispositions;
+
 use Djambi\Factories\GameDispositionsFactory;
 use Djambi\GameDisposition;
 use Djambi\Grids\StandardGridWith4Sides;
 
-/**
- * Class DjambiGameDisposition4std
- */
 class GameDisposition4std extends GameDisposition {
   public function __construct(GameDispositionsFactory $factory, $settings = NULL) {
     $scheme = new StandardGridWith4Sides($settings);

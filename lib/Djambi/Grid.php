@@ -13,32 +13,35 @@ use Djambi\Exceptions\GridInvalidException;
  * Class DjambiBattlefieldScheme
  */
 class Grid {
-  const DISPOSITION_HEXAGONAL = 'hexagonal';
-  const DISPOSITION_CARDINAL = 'cardinal';
+  const SHAPE_HEXAGONAL = 'hexagonal';
+  const SHAPE_CARDINAL = 'cardinal';
 
-  /* @var PieceDescription[] $pieceScheme */
-  protected $pieceScheme = array();
-  /* @var string $disposition */
-  protected $disposition;
-  /* @var int $rows */
-  protected $rows;
-  /* @var int $cols */
-  protected $cols;
-  /* @var array $specialCells */
-  protected $specialCells;
-  /* @var array $sides */
-  protected $sides;
   /* @var array $allowableDispotions */
-  protected $allowableDispositions = array(self::DISPOSITION_CARDINAL, self::DISPOSITION_HEXAGONAL);
+  protected $allowableShapes = array(
+    self::SHAPE_CARDINAL,
+    self::SHAPE_HEXAGONAL,
+  );
+  /* @var PieceDescription[] $pieceScheme */
+  private $pieceScheme = array();
+  /* @var string $disposition */
+  private $shape;
+  /* @var int $rows */
+  private $rows;
+  /* @var int $cols */
+  private $cols;
+  /* @var array $specialCells */
+  private $specialCells;
+  /* @var array $sides */
+  private $sides;
   /* @var array $directions */
-  protected $directions = array();
+  private $directions = array();
   /* @var array $settings */
-  protected $settings = array();
+  private $settings = array();
 
   public function __construct($settings = NULL) {
     $cols = isset($settings['cols']) ? $settings['cols'] : 9;
     $rows = isset($settings['rows']) ? $settings['rows'] : 9;
-    if (isset($settings['disposition']) && $settings['disposition'] == self::DISPOSITION_HEXAGONAL) {
+    if (isset($settings['disposition']) && $settings['disposition'] == self::SHAPE_HEXAGONAL) {
       $this->useHexagonalGrid($rows, $cols);
     }
     else {
@@ -64,7 +67,7 @@ class Grid {
   protected function useStandardGrid($cols = 9, $rows = 9) {
     $this->setCols($cols);
     $this->setRows($rows);
-    $this->setDispostion(self::DISPOSITION_CARDINAL);
+    $this->setShape(self::SHAPE_CARDINAL);
     $this->addSpecialCell(Cell::TYPE_THRONE, array('x' => ceil($rows / 2), 'y' => ceil($cols / 2)));
     $this->useCardinalDirections(TRUE);
   }
@@ -72,7 +75,7 @@ class Grid {
   protected function useHexagonalGrid($cols = 9, $rows = 9) {
     $this->setCols($cols);
     $this->setRows($rows);
-    $this->setDispostion(self::DISPOSITION_HEXAGONAL);
+    $this->setShape(self::SHAPE_HEXAGONAL);
     $this->addSpecialCell(Cell::TYPE_THRONE, array('x' => ceil($rows / 2), 'y' => ceil($cols / 2)));
     $this->useHexagonalDirections();
     return $this;
@@ -225,9 +228,9 @@ class Grid {
     return $this;
   }
 
-  protected function addAllowableDispositions($disposition) {
-    if (!in_array($disposition, $this->allowableDispositions)) {
-      $this->allowableDispositions[] = $disposition;
+  protected function addAllowableShapes($shape) {
+    if (!in_array($shape, $this->allowableShapes)) {
+      $this->allowableShapes[] = $shape;
       return TRUE;
     }
     else {
@@ -235,17 +238,17 @@ class Grid {
     }
   }
 
-  protected function setDispostion($disposition) {
-    if (!in_array($disposition, $this->allowableDispositions)) {
+  protected function setShape($shape) {
+    if (!in_array($shape, $this->allowableShapes)) {
       throw new GridInvalidException('Unknown disposition');
     }
     else {
-      $this->disposition = $disposition;
+      $this->shape = $shape;
     }
   }
 
-  public function getDisposition() {
-    return $this->disposition;
+  public function getShape() {
+    return $this->shape;
   }
 
   protected function setRows($nb) {
