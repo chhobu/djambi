@@ -8,7 +8,6 @@ use Djambi\Factories\GameDispositionsFactory;
 use Djambi\GameManager;
 use Djambi\Signal;
 use Djambi\Stores\StandardRuleset;
-use Drupal\kw_djambi\Djambi\Factories\DjambiCaptchaGameFactory;
 use Drupal\kw_djambi\Djambi\Factories\DjambiNodeGameFactory;
 use Drupal\kw_djambi\Djambi\GameManagers\DrupalGameManager;
 use Drupal\kw_djambi\Djambi\DjambiContext;

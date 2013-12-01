@@ -18,6 +18,7 @@ use Djambi\Moves\Necromobility;
 use Djambi\Moves\Reportage;
 use Djambi\Moves\ThroneEvacuation;
 use Djambi\Players\ComputerPlayer;
+use Djambi\Signal;
 use Djambi\Stores\StandardRuleset;
 use Drupal\kw_djambi\Djambi\DjambiContext;
 use Djambi\Exceptions\PlayerInvalidException;
@@ -28,18 +29,9 @@ use Djambi\Exceptions\PlayerInvalidException;
 function _kw_djambi_build_game_form(&$form, &$form_state, GameManager $game, $options = NULL) {
   $context = DjambiContext::getInstance();
   $grid = $game->getBattlefield();
-  $show_log = TRUE;
-  $show_rules = TRUE;
-  $show_stats = TRUE;
-  if (isset($options['show_log'])) {
-    $show_log = $options['show_log'];
-  }
-  if (isset($options['show_rules'])) {
-    $show_rules = $options['show_rules'];
-  }
-  if (isset($options['show_stats'])) {
-    $show_stats = $options['show_stats'];
-  }
+  $show_log = isset($options['show_log']) ? $options['show_log'] : TRUE;
+  $show_rules = isset($options['show_rules']) ? $options['show_rules'] : TRUE;
+  $show_stats = isset($options['show_stats']) ? $options['show_stats'] : TRUE;
   $current_user_faction = $context->getUserFaction($grid);
   if ($game->isFinished() && !empty($current_user_faction)) {
     $form_state['djambi']['result'] = $current_user_faction->getStatus();
@@ -154,7 +146,7 @@ function _kw_djambi_build_game_form(&$form, &$form_state, GameManager $game, $op
       '#limit_validation_errors' => array(),
     );
   }
-  if ($show_log) {
+  if ($show_rules) {
     $form['options'] = array(
       '#type' => 'fieldset',
       '#title' => t('Game configuration'),
@@ -432,7 +424,6 @@ function _kw_djambi_build_part_move_controls(&$form, &$form_state, GameManager $
 function _kw_djambi_build_part_rules(&$form, GameManager $gm) {
   $rules_rows = array();
   $options = $gm->getDisposition()->getOptionsStore()->getAllGameOptions();
-  /* @var \Djambi\GameOption $option */
   foreach ($options as $option) {
     $key = $option->getName();
     $modes = $option->getModes();
@@ -1819,6 +1810,7 @@ function kw_djambi_game_form_participate_submit($form, &$form_state) {
   try {
     $target_faction = $grid->getFactionById($form_state['clicked_button']['#array_parents'][2]);
     $player = $context->getCurrentUser(TRUE);
+    $player->setLastSignal(Signal::createSignal($player, $context->getIp()));
     $gm->addNewPlayer($player, $target_faction);
     drupal_set_message(t('You are now playing the !color team.',
       array('!color' => _kw_djambi_get_translatable_messages($target_faction->getName()))));
@@ -1850,7 +1842,9 @@ function kw_djambi_game_form_cancel_participation_submit($form, &$form_state) {
   /* @var $gm GameManager */
   $gm = $form_state['djambi']['game'];
   $seq = $gm->getInfo('sequence');
-  $gm->ejectPlayer(DjambiContext::getInstance()->getCurrentUser());
+  $player = DjambiContext::getInstance()->getCurrentUser();
+  $player->setLastSignal(Signal::createSignal($player, DjambiContext::getInstance()->getIp()));
+  $gm->ejectPlayer($player);
   drupal_set_message(t('You just left Djambi game #!nb', array('!nb' => $seq)));
   drupal_goto('<front>');
 }

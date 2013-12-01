@@ -94,9 +94,7 @@ class GameManager implements GameManagerInterface {
     $gm = new static($data['id'], $data['mode']);
     $gm->setNew(FALSE);
     $gm->loadBattlefield($data);
-    if (!$gm->isFinished()) {
-      $gm->setInitialState($data);
-    }
+    $gm->setInitialState($data);
     return $gm;
   }
 
