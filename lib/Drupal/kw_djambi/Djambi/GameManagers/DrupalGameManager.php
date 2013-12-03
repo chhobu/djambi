@@ -308,5 +308,8 @@ class DrupalGameManager extends GameManager {
     }
   }
 
+  public function isViewable() {
+    return TRUE;
+  }
 
 }

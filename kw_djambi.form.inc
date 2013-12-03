@@ -43,14 +43,12 @@ function _kw_djambi_build_game_form(&$form, &$form_state, GameManager $game, $op
   else {
     $replay = FALSE;
   }
-  if (!$replay && !$game->isFinished()) {
-    $is_refresh_modes = !in_array($game->getMode(), array(
-      GameManager::MODE_SANDBOX,
-      GameManager::MODE_TRAINING,
-    ));
-    if ($is_refresh_modes && !is_null($current_user_faction)) {
-      $context->sendSignal();
-    }
+  $is_refresh_modes = !in_array($game->getMode(), array(
+    GameManager::MODE_SANDBOX,
+    GameManager::MODE_TRAINING,
+  ));
+  if (!$replay && !$game->isFinished() && $is_refresh_modes && !is_null($current_user_faction)) {
+    $context->sendSignal();
   }
   $faction = $grid->getPlayingFaction();
   $is_user_playing_current_faction = empty($faction) ? FALSE : $context->checkUserPlayingFaction($faction);
@@ -78,17 +76,16 @@ function _kw_djambi_build_game_form(&$form, &$form_state, GameManager $game, $op
   // Création de l'ossature du formulaire :
   $do_refresh = 'no';
   if (!$game->isFinished() && !$replay) {
-    if ($game->isNotBegin()) {
-      $do_refresh = 'check';
-    }
-    elseif (is_null($current_user_faction)) {
-      $do_refresh = 'check';
-    }
-    elseif ($faction && !is_null($faction->getPlayer()) && !$faction->getPlayer()->isHuman()) {
+    if ($faction && !is_null($faction->getPlayer()) && !$faction->getPlayer()->isHuman()) {
       $do_refresh = 'force';
     }
-    elseif ($faction && $game->getMode() != GameManager::MODE_SANDBOX) {
-      $do_refresh = $faction->getId() != $current_user_faction->getId() ? 'check' : 'minimal';
+    elseif ($game->isViewable()) {
+      if ($game->isNotBegin() || is_null($current_user_faction)) {
+        $do_refresh = 'check';
+      }
+      elseif ($faction && $game->getMode() != GameManager::MODE_SANDBOX  && $game->isViewable()) {
+        $do_refresh = $faction->getId() != $current_user_faction->getId() ? 'check' : 'minimal';
+      }
     }
   }
   $grid_id = 'DjambiContainer' . $game->getId();

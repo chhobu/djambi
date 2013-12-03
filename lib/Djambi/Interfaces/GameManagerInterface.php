@@ -189,6 +189,11 @@ interface GameManagerInterface {
   public function isNotBegin();
 
   /**
+   * Détermine si une partie est visible par des personnes extérieures
+   */
+  public function isViewable();
+
+  /**
    * Récupère la valeur d'une option de jeu.
    *
    * @param $option_key

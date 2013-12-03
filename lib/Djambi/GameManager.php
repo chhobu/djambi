@@ -482,4 +482,8 @@ class GameManager implements GameManagerInterface {
     return $this;
   }
 
+  public function isViewable() {
+    return FALSE;
+  }
+
 }
