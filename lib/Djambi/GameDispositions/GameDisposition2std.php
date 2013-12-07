@@ -5,7 +5,6 @@ namespace Djambi\GameDispositions;
 use Djambi\Faction;
 use Djambi\Factories\GameDispositionsFactory;
 use Djambi\GameDisposition;
-use Djambi\Grids\StandardGridWith4Sides;
 
 class GameDisposition2std extends GameDisposition {
   public function __construct(GameDispositionsFactory $factory, $settings = NULL) {
@@ -13,8 +12,6 @@ class GameDisposition2std extends GameDisposition {
       2 => Faction::STATUS_VASSALIZED,
       4 => Faction::STATUS_VASSALIZED,
     );
-    $scheme = new StandardGridWith4Sides($settings);
-    $this->setGrid($scheme)->setNbPlayers(2);
-    $this->useStandardRuleset();
+    $this->useStandardGrid($settings)->setNbPlayers(2)->useStandardRuleset();
   }
 }

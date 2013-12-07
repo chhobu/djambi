@@ -8,13 +8,23 @@
 
 namespace Djambi;
 use Djambi\Exceptions\GridInvalidException;
+use Djambi\Interfaces\GridInterface;
+use Djambi\PieceDescriptions\Assassin;
+use Djambi\PieceDescriptions\Diplomat;
+use Djambi\PieceDescriptions\Leader;
+use Djambi\PieceDescriptions\Militant;
+use Djambi\PieceDescriptions\Necromobile;
+use Djambi\PieceDescriptions\Reporter;
 
 /**
  * Class DjambiBattlefieldScheme
  */
-class Grid {
+class Grid implements GridInterface {
   const SHAPE_HEXAGONAL = 'hexagonal';
   const SHAPE_CARDINAL = 'cardinal';
+
+  const PIECE_PLACEMENT_RELATIVE = 'leader-relative';
+  const PIECE_PLACEMENT_SPECIFIC_ONLY = 'specific';
 
   /* @var array $allowableDispotions */
   protected $allowableShapes = array(
@@ -30,7 +40,7 @@ class Grid {
   /* @var int $cols */
   private $cols;
   /* @var array $specialCells */
-  private $specialCells;
+  private $specialCells = array();
   /* @var array $sides */
   private $sides;
   /* @var array $directions */
@@ -41,27 +51,46 @@ class Grid {
   public function __construct($settings = NULL) {
     $cols = isset($settings['cols']) ? $settings['cols'] : 9;
     $rows = isset($settings['rows']) ? $settings['rows'] : 9;
+    $this->specialCells = isset($settings['special_cells']) ? $settings['special_cells'] : array();
     if (isset($settings['disposition']) && $settings['disposition'] == self::SHAPE_HEXAGONAL) {
       $this->useHexagonalGrid($rows, $cols);
     }
     else {
       $this->useStandardGrid($rows, $cols);
     }
-    $this->specialCells = isset($settings['special_cells']) ? $settings['special_cells'] : $this->specialCells;
+    if (!isset($settings['pieces'])) {
+      $this->useStandardPieces();
+    }
+    else {
+      foreach ($settings['pieces'] as $piece_data) {
+        $piece = PieceDescription::fromArray($piece_data);
+        $this->addCommonPiece($piece);
+      }
+    }
+    if (!empty($settings['sides'])) {
+      foreach ($settings['sides'] as $side) {
+        $pieces = array();
+        if (!empty($side['specific_pieces'])) {
+          foreach ($side['specific_pieces'] as $data) {
+            $pieces[] = PieceDescription::fromArray($data);
+          }
+        }
+        $this->addSide($side['start_position'], $side['start_status'], $pieces);
+      }
+    }
     $this->setSettings($settings);
-    $this->useStandardPieces();
   }
 
   protected function useStandardPieces() {
-    $this->addPiece('\Djambi\PieceDescriptions\Leader', NULL, array('x' => 0, 'y' => 0));
-    $this->addPiece('\Djambi\PieceDescriptions\Diplomate', NULL, array('x' => 0, 'y' => 1));
-    $this->addPiece('\Djambi\PieceDescriptions\Reporter', NULL, array('x' => -1, 'y' => 0));
-    $this->addPiece('\Djambi\PieceDescriptions\Assassin', NULL, array('x' => 1, 'y' => 0));
-    $this->addPiece('\Djambi\PieceDescriptions\Necromobile', NULL, array('x' => 0, 'y' => 2));
-    $this->addPiece('\Djambi\PieceDescriptions\Militant', 1, array('x' => -2, 'y' => 0));
-    $this->addPiece('\Djambi\PieceDescriptions\Militant', 2, array('x' => 2, 'y' => 0));
-    $this->addPiece('\Djambi\PieceDescriptions\Militant', 3, array('x' => -1, 'y' => 1));
-    $this->addPiece('\Djambi\PieceDescriptions\Militant', 4, array('x' => 1, 'y' => 1));
+    $this->addCommonPiece(new Leader(NULL, array('x' => 0, 'y' => 0)));
+    $this->addCommonPiece(new Diplomat(NULL, array('x' => 0, 'y' => 1)));
+    $this->addCommonPiece(new Reporter(NULL, array('x' => -1, 'y' => 0)));
+    $this->addCommonPiece(new Assassin(NULL, array('x' => 1, 'y' => 0)));
+    $this->addCommonPiece(new Necromobile(NULL, array('x' => 0, 'y' => 2)));
+    $this->addCommonPiece(new Militant(1, array('x' => -2, 'y' => 0)));
+    $this->addCommonPiece(new Militant(2, array('x' => 2, 'y' => 0)));
+    $this->addCommonPiece(new Militant(3, array('x' => -1, 'y' => 1)));
+    $this->addCommonPiece(new Militant(4, array('x' => 1, 'y' => 1)));
   }
 
   protected function useStandardGrid($cols = 9, $rows = 9) {
@@ -238,7 +267,7 @@ class Grid {
     }
   }
 
-  protected function setShape($shape) {
+  public function setShape($shape) {
     if (!in_array($shape, $this->allowableShapes)) {
       throw new GridInvalidException('Unknown disposition');
     }
@@ -249,6 +278,12 @@ class Grid {
 
   public function getShape() {
     return $this->shape;
+  }
+
+  public function setDimensions($cols, $rows) {
+    $this->setRows($rows);
+    $this->setCols($cols);
+    return $this;
   }
 
   protected function setRows($nb) {
@@ -283,9 +318,7 @@ class Grid {
     return $this->cols;
   }
 
-  protected function addPiece($class, $identifier, $start_scheme) {
-    /* @var PieceDescription $piece */
-    $piece = new $class($identifier, $start_scheme);
+  public function addCommonPiece(PieceDescription $piece) {
     $this->pieceScheme[$piece->getShortname()] = $piece;
   }
 
@@ -332,18 +365,25 @@ class Grid {
     }
   }
 
-  protected function addSide($start_origin, $start_status = Faction::STATUS_READY) {
+  public function addSide(array $start_origin = NULL, $start_status = Faction::STATUS_READY, $specific_pieces = array()) {
     $nb_sides = count($this->sides) + 1;
+    if (!is_null($start_origin) && isset($start_origin['x']) && isset($start_origin['y'])) {
+      $start_origin['placement'] = self::PIECE_PLACEMENT_RELATIVE;
+    }
+    else {
+      $start_origin['placement'] = self::PIECE_PLACEMENT_SPECIFIC_ONLY;
+    }
     $side_info = array_merge(self::getSidesInfos($nb_sides), $start_origin);
     $side_info['start_status'] = $start_status;
-    $this->sides[] = $side_info;
+    $side_info['specific_pieces'] = $specific_pieces;
+    $this->sides[$side_info['id']] = $side_info;
   }
 
   public function getSides() {
     return $this->sides;
   }
 
-  protected function addSpecialCell($type, $location) {
+  public function addSpecialCell($type, $location) {
     $this->specialCells[] = array(
       'type' => $type,
       'location' => $location,

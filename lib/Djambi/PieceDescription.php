@@ -2,8 +2,9 @@
 namespace Djambi;
 
 use Djambi\Exceptions\GridInvalidException;
+use Djambi\Exceptions\PieceNotFoundException;
 
-class PieceDescription {
+abstract class PieceDescription {
   /** @var string : type de pièce */
   private $type;
   /** @var string : nom court de la pièce */
@@ -23,15 +24,36 @@ class PieceDescription {
   /** @var array : liste des capacités de la pièce */
   protected $habilities = array();
 
-  public function __construct($type, $generic_shortname, $generic_name, $num, $start_position, $value) {
+  protected function __construct($type, $generic_shortname, $generic_name, $num, $start_position, $value) {
     $this->type = $type;
     $this->num = $num;
     $this->shortname = $num == 0 ? $generic_shortname : $generic_shortname . $num;
     $this->genericName = $generic_name;
-    $this->setStartPosition($start_position);
+    if (!is_array($start_position)) {
+      $this->setStartCellName($start_position);
+    }
+    else {
+      $this->setStartPosition($start_position);
+    }
     $this->setImagePattern($type);
     $this->setRulePattern($type);
     $this->setValue($value);
+  }
+
+  public function toArray() {
+    return array(
+      'type' => get_class($this),
+      'number' => $this->getNum(),
+      'start_position' => $this->getStartPosition(),
+    );
+  }
+
+  public static function fromArray(array $data) {
+    $class = $data['type'];
+    if (class_exists($class)) {
+      return new $class($data['number'], $data['start_position']);
+    }
+    throw new GridInvalidException("Cannot load piece description from array");
   }
 
   public function getType() {
@@ -90,6 +112,11 @@ class PieceDescription {
       throw new GridInvalidException("Invalid start position for piece " . $this->getShortname());
     }
     $this->startPosition = $position;
+    return $this;
+  }
+
+  protected function setStartCellName($cell_name) {
+    $this->startPosition = $cell_name;
     return $this;
   }
 

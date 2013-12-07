@@ -76,6 +76,9 @@ class Move {
   }
 
   protected function setDestination(Cell $cell) {
+    if (!in_array($cell->getName(), $this->getSelectedPiece()->getAllowableMovesNames())) {
+      throw new DisallowedActionException("Disallowed move : piece " . $this->getSelectedPiece()->getId() . " to " . $cell->getName());
+    }
     $this->destination = $cell;
     return $this;
   }
@@ -83,16 +86,10 @@ class Move {
   public function moveSelectedPiece(Cell $cell) {
     if ($this->getPhase() == self::PHASE_PIECE_DESTINATION) {
       $this->setDestination($cell);
-      // Vérification de l'autorisation du mouvement
-      if (!in_array($cell->getName(), $this->getSelectedPiece()->getAllowableMovesNames())) {
-        throw new DisallowedActionException("Disallowed move : piece " . $this->getSelectedPiece()->getId() . " to " . $cell->getName());
-      }
-      else {
-        $this->setPhase(self::PHASE_PIECE_INTERACTIONS);
-        $this->getSelectedPiece()->executeMove($this);
-        $this->checkCompleted();
-        return $this;
-      }
+      $this->setPhase(self::PHASE_PIECE_INTERACTIONS);
+      $this->getSelectedPiece()->executeMove($this);
+      $this->checkCompleted();
+      return $this;
     }
     else {
       throw new IllogicMoveException("Attempt to choose piece destination before piece selection phase.");

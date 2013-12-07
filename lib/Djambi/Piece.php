@@ -209,7 +209,11 @@ class Piece {
   }
 
   public function evaluateMove(Move $move) {
-    $this->prepareMove($move, TRUE);
+    $move_ok = $this->prepareMove($move, TRUE);
+    if (!$move_ok) {
+      throw new DisallowedActionException("Unauthorized move : piece " . $this->getId()
+        . " from " . $this->getPosition()->getName() . " to " . $move->getDestination()->getName());
+    }
     foreach ($move->getInteractions() as $interaction) {
       $interaction->findPossibleChoices();
     }
@@ -297,8 +301,7 @@ class Piece {
         elseif ($target->isAlive()) {
           // Signature de l'assassin
           $test = $this->getDescription()->hasHabilityKillByAttack();
-          if ($this->getDescription()->hasHabilitySignature() && $this->getDescription()->hasHabilityKillByAttack()
-          && ($allow_interactions || $extra_interaction)) {
+          if ($this->getDescription()->hasHabilitySignature() && $test && ($allow_interactions || $extra_interaction)) {
             $move->triggerKill($target, $current_cell);
             $move_ok = TRUE;
             if ($extra_interaction) {
@@ -306,7 +309,7 @@ class Piece {
             }
           }
           // Déplacement du corps de la victime :
-          elseif ($this->getDescription()->hasHabilityKillByAttack() && $allow_interactions) {
+          elseif ($test && $allow_interactions) {
             $move->triggerInteraction(new Murder($move, $target));
             $move_ok = TRUE;
           }

@@ -81,9 +81,14 @@ class Battlefield implements BattlefieldInterface {
    */
   public static function createNewBattlefield(GameManagerInterface $gm, $players) {
     $battlefield = new self($gm);
+    // Construction de la grille :
+    $battlefield->buildField();
+    $scheme = $gm->getDisposition()->getGrid();
+    $directions = $scheme->getDirections();
+    $scheme_sides = $scheme->getSides();
     // Construction des factions :
     $ready = TRUE;
-    foreach ($gm->getDisposition()->getGrid()->getSides() as $side) {
+    foreach ($scheme_sides as $side) {
       if ($side['start_status'] == Faction::STATUS_READY) {
         /* @var HumanPlayer $player */
         if ($gm->getMode() == GameManager::MODE_SANDBOX) {
@@ -101,63 +106,78 @@ class Battlefield implements BattlefieldInterface {
         $player = NULL;
       }
       $data['status'] = $side['start_status'];
-      $battlefield->factions[$side['id']] = new Faction($battlefield, $side['id'],
+      $faction = new Faction($battlefield, $side['id'],
         $side['name'], $side['class'], $side['start_order'], $data, $player);
-    }
-
-    // Construction de la grille :
-    $battlefield->buildField();
-    $scheme = $gm->getDisposition()->getGrid();
-    $directions = $scheme->getDirections();
-    $scheme_sides = $scheme->getSides();
-    foreach ($battlefield->factions as $faction) {
+      $battlefield->factions[$side['id']] = $faction;
+      // Placement des pièces communes :
       $start_order = $faction->getStartOrder();
       $leader_position = current(array_slice($scheme_sides, $start_order - 1, 1));
-      $start_scheme = array();
-      $axis = NULL;
-      foreach ($directions as $orientation => $direction) {
-        $next_cell = $battlefield->findCell($leader_position['x'], $leader_position['y']);
-        $continue = TRUE;
-        while ($continue) {
-          if ($next_cell->getType() == Cell::TYPE_THRONE) {
-            $axis = $orientation;
+      if (!empty($leader_position['placement']) && $leader_position['placement'] == Grid::PIECE_PLACEMENT_RELATIVE) {
+        $start_scheme = array();
+        $axis = NULL;
+        foreach ($directions as $orientation => $direction) {
+          $next_cell = $battlefield->findCell($leader_position['x'], $leader_position['y']);
+          $continue = TRUE;
+          while ($continue) {
+            if ($next_cell->getType() == Cell::TYPE_THRONE) {
+              $axis = $orientation;
+              break;
+            }
+            $neighbours = $next_cell->getNeighbours();
+            if (isset($neighbours[$orientation])) {
+              $next_cell = $neighbours[$orientation];
+            }
+            else {
+              $continue = FALSE;
+            }
+          }
+          if (!empty($axis)) {
             break;
           }
-          $neighbours = $next_cell->getNeighbours();
-          if (isset($neighbours[$orientation])) {
-            $next_cell = $neighbours[$orientation];
+        }
+        if (empty($axis)) {
+          throw new GridInvalidException('Bad pieces start scheme.');
+        }
+        foreach ($scheme->getPieceScheme() as $piece_id => $piece) {
+          $start_position = $piece->getStartPosition();
+          $starting_cell = $battlefield->findCell($leader_position['x'], $leader_position['y']);
+          for ($i = 0; $i < $start_position['y']; $i++) {
+            $neighbours = $starting_cell->getNeighbours();
+            $starting_cell = $neighbours[$axis];
+          }
+          if ($start_position['x'] > 0) {
+            $new_axis = $directions[$axis]['right'];
           }
           else {
-            $continue = FALSE;
+            $new_axis = $directions[$axis]['left'];
           }
+          for ($i = 0; $i < abs($start_position['x']); $i++) {
+            $neighbours = $starting_cell->getNeighbours();
+            $starting_cell = $neighbours[$new_axis];
+          }
+          $start_scheme[$piece_id] = array(
+            'x' => $starting_cell->getX(),
+            'y' => $starting_cell->getY(),
+          );
         }
-        if (!empty($axis)) {
-          break;
-        }
+        $faction->createPieces($scheme->getPieceScheme(), $start_scheme);
       }
-      if (empty($axis)) {
-        throw new GridInvalidException('Bad pieces start scheme.');
+      // Placement des pièces spécifiques
+      if (!empty($side['specific_pieces'])) {
+        $specific_start_positions = array();
+        /* @var PieceDescription $specific_piece_description */
+        foreach ($side['specific_pieces'] as $key => $specific_piece_description) {
+          if (!is_array($specific_piece_description->getStartPosition())) {
+            $cell = $battlefield->findCellByName($specific_piece_description->getStartPosition());
+            $specific_start_position = array('x' => $cell->getX(), 'y' => $cell->getY());
+          }
+          else {
+            $specific_start_position = $specific_piece_description->getStartPosition();
+          }
+          $specific_start_positions[$key] = $specific_start_position;
+        }
+        $faction->createPieces($side['specific_pieces'], $specific_start_positions);
       }
-      foreach ($scheme->getPieceScheme() as $piece_id => $piece) {
-        $start_position = $piece->getStartPosition();
-        $starting_cell = $battlefield->findCell($leader_position['x'], $leader_position['y']);
-        for ($i = 0; $i < $start_position['y']; $i++) {
-          $neighbours = $starting_cell->getNeighbours();
-          $starting_cell = $neighbours[$axis];
-        }
-        if ($start_position['x'] > 0) {
-          $new_axis = $directions[$axis]['right'];
-        }
-        else {
-          $new_axis = $directions[$axis]['left'];
-        }
-        for ($i = 0; $i < abs($start_position['x']); $i++) {
-          $neighbours = $starting_cell->getNeighbours();
-          $starting_cell = $neighbours[$new_axis];
-        }
-        $start_scheme[$piece_id] = array('x' => $starting_cell->getX(), 'y' => $starting_cell->getY());
-      }
-      $faction->createPieces($scheme->getPieceScheme(), $start_scheme);
     }
     $battlefield->logEvent('info', 'NEW_DJAMBI_GAME');
     $gm->setStatus($ready ? GameManager::STATUS_PENDING : GameManager::STATUS_RECRUITING);

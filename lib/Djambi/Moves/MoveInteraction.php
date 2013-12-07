@@ -58,6 +58,11 @@ abstract class MoveInteraction extends Move implements MoveInteractionInterface 
     return $this;
   }
 
+  protected function setDestination(Cell $cell) {
+    $this->destination = $cell;
+    return $this;
+  }
+
   public function moveSelectedPiece(Cell $cell) {
     if ($this->getPhase() == self::PHASE_PIECE_DESTINATION) {
       $this->setDestination($cell);

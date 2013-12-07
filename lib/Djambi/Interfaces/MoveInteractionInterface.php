@@ -4,8 +4,14 @@ namespace Djambi\Interfaces;
 
 use Djambi\Cell;
 use Djambi\Move;
+use Djambi\Piece;
 
 interface MoveInteractionInterface {
+
+  /**
+   * @return Piece
+   */
+  public function getSelectedPiece();
 
   /** @return Move */
   public function getTriggeringMove();

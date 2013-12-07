@@ -5,6 +5,9 @@
  */
 
 namespace Djambi;
+use Djambi\Grids\HexagonalGridWith3Sides;
+use Djambi\Grids\MiniGridWith2Sides;
+use Djambi\Grids\StandardGridWith4Sides;
 use Djambi\Stores\GameOptionsStore;
 use Djambi\Stores\StandardRuleset;
 
@@ -24,15 +27,18 @@ abstract class GameDisposition  {
   }
 
   public function getGrid() {
+    if (is_null($this->grid)) {
+      $this->useStandardGrid();
+    }
     return $this->grid;
   }
 
-  protected function setNbPlayers($nb_players) {
+  public function setNbPlayers($nb_players) {
     $this->nbPlayers = $nb_players;
     return $this;
   }
 
-  protected function setGrid(Grid $scheme) {
+  public function setGrid(Grid $scheme) {
     $this->grid = $scheme;
     return $this;
   }
@@ -41,19 +47,34 @@ abstract class GameDisposition  {
     return str_replace('Djambi\GameDispositions\GameDisposition', '', get_class($this));
   }
 
-  protected function useStandardRuleset() {
+  public function useStandardRuleset() {
     $this->optionsStore = new StandardRuleset();
   }
 
   public function getOptionsStore() {
-    if (empty($this->optionsStore)) {
+    if (is_null($this->optionsStore)) {
       $this->useStandardRuleset();
     }
     return $this->optionsStore;
   }
 
-  protected function setOptionsStore(GameOptionsStore $store) {
+  public function setOptionsStore(GameOptionsStore $store) {
     $this->optionsStore = $store;
+  }
+
+  public function useMiniGridWith2Sides($settings = array()) {
+    $this->setGrid(new MiniGridWith2Sides($settings));
+    return $this;
+  }
+
+  public function useStandardGrid($settings = array()) {
+    $this->setGrid(new StandardGridWith4Sides($settings));
+    return $this;
+  }
+
+  public function useHexagonalGrid($settings = array()) {
+    $this->setGrid(new HexagonalGridWith3Sides($settings));
+    return $this;
   }
 
 }

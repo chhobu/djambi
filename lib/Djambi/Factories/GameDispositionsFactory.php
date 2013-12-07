@@ -1,12 +1,18 @@
 <?php
 namespace Djambi\Factories;
 use Djambi\Exceptions\DispositionNotFoundException;
+use Djambi\Faction;
+use Djambi\GameDispositions\GameDispositionCustom;
 use Djambi\Interfaces\GameDispositionsFactoryInterface;
+use Djambi\Interfaces\GridInterface;
+use Djambi\PieceDescription;
 
 /**
  * Class DjambiGameDispostionFactory
  */
-class GameDispositionsFactory implements GameDispositionsFactoryInterface {
+class GameDispositionsFactory implements GameDispositionsFactoryInterface, GridInterface {
+  /** @var array */
+  private $settings = array();
 
   /**
    * Prevents this class from being instancied.
@@ -39,6 +45,14 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
   }
 
   /**
+   * @return GameDispositionsFactory
+   */
+  public static function buildNewCustomDisposition() {
+    $factory = new static();
+    return $factory;
+  }
+
+  /**
    * Liste les dispositions de jeu publiques.
    *
    * @return array
@@ -61,6 +75,79 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
    */
   public static function listNbPlayersAvailable() {
     return array(2 => 2, 3 => 3, 4 => 4);
+  }
+
+  protected function getSettings() {
+    return $this->settings;
+  }
+
+  protected function setSettings($settings) {
+    $this->settings = $settings;
+    return $this;
+  }
+
+  protected function addSetting($setting_name, $setting_value) {
+    $this->settings[$setting_name] = $setting_value;
+    return $this;
+  }
+
+  public function setDimensions($cols, $rows) {
+    $this->addSetting('cols', $cols);
+    $this->addSetting('rows', $rows);
+    return $this;
+  }
+
+  public function setShape($shape) {
+    $this->addSetting('disposition', $shape);
+    return $this;
+  }
+
+  public function addSpecialCell($type, $location) {
+    $special_cells = isset($this->settings['special_cells']) ? $this->settings['special_cells'] : array();
+    $special_cells[] = array(
+      'type' => $type,
+      'location' => $location,
+    );
+    $this->addSetting('special_cells', $special_cells);
+    return $this;
+  }
+
+  /**
+   * Ajoute une faction dans la grille.
+   *
+   * @param array $start_position
+   * @param string $start_status
+   *   Statut de départ de la faction
+   * @param PieceDescription[] $specific_pieces
+   *   Liste de pièces spécifiques au camp
+   *
+   * @return GridInterface
+   */
+  public function addSide(array $start_position = NULL, $start_status = Faction::STATUS_READY, $specific_pieces = array()) {
+    $sides = isset($this->settings['sides']) ? $this->settings['sides'] : array();
+    $side = array(
+      'start_position' => $start_position,
+      'start_status' => $start_status,
+    );
+    if (!empty($specific_pieces)) {
+      foreach ($specific_pieces as $key => $piece) {
+        $side['specific_pieces'][$key] = $piece->toArray();
+      }
+    }
+    $sides[] = $side;
+    $this->addSetting('sides', $sides);
+    return $this;
+  }
+
+  public function addCommonPiece(PieceDescription $piece) {
+    $pieces = isset($this->settings['piece_scheme']) ? $this->settings['piece_scheme'] : array();
+    $pieces[] = $piece->toArray();
+    $this->addSetting('piece_scheme', $pieces);
+    return $this;
+  }
+
+  public function deliverDisposition() {
+    return new GameDispositionCustom($this, $this->getSettings());
   }
 
 }
