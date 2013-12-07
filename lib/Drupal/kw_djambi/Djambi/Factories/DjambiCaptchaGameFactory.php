@@ -38,7 +38,7 @@ class DjambiCaptchaGameFactory extends GameFactory implements GameFactoryInterfa
       $player = $game->getBattlefield()->getFactionById('B')->getPlayer();
       if ($player instanceof ComputerPlayer) {
         $player->useIa(PredictableIA::getClass());
-        $file_path = variable_get('file_temporary_path') . '/PredictableIA.' . $game->getId() . '.'
+        $file_path = variable_get('file_temporary_path') . '/djambi/PredictableIA.' . $game->getId() . '.'
         . $player->getFaction()->getId() . '.json';
         $player->getIa()->addSetting('strategy_file', $file_path);
       }
