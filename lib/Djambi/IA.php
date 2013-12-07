@@ -5,10 +5,12 @@ use Djambi\Interfaces\IAInterface;
 use Djambi\Players\ComputerPlayer;
 
 abstract class IA implements IAInterface {
-  /* @var string $name */
+  /** @var string */
   private $name;
-  /* @var ComputerPlayer $faction */
+  /** @var ComputerPlayer */
   private $player;
+  /** @var array */
+  private $settings = array();
 
   protected function __construct(ComputerPlayer $player, $name = 'DefaultBot') {
     $this->player = $player;
@@ -22,6 +24,10 @@ abstract class IA implements IAInterface {
     else {
       return new static($player, $name);
     }
+  }
+
+  public static function getClass() {
+    return get_called_class();
   }
 
   public function getName() {
@@ -53,19 +59,46 @@ abstract class IA implements IAInterface {
     }
     else {
       $move = $this->decideMove($available_moves);
-      $move->getSelectedPiece()->executeMove($move);
-      while (!$move->isCompleted()) {
-        $interaction = $move->getFirstInteraction();
-        if (!empty($interaction) && count($interaction->getPossibleChoices()) > 0) {
-          $choice = $this->decideInteraction($interaction);
-          $interaction->executeChoice($choice);
-        }
-        else {
-          $this->getPlayer()->getFaction()->skipTurn();
-          break;
+      if (is_null($move)) {
+        $this->getPlayer()->getFaction()->skipTurn();
+      }
+      else {
+        $move->getSelectedPiece()->executeMove($move);
+        while (!$move->isCompleted()) {
+          $interaction = $move->getFirstInteraction();
+          if (!empty($interaction) && count($interaction->getPossibleChoices()) > 0) {
+            $choice = $this->decideInteraction($interaction);
+            $interaction->executeChoice($choice);
+          }
+          else {
+            $this->getPlayer()->getFaction()->skipTurn();
+            break;
+          }
         }
       }
     }
+    return $this;
+  }
+
+  public function setSettings(array $settings) {
+    $this->settings = $settings;
+    return $this;
+  }
+
+  /**
+   * @return array
+   */
+  public function getSettings() {
+    return $this->settings;
+  }
+
+  public function addSetting($var, $value) {
+    $this->settings[$var] = $value;
+    return $this;
+  }
+
+  public function getSetting($var) {
+    return isset($this->settings[$var]) ? $this->settings[$var] : NULL;
   }
 
 }

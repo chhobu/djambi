@@ -3,7 +3,9 @@
 namespace Djambi\Interfaces;
 
 
+use Djambi\Cell;
 use Djambi\Faction;
+use Djambi\Move;
 use Djambi\Player;
 
 interface BattlefieldInterface {
@@ -50,8 +52,39 @@ interface BattlefieldInterface {
   public function getFactions();
 
   /**
+   * @param string $id
+   *
+   * @return Faction
+   */
+  public function getFactionById($id);
+
+  /**
+   * @return Cell[]
+   */
+  public function getCells();
+
+  /**
+   * @param string
+   *
+   * @return array
+   */
+  public function getSpecialCells($type);
+
+  /**
    * @return Faction
    */
   public function getPlayingFaction();
+
+  /**
+   * @return Move
+   */
+  public function getCurrentMove();
+
+  /**
+   * @param string $name
+   *
+   * @return Cell
+   */
+  public function findCellByName($name);
 
 }

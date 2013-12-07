@@ -4,66 +4,45 @@ namespace Drupal\kw_djambi\Djambi\Factories;
 
 
 use Djambi\Factories\GameDispositionsFactory;
-use Djambi\GameDisposition;
+use Djambi\Factories\GameFactory;
 use Djambi\GameManager;
 use Djambi\IA\DummyIA;
+use Djambi\IA\PredictableIA;
 use Djambi\Interfaces\GameFactoryInterface;
-use Djambi\Interfaces\HumanPlayerInterface;
 use Djambi\Players\ComputerPlayer;
 use Drupal\kw_djambi\Djambi\DjambiContext;
 use Drupal\kw_djambi\Djambi\Traits\DrupalDjambiFormTrait;
 
-class DjambiCaptchaGameFactory implements GameFactoryInterface {
-  private $player1;
-  private $player2;
-  private $disposition;
+class DjambiCaptchaGameFactory extends GameFactory implements GameFactoryInterface {
 
   use DrupalDjambiFormTrait;
 
-  public function __construct() {}
-
-  public function setPlayer1(HumanPlayerInterface $player1) {
-    $this->player1 = $player1;
-    return $this;
+  public function __construct() {
+    parent::__construct();
+    $this->setMode(GameManager::MODE_TRAINING);
   }
 
-  public function getPlayer1() {
-    if (is_null($this->player1)) {
-      $this->player1 = DjambiContext::getInstance()->getCurrentUser(TRUE);
-    }
-    return $this->player1;
-  }
-
-  public function setPlayer2(ComputerPlayer $player2) {
-    $this->player2 = $player2;
-    return $this;
-  }
-
-  public function getPlayer2() {
-    if (is_null($this->player2)) {
-      $this->player2 = new ComputerPlayer();
-      $this->player2->useIa(DummyIA::instanciate($this->player2));
-    }
-    return $this->player2;
-  }
-
-  public function setDisposition(GameDisposition $disposition) {
-    $this->disposition = $disposition;
-    return $this;
-  }
-
-  public function getDisposition() {
-    if (is_null($this->disposition)) {
-      $this->disposition = GameDispositionsFactory::loadDisposition('2mini');
-    }
-    return $this->disposition;
+  protected function getDefaultComputerIa() {
+    $ia_class = DummyIA::getClass();
+    return $ia_class;
   }
 
   public function createGameManager() {
-    $players = array($this->getPlayer1(), $this->getPlayer2());
-    $game = GameManager::createGame($players, uniqid('Captcha-'), GameManager::MODE_TRAINING, $this->getDisposition());
+    $this->setDisposition(GameDispositionsFactory::loadDisposition('2mini'));
+    $this->addPlayer(DjambiContext::getInstance()->getCurrentUser(TRUE), 1);
+    $this->setId(uniqid('Captcha-'));
+    $game = parent::createGameManager();
     $game->setOption('turns_before_draw_proposal', -1);
     $game->setInfo('interface', 'minimal')->play();
+    if (isset($_GET['ia']) && $_GET['ia'] == 'predictable') {
+      $player = $game->getBattlefield()->getFactionById('B')->getPlayer();
+      if ($player instanceof ComputerPlayer) {
+        $player->useIa(PredictableIA::getClass());
+        $file_path = variable_get('file_temporary_path') . '/PredictableIA.' . $game->getId() . '.'
+        . $player->getFaction()->getId() . '.json';
+        $player->getIa()->addSetting('strategy_file', $file_path);
+      }
+    }
     return $game;
   }
 

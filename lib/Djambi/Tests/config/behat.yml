@@ -1,0 +1,7 @@
+# behat.yml
+default:
+  paths:
+     features: ../features
+     bootstrap: ..
+  context:
+     class: Djambi\Tests\DjambiTestContext

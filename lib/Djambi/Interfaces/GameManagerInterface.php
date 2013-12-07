@@ -1,5 +1,6 @@
 <?php
 namespace Djambi\Interfaces;
+
 use Djambi\Faction;
 use Djambi\GameDisposition;
 use Djambi\Player;
@@ -84,7 +85,7 @@ interface GameManagerInterface {
    * @param string $info
    * @param mixed $value
    *
-   * @return BattlefieldInterface
+   * @return GameManagerInterface
    */
   public function setInfo($info, $value);
 
@@ -208,7 +209,7 @@ interface GameManagerInterface {
    * @param $option_key
    * @param $value
    *
-   * @return mixed
+   * @return GameManagerInterface
    */
   public function setOption($option_key, $value);
 }

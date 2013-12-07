@@ -3,6 +3,7 @@
 namespace Djambi\Interfaces;
 
 
+use Djambi\Cell;
 use Djambi\Move;
 use Djambi\Players\ComputerPlayer;
 
@@ -16,6 +17,13 @@ interface IAInterface {
    * @return IAInterface
    */
   public static function instanciate(ComputerPlayer $player, $name = NULL);
+
+  /**
+   * Renvoie le nom de la classe appelée.
+   *
+   * @return string
+   */
+  public static function getClass();
 
   /**
    * Renvoie le nom de l'IA utilisée.
@@ -48,7 +56,7 @@ interface IAInterface {
    * @param MoveInteractionInterface $move
    *   Interaction suite à un mouvement
    *
-   * @return mixed
+   * @return Cell
    *   Choix de déplacement à réaliser
    */
   public function decideInteraction(MoveInteractionInterface $move);

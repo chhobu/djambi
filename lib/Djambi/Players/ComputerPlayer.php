@@ -24,23 +24,23 @@ class ComputerPlayer extends Player {
     return $this->ia;
   }
 
-  public function useIa(IA $îa) {
-    $this->ia = $îa;
-    return $this;
+  public function useIa($class_name) {
+    $ia_method = 'instanciate';
+    if (class_exists($class_name) && method_exists($class_name, $ia_method)) {
+      $ia = call_user_func_array($class_name . '::' . $ia_method, array($this));
+      if ($ia instanceof IA) {
+        $this->ia = $ia;
+        return $this;
+      }
+    }
+    throw new PlayerInvalidException("Computer player must use an extended IA class");
   }
 
   public static function loadPlayer(array $data) {
     $player = parent::loadPlayer($data);
-    $ia_method = 'instanciate';
-    if ($player instanceof ComputerPlayer && !empty($data['ia'])
-    && class_exists($data['ia']) && method_exists($data['ia'], $ia_method)) {
-      $ia = call_user_func_array($data['ia'] . '::' . $ia_method, array($player));
-      if ($ia instanceof IA) {
-        $player->useIa($ia);
-      }
-      else {
-        throw new PlayerInvalidException("Computer player must use an extended IA class");
-      }
+    if ($player instanceof ComputerPlayer && !empty($data['ia'])) {
+      $player->useIa($data['ia']);
+      $player->getIa()->setSettings($data['ia_settings']);
     }
     else {
       throw new Exception("Failed loading computer player");
@@ -52,6 +52,7 @@ class ComputerPlayer extends Player {
     $data = array(
       'className' => $this->getClassName(),
       'ia' => get_class($this->getIa()),
+      'ia_settings' => $this->getIa()->getSettings(),
       'id' => $this->getId(),
     );
     return $data;
