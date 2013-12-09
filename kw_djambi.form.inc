@@ -73,6 +73,7 @@ function _kw_djambi_build_game_form(&$form, &$form_state, GameManager $game, $op
     'effect' => 'none',
     'method' => 'replace',
   );
+  $form['#attributes']['class'][] = 'ajax-no-ids';
   // Création de l'ossature du formulaire :
   $do_refresh = 'no';
   if (!$game->isFinished() && !$replay) {

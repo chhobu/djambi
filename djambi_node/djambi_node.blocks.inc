@@ -625,9 +625,7 @@ function _djambi_node_list_user_games($nid = 0) {
     'query' => array('destination' => isset($parameters['destination']) ? $parameters['destination'] : $parameters['q']),
     'attributes' => array(
       'rel' => 'nofollow',
-      'class' => array(
-        'use-ajax',
-      ),
+      'class' => array('use-ajax', 'ajax-no-ids'),
     ),
   );
   if (!empty($links)) {
