@@ -70,7 +70,7 @@ class Battlefield implements BattlefieldInterface {
   /**
    * Crée une nouvelle grille de Djambi.
    *
-   * @param GameManagerInterface $gm
+   * @param GameManagerInterface $game
    *   Objet de gestion de la partie
    * @param PlayerInterface[] $players
    *   Liste des joueurs
@@ -79,11 +79,11 @@ class Battlefield implements BattlefieldInterface {
    * @return Battlefield
    *   Nouvelle grille de Djambi
    */
-  public static function createNewBattlefield(GameManagerInterface $gm, $players) {
-    $battlefield = new self($gm);
+  public static function createNewBattlefield(GameManagerInterface $game, $players) {
+    $battlefield = new self($game);
     // Construction de la grille :
     $battlefield->buildField();
-    $scheme = $gm->getDisposition()->getGrid();
+    $scheme = $game->getDisposition()->getGrid();
     $directions = $scheme->getDirections();
     $scheme_sides = $scheme->getSides();
     // Construction des factions :
@@ -91,7 +91,7 @@ class Battlefield implements BattlefieldInterface {
     foreach ($scheme_sides as $side) {
       if ($side['start_status'] == Faction::STATUS_READY) {
         /* @var HumanPlayer $player */
-        if ($gm->getMode() == GameManager::MODE_SANDBOX) {
+        if ($game->getMode() == GameManager::MODE_SANDBOX) {
           $player = current($players);
         }
         else {
@@ -180,14 +180,14 @@ class Battlefield implements BattlefieldInterface {
       }
     }
     $battlefield->logEvent('info', 'NEW_DJAMBI_GAME');
-    $gm->setStatus($ready ? GameManager::STATUS_PENDING : GameManager::STATUS_RECRUITING);
+    $game->setStatus($ready ? GameManager::STATUS_PENDING : GameManager::STATUS_RECRUITING);
     return $battlefield;
   }
 
   /**
    * Charge une grille de Djambi.
    *
-   * @param GameManagerInterface $gm
+   * @param GameManagerInterface $game
    *   Objet GameManager lié
    * @param array $data
    *   Tableau de données permettant de recréer la partie
@@ -196,9 +196,9 @@ class Battlefield implements BattlefieldInterface {
    * @return Battlefield
    *   Grille de Djambi courante
    */
-  public static function loadBattlefield(GameManagerInterface $gm, $data) {
-    $battlefield = new self($gm);
-    $gm->setStatus($data['status']);
+  public static function loadBattlefield(GameManagerInterface $game, $data) {
+    $battlefield = new self($game);
+    $game->setStatus($data['status']);
     $battlefield->moves = isset($data['moves']) ? $data['moves'] : $battlefield->moves;
     $battlefield->turns = isset($data['turns']) ? $data['turns'] : $battlefield->turns;
     $battlefield->events = isset($data['events']) ? $data['events'] : $battlefield->events;
@@ -207,13 +207,13 @@ class Battlefield implements BattlefieldInterface {
     if (isset($data['options']) && is_array($data['options'])) {
       foreach ($data['options'] as $option => $value) {
         try {
-          $gm->setOption($option, $value);
+          $game->setOption($option, $value);
         }
         catch (GameOptionInvalidException $e) {}
       }
     }
     $battlefield->buildField();
-    $scheme = $gm->getDisposition()->getGrid();
+    $scheme = $game->getDisposition()->getGrid();
     $pieces_scheme = $scheme->getPieceScheme();
     $sides_scheme = $scheme->getSides();
     foreach ($data['factions'] as $key => $faction_data) {

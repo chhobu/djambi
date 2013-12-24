@@ -46,6 +46,20 @@ class DjambiTestBaseContext extends BehatContext {
   );
 
   /**
+   * @BeforeSuite
+   */
+  public static function prepare() {
+    DjambiCodeCoverage::getInstance()->beginCoverage();
+  }
+
+  /**
+   * @AfterSuite
+   */
+  public static function shutdown() {
+    DjambiCodeCoverage::getInstance()->generateCoverage();
+  }
+
+  /**
    * Initializes context.
    * Every scenario gets it's own context object.
    *

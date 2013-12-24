@@ -16,20 +16,22 @@ interface BattlefieldInterface {
   public function getGameManager();
 
   /**
-   * @param GameManagerInterface $gm
+   * @param GameManagerInterface $game
    * @param Player[] $players
+
    *
-   * @return BattlefieldInterface
+*@return BattlefieldInterface
    */
-  public static function createNewBattlefield(GameManagerInterface $gm, $players);
+  public static function createNewBattlefield(GameManagerInterface $game, $players);
 
   /**
-   * @param GameManagerInterface $gm
+   * @param GameManagerInterface $game
    * @param array $data
+
    *
-   * @return BattlefieldInterface
+*@return BattlefieldInterface
    */
-  public static function loadBattlefield(GameManagerInterface $gm, $data);
+  public static function loadBattlefield(GameManagerInterface $game, $data);
 
   /**
    * @return array

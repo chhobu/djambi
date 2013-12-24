@@ -60,24 +60,24 @@ class GameManager implements GameManagerInterface {
    * Implements create().
    */
   public static function createGame($players, $id, $mode, GameDisposition $disposition, $battlefield_factory = NULL) {
-    /* @var GameManager $gm */
-    $gm = new static($id, $mode);
-    $gm->setDisposition($disposition);
+    /* @var GameManager $game */
+    $game = new static($id, $mode);
+    $game->setDisposition($disposition);
     if (is_null($battlefield_factory)) {
-      $grid = Battlefield::createNewBattlefield($gm, $players);
+      $grid = Battlefield::createNewBattlefield($game, $players);
     }
     else {
       $grid = call_user_func_array($battlefield_factory . '::createNewBattlefield',
-        array($gm, $players));
-      $gm->setInfo('battlefield_factory', $battlefield_factory);
+        array($game, $players));
+      $game->setInfo('battlefield_factory', $battlefield_factory);
     }
-    $gm->setBattlefield($grid);
+    $game->setBattlefield($grid);
     $time = time();
-    $gm->setBegin($time);
-    $gm->setChanged($time);
-    $gm->setNew(TRUE);
-    $gm->setInitialState($grid->toArray());
-    return $gm;
+    $game->setBegin($time);
+    $game->setChanged($time);
+    $game->setNew(TRUE);
+    $game->setInitialState($grid->toArray());
+    return $game;
   }
 
   /**
@@ -90,12 +90,12 @@ class GameManager implements GameManagerInterface {
     if (!isset($data['id'])) {
       $data['id'] = NULL;
     }
-    /* @var $gm GameManager */
-    $gm = new static($data['id'], $data['mode']);
-    $gm->setNew(FALSE);
-    $gm->loadBattlefield($data);
-    $gm->setInitialState($data);
-    return $gm;
+    /* @var $game GameManager */
+    $game = new static($data['id'], $data['mode']);
+    $game->setNew(FALSE);
+    $game->loadBattlefield($data);
+    $game->setInitialState($data);
+    return $game;
   }
 
   protected function loadBattlefield($data) {
