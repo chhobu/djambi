@@ -4,6 +4,5 @@ description = "Save Machiavelli chess games through a dedicated content type"
 core = 7.x
 version = 7.x-1.0-dev
 package = Kweb Djambi
-; files[] = djambi_node.test
 dependencies[] = kw_datagrid
 dependencies[] = kw_djambi
