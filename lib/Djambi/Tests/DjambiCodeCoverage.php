@@ -42,7 +42,7 @@ class DjambiCodeCoverage {
     }
     $writer->process($this->coverage, $path . "/behat-lib.xml");
     $writer = new \PHP_CodeCoverage_Report_HTML();
-    $writer->process($this->coverage, $path . '/behat-lib-html');
+    $writer->process($this->coverage, $path);
     return $this;
   }
 }
