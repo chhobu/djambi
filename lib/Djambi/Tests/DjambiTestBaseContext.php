@@ -3,6 +3,7 @@
 namespace Djambi\Tests;
 
 use Behat\Behat\Context\BehatContext;
+use Behat\Behat\Event\SuiteEvent;
 use Djambi\Exceptions\FactionNotFoundException;
 use Djambi\Exceptions\PieceNotFoundException;
 use Djambi\Faction;
@@ -48,15 +49,22 @@ class DjambiTestBaseContext extends BehatContext {
   /**
    * @BeforeSuite
    */
-  public static function prepare() {
-    DjambiCodeCoverage::getInstance()->beginCoverage();
+  public static function prepare(SuiteEvent $event) {
+    $parameters = $event->getContextParameters();
+    if (!empty($parameters['code_coverage'])) {
+      $coverage = DjambiCodeCoverage::initiateCoverage($parameters['code_coverage']);
+      $coverage->beginCoverage();
+    }
   }
 
   /**
    * @AfterSuite
    */
-  public static function shutdown() {
-    DjambiCodeCoverage::getInstance()->generateCoverage();
+  public static function shutdown(SuiteEvent $event) {
+    $parameters = $event->getContextParameters();
+    if (!empty($parameters['code_coverage'])) {
+      DjambiCodeCoverage::getInstance()->generateCoverage();
+    }
   }
 
   /**
@@ -65,7 +73,7 @@ class DjambiTestBaseContext extends BehatContext {
    *
    * @param array $parameters context parameters (set them up through behat.yml)
    */
-  protected function __construct(array $parameters) {
+  public function __construct(array $parameters) {
     $this->gameFactory = new GameFactory();
   }
 

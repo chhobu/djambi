@@ -9,16 +9,40 @@ class DjambiCodeCoverage {
   protected static $instance;
   /** @var \PHP_CodeCoverage */
   protected $coverage;
+  /** @var array */
+  protected $params;
 
-  protected function __construct() {
-    $filter = new \PHP_CodeCoverage_Filter();
-    $filter->addDirectoryToWhitelist(__DIR__ . "/../../Djambi");
-    $this->coverage = new \PHP_CodeCoverage(NULL, $filter);
-  }
+  protected function __construct() {}
 
   public function beginCoverage() {
     $this->coverage->start('Behat Test');
     return $this;
+  }
+
+  public static function initiateCoverage($params) {
+    $instance = static::getInstance();
+    $filter = new \PHP_CodeCoverage_Filter();
+    $filter->addDirectoryToWhitelist(__DIR__ . "/../../Djambi");
+    $instance->setCoverage(new \PHP_CodeCoverage(NULL, $filter));
+    $instance->setParams($params);
+    return $instance;
+  }
+
+  protected function setCoverage(\PHP_CodeCoverage $coverage) {
+    $this->coverage = $coverage;
+    return $this;
+  }
+
+  protected function setParams(array $params = NULL) {
+    $this->params = $params;
+    return $this;
+  }
+
+  protected function getParam($name) {
+    if (isset($this->params[$name])) {
+      return $this->params[$name];
+    }
+    return FALSE;
   }
 
   public static function getInstance() {
@@ -33,16 +57,25 @@ class DjambiCodeCoverage {
       $this->coverage->stop();
     }
     catch (\PHP_CodeCoverage_Exception $e) {}
-    $writer = new \PHP_CodeCoverage_Report_Clover();
-    $path = __DIR__ . "/../../../../../../../sites/djambi_test/tests/build/coverage";
+    if ($path = $this->getParam('clover')) {
+      $this->makeDir($path);
+      $writer = new \PHP_CodeCoverage_Report_Clover();
+      $writer->process($this->coverage, $path . "/behat-lib.xml");
+    }
+    if ($path = $this->getParam('html')) {
+      $this->makeDir($path);
+      $writer = new \PHP_CodeCoverage_Report_HTML();
+      $writer->process($this->coverage, $path);
+    }
+    return $this;
+  }
+
+  protected function makeDir($path) {
     if (!is_dir($path)) {
       $oldmask = umask(0);
       mkdir($path, 0777, TRUE);
       umask($oldmask);
     }
-    $writer->process($this->coverage, $path . "/behat-lib.xml");
-    $writer = new \PHP_CodeCoverage_Report_HTML();
-    $writer->process($this->coverage, $path);
     return $this;
   }
 }
