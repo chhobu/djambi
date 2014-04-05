@@ -3,7 +3,7 @@ namespace Drupal\djambi\Form;
 
 use Drupal\Core\Form\FormInterface;
 
-class DjambiFormPage implements FormInterface {
+class GameGridForm implements FormInterface {
 
   /**
    * Returns a unique string identifying the form.

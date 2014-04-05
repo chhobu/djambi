@@ -1,0 +1,6 @@
+name: Djambi
+core: 8.x
+type: module
+package: Djambi
+description: Let's play Djambi online with Drupal !
+version: 8.x-1.x-dev

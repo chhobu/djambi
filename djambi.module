@@ -1,0 +1,12 @@
+<?php
+/**
+ * Implements hook_permission().
+ */
+function djambi_permission() {
+  return array(
+    'play djambi sandbox game' => array(
+      'title' => t('Play Djambi sandbox game'),
+      'description' => t('Initiate and play a single player Djambi sandbox game.'),
+    ),
+  );
+}
