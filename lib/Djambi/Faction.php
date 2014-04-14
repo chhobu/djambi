@@ -7,6 +7,7 @@
 
 namespace Djambi;
 
+use Djambi\GameManagers\BasicGameManager;
 use Djambi\Interfaces\HumanPlayerInterface;
 use Djambi\Interfaces\PlayerInterface;
 use Djambi\Players\ComputerPlayer;
@@ -281,8 +282,8 @@ class Faction {
     $this->player = $player;
     $player->setFaction($this);
     $this->setStatus(self::STATUS_READY);
-    if ($player instanceof HumanPlayerInterface && is_null($player->getJoined())) {
-      $player->setJoined(time());
+    if ($player instanceof HumanPlayerInterface && $player->isEmptySeat()) {
+      $player->useSeat();
     }
     return $this;
   }
@@ -364,7 +365,7 @@ class Faction {
     $turns = $this->getBattlefield()->getTurns();
     $this->setLastDrawProposal($turns[$this->getBattlefield()->getCurrentTurnId()]['turn']);
     $this->getBattlefield()->logEvent('event', 'DRAW_PROPOSAL', array('faction1' => $this->getId()));
-    $this->getBattlefield()->getGameManager()->setStatus(GameManager::STATUS_DRAW_PROPOSAL);
+    $this->getBattlefield()->getGameManager()->setStatus(BasicGameManager::STATUS_DRAW_PROPOSAL);
     $this->setDrawStatus(self::DRAW_STATUS_PROPOSED);
     $this->getBattlefield()->changeTurn();
     return $this;
@@ -395,7 +396,7 @@ class Faction {
 
   public function rejectDraw() {
     $this->getBattlefield()->logEvent('event', 'DRAW_REJECTED', array('faction1' => $this->getId()));
-    $this->getBattlefield()->getGameManager()->setStatus(GameManager::STATUS_PENDING);
+    $this->getBattlefield()->getGameManager()->setStatus(BasicGameManager::STATUS_PENDING);
     $factions = $this->getBattlefield()->getFactions();
     foreach ($factions as $faction) {
       $this->getBattlefield()->getFactionById($faction->getId())->setDrawStatus(NULL);
@@ -508,7 +509,7 @@ class Faction {
     $data['status'] = $this->getStatus();
     $player = $this->getPlayer();
     if (!empty($player)) {
-      $data['player'] = $this->getPlayer()->saveToArray();
+      $data['player'] = $this->getPlayer()->toArray();
     }
     else {
       $data['player'] = NULL;

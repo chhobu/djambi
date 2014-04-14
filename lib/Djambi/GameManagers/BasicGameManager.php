@@ -5,19 +5,28 @@
  * et de gérer la persistance de parties de Djambi.
  */
 
-namespace Djambi;
+namespace Djambi\GameManagers;
+
+use Djambi\Battlefield;
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\DispositionNotFoundException;
 use Djambi\Exceptions\GameOptionInvalidException;
+use Djambi\Exceptions\GridInvalidException;
+use Djambi\Exceptions\UnpersistableObjectException;
+use Djambi\Faction;
 use Djambi\Factories\GameDispositionsFactory;
+use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\Interfaces\BattlefieldInterface;
 use Djambi\Interfaces\GameManagerInterface;
+use Djambi\Interfaces\PlayerInterface;
+use Djambi\PersistantDjambiObject;
+use Djambi\Signal;
 
 /**
  * Class DjambiGameManager
  * Gère la persistance des parties de Djambi.
  */
-class GameManager implements GameManagerInterface {
+class BasicGameManager extends PersistantDjambiObject implements GameManagerInterface {
   const MODE_SANDBOX = 'bac-a-sable';
   const MODE_FRIENDLY = 'amical';
   const MODE_TRAINING = 'training';
@@ -31,37 +40,45 @@ class GameManager implements GameManagerInterface {
   private $id;
   /** @var Battlefield $battlefield */
   private $battlefield;
-  /** @var bool $new */
-  private $new = FALSE;
   /** @var int $changed */
   private $changed;
   /** @var int $created */
   private $begin;
   /** @var array $infos */
   protected $infos = array();
-  /** @var array $initialState */
-  private $initialState;
   /** @var string */
   private $mode;
   /** @var string */
   private $status;
-  /** @var GameDisposition */
+  /** @var BaseGameDisposition */
   private $disposition;
 
   /**
    * Empêche la création directe d'un GameManager.
    */
-  protected function __construct($id, $mode) {
+  protected function __construct($mode, $id = NULL) {
+    if (is_null($id)) {
+      $id = uniqid();
+    }
     $this->setId($id);
     $this->setMode($mode);
   }
 
   /**
    * Implements create().
+   *
+   * @param PlayerInterface[] $players
+   * @param string $id
+   * @param string $mode
+   * @param BaseGameDisposition $disposition
+   * @param null $battlefield_factory
+   *
+   * @throws GridInvalidException
+   * @return static
    */
-  public static function createGame($players, $id, $mode, GameDisposition $disposition, $battlefield_factory = NULL) {
-    /* @var GameManager $game */
-    $game = new static($id, $mode);
+  public static function createGame($players, $id, $mode, BaseGameDisposition $disposition, $battlefield_factory = NULL) {
+    /* @var BasicGameManager $game */
+    $game = new static($mode, $id);
     $game->setDisposition($disposition);
     if (is_null($battlefield_factory)) {
       $grid = Battlefield::createNewBattlefield($game, $players);
@@ -75,26 +92,20 @@ class GameManager implements GameManagerInterface {
     $time = time();
     $game->setBegin($time);
     $game->setChanged($time);
-    $game->setNew(TRUE);
-    $game->setInitialState($grid->toArray());
     return $game;
   }
 
-  /**
-   * Implements load().
-   */
-  public static function loadGame($data) {
-    if (!is_array($data) || !isset($data['mode'])) {
+  public static function load($mode, $ide) {
+    throw new UnpersistableObjectException("Standard game manager cannot be persisted !");
+  }
+
+  public static function fromArray(array $data, array $context = array()) {
+    if (!is_array($data) || !isset($data['mode']) || !isset($data['id'])) {
       throw new GameOptionInvalidException("Missing required mode information for loading a game.");
     }
-    if (!isset($data['id'])) {
-      $data['id'] = NULL;
-    }
-    /* @var $game GameManager */
-    $game = new static($data['id'], $data['mode']);
-    $game->setNew(FALSE);
+    /* @var $game BasicGameManager */
+    $game = new static($data['mode'], $data['id']);
     $game->loadBattlefield($data);
-    $game->setInitialState($data);
     return $game;
   }
 
@@ -152,7 +163,7 @@ class GameManager implements GameManagerInterface {
     return $this;
   }
 
-  protected function setDisposition(GameDisposition $disposition) {
+  protected function setDisposition(BaseGameDisposition $disposition) {
     $this->disposition = $disposition;
     return $this;
   }
@@ -254,7 +265,11 @@ class GameManager implements GameManagerInterface {
    * @return bool
    */
   public function isPending() {
-    if (in_array($this->getStatus(), array(self::STATUS_PENDING, self::STATUS_DRAW_PROPOSAL))) {
+    if (in_array($this->getStatus(), array(
+        self::STATUS_PENDING,
+        self::STATUS_DRAW_PROPOSAL,
+      ))
+    ) {
       return TRUE;
     }
     else {
@@ -299,30 +314,10 @@ class GameManager implements GameManagerInterface {
    * @param BattlefieldInterface $grid
    *   Grille de Djambi
    *
-   * @return GameManager
+   * @return BasicGameManager
    */
   protected function setBattlefield(BattlefieldInterface $grid) {
     $this->battlefield = $grid;
-    return $this;
-  }
-
-  protected function setInitialState($data) {
-    $data['begin'] = $this->getBegin();
-    $data['changed'] = $this->getChanged();
-    $this->initialState = $data;
-    return $this;
-  }
-
-  protected function getInitialState() {
-    return $this->initialState;
-  }
-
-  public function isNew() {
-    return $this->new;
-  }
-
-  protected function setNew($is_new) {
-    $this->new = $is_new;
     return $this;
   }
 
@@ -344,40 +339,27 @@ class GameManager implements GameManagerInterface {
     return $this;
   }
 
-  /**
-   * Sauvegarde la partie, en générant un tableau de données.
-   */
-  public function save($called_from) {
+  protected function preSave() {
     $this->setChanged(time());
-    $this->setInitialState($this->getBattlefield()->toArray());
+  }
+
+  public function save() {
+    $this->preSave();
     return $this;
+  }
+
+  public function toArray() {
+    // TODO rappatrier la logique de sauvagarde de la classe battlefield
+    return $this->getBattlefield()->toArray();
   }
 
   /**
    * Recharge la partie en cours.
-   *
-   * @return GameManager
+   * @return BasicGameManager
    */
   public function reload() {
     return $this;
   }
-
-  /**
-   * Réinitialise la partie à la dernière sauvegarde effectuée.
-   *
-   * @return GameManager
-   */
-  public function rollback() {
-    $initial_state = $this->getInitialState();
-    if (!empty($initial_state)) {
-      $this->loadBattlefield($initial_state);
-      if (!$this->isFinished()) {
-        $this->play();
-      }
-    }
-    return $this;
-  }
-
 
   /**
    * Lance les actions permettant de rendre une partie jouable.
@@ -407,15 +389,21 @@ class GameManager implements GameManagerInterface {
 
   public function getOption($option_key) {
     try {
-      return $this->getDisposition()->getOptionsStore()->retrieve($option_key)->getValue();
+      return $this->getDisposition()
+        ->getOptionsStore()
+        ->retrieve($option_key)
+        ->getValue();
     }
-    catch(GameOptionInvalidException $e) {
+    catch (GameOptionInvalidException $e) {
       return NULL;
     }
   }
 
   public function setOption($option_key, $value) {
-    $this->getDisposition()->getOptionsStore()->retrieve($option_key)->setValue($value);
+    $this->getDisposition()
+      ->getOptionsStore()
+      ->retrieve($option_key)
+      ->setValue($value);
     return $this;
   }
 
@@ -423,7 +411,7 @@ class GameManager implements GameManagerInterface {
     return $this;
   }
 
-  public function ejectPlayer(Player $player) {
+  public function ejectPlayer(PlayerInterface $player) {
     $grid = $this->getBattlefield();
     if ($this->getStatus() == self::STATUS_RECRUITING) {
       $nb_playing_factions = 0;
@@ -439,7 +427,7 @@ class GameManager implements GameManagerInterface {
         $this->delete();
       }
       else {
-        $grid->logEvent('info', 'TEAM_EXIT', array('!player' => $player->getName()));
+        $grid->logEvent('info', 'TEAM_EXIT', array('!player' => $player->displayName()));
         $this->save(__CLASS__);
       }
     }
@@ -449,7 +437,7 @@ class GameManager implements GameManagerInterface {
     return $this;
   }
 
-  public function addNewPlayer(Player $player, Faction $target) {
+  public function addNewPlayer(PlayerInterface $player, Faction $target) {
     $nb_empty_factions = 0;
     $grid = $this->getBattlefield();
     if ($this->getStatus() != self::STATUS_RECRUITING) {
@@ -476,14 +464,10 @@ class GameManager implements GameManagerInterface {
     }
     $grid->logEvent('info', 'NEW_TEAM', array(
       'faction1' => $target->getId(),
-      '!player' => $player->getName(),
+      '!player' => $player->displayName(),
     ));
     $this->save(__CLASS__);
     return $this;
-  }
-
-  public function isViewable() {
-    return FALSE;
   }
 
 }

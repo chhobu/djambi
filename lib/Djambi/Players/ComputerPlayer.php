@@ -1,20 +1,19 @@
 <?php
 namespace Djambi\Players;
 
-use Djambi\Exceptions\Exception;
-use Djambi\IA;
 use Djambi\IA\DummyIA;
-use Djambi\Player;
 use Djambi\Exceptions\PlayerInvalidException;
+use Djambi\Interfaces\IAInterface;
 
-class ComputerPlayer extends Player {
-  /* @var IA $ia; */
+class ComputerPlayer extends BasePlayer {
+  const CLASS_NICKNAME = 'bot-';
+
+  /* @var IAInterface $ia; */
   private $ia;
 
   public function __construct($id = NULL) {
+    parent::__construct($id);
     $this->setType(self::TYPE_COMPUTER);
-    $this->setClassName();
-    $this->setId($id, 'Bot-');
   }
 
   public function getIa() {
@@ -28,7 +27,7 @@ class ComputerPlayer extends Player {
     $ia_method = 'instanciate';
     if (class_exists($class_name) && method_exists($class_name, $ia_method)) {
       $ia = call_user_func_array($class_name . '::' . $ia_method, array($this));
-      if ($ia instanceof IA) {
+      if ($ia instanceof IAInterface) {
         $this->ia = $ia;
         return $this;
       }
@@ -36,26 +35,21 @@ class ComputerPlayer extends Player {
     throw new PlayerInvalidException("Computer player must use an extended IA class");
   }
 
-  public static function loadPlayer(array $data) {
-    $player = parent::loadPlayer($data);
+  public static function fromArray(array $data, array $context = array()) {
+    $player = parent::fromArray($data, $context);
     if ($player instanceof ComputerPlayer && !empty($data['ia'])) {
       $player->useIa($data['ia']);
       $player->getIa()->setSettings($data['ia_settings']);
     }
     else {
-      throw new Exception("Failed loading computer player");
+      throw new PlayerInvalidException("Failed loading computer player");
     }
     return $player;
   }
 
-  public function saveToArray() {
-    $data = array(
-      'className' => $this->getClassName(),
-      'ia' => get_class($this->getIa()),
-      'ia_settings' => $this->getIa()->getSettings(),
-      'id' => $this->getId(),
-    );
-    return $data;
+  protected function prepareArrayConversion() {
+    $this->addPersistantProperties(array('ia'));
+    parent::prepareArrayConversion();
   }
 
 }

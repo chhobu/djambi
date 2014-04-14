@@ -4,7 +4,8 @@
  * Description des différentes dispositions de jeu de Djambi possibles
  */
 
-namespace Djambi;
+namespace Djambi\GameDispositions;
+use Djambi\Grid;
 use Djambi\Grids\HexagonalGridWith3Sides;
 use Djambi\Grids\MiniGridWith2Sides;
 use Djambi\Grids\StandardGridWith4Sides;
@@ -14,7 +15,7 @@ use Djambi\Stores\StandardRuleset;
 /**
  * Class DjambiGameDisposition
  */
-abstract class GameDisposition  {
+abstract class BaseGameDisposition  {
   /** @var Grid $grid */
   private $grid;
   /** @var int $nb */

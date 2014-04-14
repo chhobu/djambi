@@ -4,29 +4,37 @@
  * Gestion des utilisateurs d'une partie de Djambi
  */
 
-namespace Djambi;
+namespace Djambi\Players;
+
 use Djambi\Exceptions\PlayerNotFoundException;
 use Djambi\Exceptions\PlayerInvalidException;
+use Djambi\Faction;
+use Djambi\Interfaces\PlayerInterface;
+use Djambi\PersistantDjambiObject;
 
 /**
  * Class DjambiPlayer
  */
-abstract class Player implements Interfaces\PlayerInterface {
+abstract class BasePlayer extends PersistantDjambiObject implements PlayerInterface {
   const TYPE_HUMAN = 'human';
   const TYPE_COMPUTER = 'computer';
+  const CLASS_NICKNAME = '';
 
   /* @var string $type */
-  private $type = 'human';
+  protected $type = self::TYPE_HUMAN;
   /* @var string $className */
   protected $className;
   /* @var string $id */
-  private $id;
-  /* @var string $name; */
-  private $name;
+  protected $id;
   /* @var Faction $faction */
-  private $faction;
+  protected $faction;
 
-  protected function __construct() {}
+  protected function __construct($id = NULL) {
+    if (is_null($id)) {
+      $id = static::generateId();
+    }
+    $this->id = $id;
+  }
 
   public function setFaction(Faction $faction) {
     $this->faction = $faction;
@@ -42,34 +50,17 @@ abstract class Player implements Interfaces\PlayerInterface {
     return $this;
   }
 
-  public function getName() {
-    if (empty($this->name)) {
-      return $this->id;
-    }
-    else {
-      return $this->name;
-    }
-  }
-
-  protected function setName($name) {
-    $this->name = $name;
-  }
-
   public function displayName() {
-    return $this->getName();
+    return $this->getId();
   }
 
   public function getId() {
     return $this->id;
   }
 
-  public function setId($id, $prefix = '') {
-    if (!is_null($id)) {
-      $this->id = $id;
-    }
-    else {
-      $this->id = uniqid($prefix);
-    }
+  protected function generateId() {
+    $prefix = static::CLASS_NICKNAME;
+    return uniqid($prefix);
   }
 
   public function isHuman() {
@@ -88,35 +79,35 @@ abstract class Player implements Interfaces\PlayerInterface {
     }
   }
 
-  public function getClassName() {
-    return $this->className;
-  }
-
-  protected function setClassName() {
-    $this->className = get_class($this);
-  }
-
   /**
    * Récupère un objet de type DjambiPlayer à partir d'un tableau de données.
    *
    * @param array $data
    *   Tableau de données
+   * @param array $context
    *
-   * @throws Exceptions\PlayerNotFoundException
-   * @return Player
+   * @throws \Djambi\Exceptions\PlayerNotFoundException
+   * @return BasePlayer
    *   Joueur de Djambi
    */
-  public static function loadPlayer(array $data) {
+  public static function fromArray(array $data, array $context = array()) {
     if (empty($data['id'])) {
       throw new PlayerNotFoundException("Missing id entry for loading player.");
     }
-    return new static($data['id']);
+    $player = new static($data['id']);
+    return $player;
+  }
+
+  protected function prepareArrayConversion() {
+    $this->addPersistantProperties(array('id'));
+    return parent::prepareArrayConversion();
   }
 
   public function isPlayingFaction(Faction $faction) {
     if (!is_null($faction->getPlayer())) {
       if ($faction->getPlayer()->getClassName() == $this->getClassName()
-        && $faction->getPlayer()->getId() == $this->getId()) {
+        && $faction->getPlayer()->getId() == $this->getId()
+      ) {
         return TRUE;
       }
     }

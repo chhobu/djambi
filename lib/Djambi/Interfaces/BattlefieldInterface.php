@@ -6,7 +6,6 @@ namespace Djambi\Interfaces;
 use Djambi\Cell;
 use Djambi\Faction;
 use Djambi\Move;
-use Djambi\Player;
 
 interface BattlefieldInterface {
 
@@ -17,19 +16,17 @@ interface BattlefieldInterface {
 
   /**
    * @param GameManagerInterface $game
-   * @param Player[] $players
-
+   * @param PlayerInterface[] $players
    *
-*@return BattlefieldInterface
+   * @return BattlefieldInterface
    */
   public static function createNewBattlefield(GameManagerInterface $game, $players);
 
   /**
    * @param GameManagerInterface $game
    * @param array $data
-
    *
-*@return BattlefieldInterface
+   * @return BattlefieldInterface
    */
   public static function loadBattlefield(GameManagerInterface $game, $data);
 

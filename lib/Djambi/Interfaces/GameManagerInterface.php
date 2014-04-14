@@ -2,54 +2,38 @@
 namespace Djambi\Interfaces;
 
 use Djambi\Faction;
-use Djambi\GameDisposition;
-use Djambi\Player;
+use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\Signal;
 
 /**
  * Interface GameManagerInterface
  */
-interface GameManagerInterface {
+interface GameManagerInterface extends ArrayableInterface {
+
+  /**
+   * @param string $id
+   * @param string $mode
+   *
+   * @return GameManagerInterface
+   */
+  public static function load($id, $mode);
+
+  /**
+   * @return GameManagerInterface
+   */
+  public function save();
 
   /**
    * Lance les actions permettant de rendre une partie jouable.
-   *
    * @return GameManagerInterface
    */
   public function play();
 
   /**
-   * Sauvegarde une partie.
-   *
-   * @param
-   *   Nom de la fonction appelant la méthode
-   *
-   * @return GameManagerInterface
-   */
-  public function save($called_from);
-
-  /**
    * Recharge une partie.
-   *
    * @return GameManagerInterface
    */
   public function reload();
-
-  /**
-   * Réinitialise la partie à la dernière sauvegarde effectuée.
-   *
-   * @return GameManagerInterface
-   */
-  public function rollback();
-
-  /**
-   * Charge une partie.
-   *
-   * @param array $data
-   *
-   * @return GameManagerInterface
-   */
-  public static function loadGame($data);
 
   /**
    * Crée une partie.
@@ -57,12 +41,12 @@ interface GameManagerInterface {
    * @param PlayerInterface[] $players
    * @param string $id
    * @param string $mode
-   * @param \Djambi\GameDisposition $disposition
+   * @param BaseGameDisposition $disposition
    * @param string $battlefield_factory
    *
    * @return GameManagerInterface
    */
-  public static function createGame($players, $id, $mode, GameDisposition $disposition, $battlefield_factory = NULL);
+  public static function createGame($players, $id, $mode, BaseGameDisposition $disposition, $battlefield_factory = NULL);
 
   /**
    * Supprime une partie.
@@ -91,14 +75,12 @@ interface GameManagerInterface {
 
   /**
    * Renvoie le timestamp de la dernière modification du jeu.
-   *
    * @return int
    */
   public function getChanged();
 
   /**
    * Renvoie le timestamp de la création du jeu.
-   *
    * @return int
    */
   public function getBegin();
@@ -115,25 +97,24 @@ interface GameManagerInterface {
   /**
    * Exclut un joueur d'une partie.
    *
-   * @param Player $player
+   * @param PlayerInterface $player
    *
    * @return GameManagerInterface
    */
-  public function ejectPlayer(Player $player);
+  public function ejectPlayer(PlayerInterface $player);
 
   /**
    * Ajoute un joueur sur la partie en cours.
    *
-   * @param Player $player
+   * @param PlayerInterface $player
    * @param Faction $faction
    *
    * @return GameManagerInterface
    */
-  public function addNewPlayer(Player $player, Faction $faction);
+  public function addNewPlayer(PlayerInterface $player, Faction $faction);
 
   /**
    * Renvoie le statut de la partie.
-   *
    * @return string
    */
   public function getStatus();
@@ -149,50 +130,39 @@ interface GameManagerInterface {
 
   /**
    * Renvoie le mode de jeu.
-   *
    * @return string
    */
   public function getMode();
 
   /**
    * Renvoie la disposition de la grille de jeu.
-   *
-   * @return GameDisposition
+   * @return BaseGameDisposition
    */
   public function getDisposition();
 
   /**
    * Renvoie l'identifiant de la partie.
-   *
    * @return string
    */
   public function getId();
 
   /**
    * Détermine si une partie est en cours.
-   *
    * @return bool
    */
   public function isPending();
 
   /**
    * Détermine si une partie est terminée.
-   *
    * @return bool
    */
   public function isFinished();
 
   /**
    * Détermine si une partie n'est pas commencée.
-   *
    * @return bool
    */
   public function isNotBegin();
-
-  /**
-   * Détermine si une partie est visible par des personnes extérieures
-   */
-  public function isViewable();
 
   /**
    * Récupère la valeur d'une option de jeu.

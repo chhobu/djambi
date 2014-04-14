@@ -5,10 +5,9 @@ namespace Djambi\GameDispositions;
 
 use Djambi\Faction;
 use Djambi\Factories\GameDispositionsFactory;
-use Djambi\GameDisposition;
 use Djambi\Grid;
 
-class GameDispositionCustom extends GameDisposition {
+class GameDispositionCustom extends BaseGameDisposition {
   public function __construct(GameDispositionsFactory $factory, $settings) {
     $grid = new Grid($settings);
     $this->setGrid($grid);

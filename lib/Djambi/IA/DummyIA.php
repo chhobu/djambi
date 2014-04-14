@@ -2,11 +2,10 @@
 
 namespace Djambi\IA;
 
-use Djambi\IA;
 use Djambi\Interfaces\MoveInteractionInterface;
 use Djambi\Players\ComputerPlayer;
 
-class DummyIA extends IA {
+class DummyIA extends BaseIA {
   protected  function __construct(ComputerPlayer $player, $name = 'BetaBot') {
     parent::__construct($player, $name);
   }

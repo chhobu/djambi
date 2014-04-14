@@ -6,7 +6,7 @@ use Behat\Gherkin\Node\TableNode;
 use Djambi\Cell;
 use Djambi\Faction;
 use Djambi\Factories\GameDispositionsFactory;
-use Djambi\GameManager;
+use Djambi\BasicGameManager;
 use Djambi\Players\HumanPlayer;
 
 class NewGameContext extends DjambiTestBaseContext {
@@ -40,7 +40,7 @@ class NewGameContext extends DjambiTestBaseContext {
   }
 
   protected function intiateNewGame($type, $nb_players) {
-    $this->getGameFactory()->setMode(GameManager::MODE_SANDBOX);
+    $this->getGameFactory()->setMode(BasicGameManager::MODE_SANDBOX);
     $this->getGameFactory()->setDisposition(GameDispositionsFactory::loadDisposition($nb_players . $type));
     $this->getGameFactory()->addPlayer($this->getCurrentPlayer());
     $this->setGame($this->getGameFactory()->createGameManager());

@@ -2,6 +2,7 @@
 namespace Djambi\Factories;
 use Djambi\Exceptions\DispositionNotFoundException;
 use Djambi\Faction;
+use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\GameDispositions\GameDispositionCustom;
 use Djambi\Interfaces\GameDispositionsFactoryInterface;
 use Djambi\Interfaces\GridInterface;
@@ -28,7 +29,7 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface, GridI
    *   Tableau associatif contenant les options de la disposition
    *
    * @throws \Djambi\Exceptions\DispositionNotFoundException
-   * @return \Djambi\GameDisposition
+   * @return BaseGameDisposition
    *   Objet étendant la classe abstraite DjambiGameDisposition
    */
   public static function loadDisposition($code, $scheme_settings = NULL) {

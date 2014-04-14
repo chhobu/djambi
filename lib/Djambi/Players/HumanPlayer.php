@@ -2,43 +2,26 @@
 namespace Djambi\Players;
 
 use Djambi\Interfaces\HumanPlayerInterface;
-use Djambi\Player;
 use Djambi\Signal;
 
-class HumanPlayer extends Player implements HumanPlayerInterface {
+class HumanPlayer extends BasePlayer implements HumanPlayerInterface {
   /** @var bool */
-  protected $registered = FALSE;
+  protected $emptySeat = TRUE;
   /** @var Signal */
   protected $lastSignal;
   /** @var int */
   protected $joined;
 
-  public function __construct($id, $prefix = '') {
-    $this->setType(self::TYPE_HUMAN);
-    $this->setClassName();
-    $this->setId($id, $prefix);
+  /**
+   * @return bool
+   */
+  public function isEmptySeat() {
+    return $this->emptySeat;
   }
 
-  public function isRegistered() {
-    return $this->registered;
-  }
-
-  protected function setRegistered($bool) {
-    $this->registered = $bool ? TRUE : FALSE;
-  }
-
-  public function register(array $data = NULL) {
-    $this->setRegistered(TRUE);
+  protected function setEmptySeat($empty) {
+    $this->emptySeat = $empty ? TRUE : FALSE;
     return $this;
-  }
-
-  public function saveToArray() {
-    $data = array(
-      'className' => $this->getClassName(),
-      'registered' => $this->isRegistered(),
-      'id' => $this->getId(),
-    );
-    return $data;
   }
 
   /**
@@ -48,11 +31,6 @@ class HumanPlayer extends Player implements HumanPlayerInterface {
     return $this->lastSignal;
   }
 
-  /**
-   * @param Signal $signal
-   *
-   * @return HumanPlayerInterface
-   */
   public function setLastSignal(Signal $signal) {
     $this->lastSignal = $signal;
     return $this;
@@ -65,31 +43,38 @@ class HumanPlayer extends Player implements HumanPlayerInterface {
     return $this->joined;
   }
 
-  /**
-   * @param int $joined
-   *
-   * @return HumanPlayerInterface
-   */
-  public function setJoined($joined) {
+  protected function setJoined($joined) {
     $this->joined = $joined;
     return $this;
   }
 
-  public static function loadPlayer(array $data) {
+  public static function createEmptyHumanPlayer() {
+    return new static();
+  }
+
+  public function useSeat() {
+    if ($this->isEmptySeat()) {
+      $this->setJoined(time());
+      $this->setEmptySeat(FALSE);
+    }
+  }
+
+  protected function prepareArrayConversion() {
+    $this->addPersistantProperties(array('emptySeat', 'joined', 'lastSignal'));
+    return parent::prepareArrayConversion();
+  }
+
+  public static function fromArray(array $data, array $context = array()) {
     /* @var \Djambi\Players\HumanPlayer $player */
-    $player = parent::loadPlayer($data);
-    if ($data['registered']) {
-      $player->register($data);
+    $player = parent::fromArray($data);
+    if (isset($data['emptySeat'])) {
+      $player->setEmptySeat($data['emptySeat']);
     }
-    if (!empty($data['joined'])) {
-      $joined = $data['joined'];
+    if (!$player->isEmptySeat()) {
+      $player->setJoined(!empty($data['joined']) ? $data['joined'] : time());
     }
-    else {
-      $joined = time();
-    }
-    $player->setJoined($joined);
-    if (!empty($data['ip']) && !empty($data['ping'])) {
-      Signal::loadSignal($player, $data['ip'], $data['ping']);
+    if (!empty($data['lastSignal'])) {
+      $player->setLastSignal(Signal::fromArray($data['lastSignal'], array('player' => $player)));
     }
     return $player;
   }

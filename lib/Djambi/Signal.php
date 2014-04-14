@@ -2,68 +2,50 @@
 
 namespace Djambi;
 
-
+use Djambi\Exceptions\PlayerNotFoundException;
 use Djambi\Interfaces\HumanPlayerInterface;
 
-class Signal {
+class Signal extends PersistantDjambiObject {
   /** @var HumanPlayerInterface */
-  private $player;
+  protected $player;
   /** @var int */
-  private $ping;
+  protected $time;
   /** @var string */
-  private $ip;
+  protected $ip;
 
-  protected function __construct(HumanPlayerInterface $player, $ip, $ping) {
-    $this->player = $player;
-    $this->ping = $ping;
+  protected function __construct(HumanPlayerInterface $player, $ip, $time) {
+    $this->time = $time;
     $this->ip = $ip;
-    $player->setLastSignal($this);
+    $this->player = $player;
   }
 
-  public static function loadSignal(HumanPlayerInterface $player, $ip, $ping) {
-    return new static($player, $ip, $ping);
+  public static function fromArray(array $data, array $context = array()) {
+    if (!isset($context['player'])) {
+      throw new PlayerNotFoundException();
+    }
+    return new static($context['player'], $data['ip'], $data['time']);
+  }
+
+  protected function prepareArrayConversion() {
+    $this->addPersistantProperties(array('ip', 'time'));
+    $this->addDependantObjects(array('player' => 'getId'));
+    return parent::prepareArrayConversion();
   }
 
   public static function createSignal(HumanPlayerInterface $player, $ip) {
     return new static($player, $ip, time());
   }
 
-  public function getPing() {
-    return $this->ping;
+  public function getTime() {
+    return $this->time;
   }
 
   public function getIp() {
     return $this->ip;
   }
 
-  public function getPlayer() {
+  protected function getPlayer() {
     return $this->player;
   }
 
-  public function propagate() {
-    if (!is_null($this->player->getFaction())) {
-      $this->player->getFaction()->getBattlefield()->getGameManager()->listenSignal($this);
-    }
-    return $this;
-  }
-
-  public function toArray() {
-    $array = array(
-      'ip' => $this->ip,
-      'ping' => $this->ping,
-    );
-    return $array;
-  }
-
-  protected function setIp($ip) {
-    $this->ip = $ip;
-  }
-
-  protected function setPlayer(HumanPlayerInterface $player) {
-    $this->player = $player;
-  }
-
-  protected function setPing($ping) {
-    $this->ping = $ping;
-  }
 }

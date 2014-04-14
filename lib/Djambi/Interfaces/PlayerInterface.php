@@ -29,12 +29,12 @@ interface PlayerInterface {
    *
    * @return PlayerInterface
    */
-  public static function loadPlayer(array $data);
+  public static function fromArray(array $data);
 
   /**
    * @return PlayerInterface
    */
-  public function saveToArray();
+  public function toArray();
 
   /**
    * @param Faction $faction

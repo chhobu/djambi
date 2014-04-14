@@ -1,0 +1,6 @@
+services:
+  djambi.shorttempstore:
+    class: Drupal\djambi\Services\ShortTempStoreFactory
+    tags:
+      - { name: needs_destruction }
+    arguments: ['@database', '@lock']

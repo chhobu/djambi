@@ -4,8 +4,8 @@ namespace Djambi\Factories;
 
 
 use Djambi\Exceptions\Exception;
-use Djambi\GameDisposition;
-use Djambi\GameManager;
+use Djambi\BaseGameDisposition;
+use Djambi\GameManagers\BasicGameManager;
 use Djambi\IA\DummyIA;
 use Djambi\Interfaces\GameFactoryInterface;
 use Djambi\Interfaces\GameManagerInterface;
@@ -15,10 +15,10 @@ use Djambi\Players\HumanPlayer;
 
 class GameFactory implements GameFactoryInterface {
   /** @var string */
-  private $mode = GameManager::MODE_FRIENDLY;
+  private $mode = BasicGameManager::MODE_FRIENDLY;
   /** @var PlayerInterface[] */
   private $players = array();
-  /** @var GameDisposition */
+  /** @var BaseGameDisposition */
   private $disposition;
   /** @var string */
   private $gameManagerClass;
@@ -27,7 +27,7 @@ class GameFactory implements GameFactoryInterface {
   /** @var string */
   private $battlefieldFactory;
 
-  public function __construct($game_manager_class = '\Djambi\GameManager') {
+  public function __construct($game_manager_class = '\Djambi\GameManagers\BasicGameManager') {
     $this->setGameManagerClass($game_manager_class);
   }
 
@@ -70,7 +70,7 @@ class GameFactory implements GameFactoryInterface {
     return $this->players;
   }
 
-  public function setDisposition(GameDisposition $disposition) {
+  public function setDisposition(BaseGameDisposition $disposition) {
     $this->disposition = $disposition;
     return $this;
   }
@@ -145,24 +145,31 @@ class GameFactory implements GameFactoryInterface {
 
   protected function addDefaultPlayers() {
     $disposition = $this->getDisposition();
-    $default_player = $this->getDefaultCurrentPlayer();
+    if (empty($this->getPlayers())) {
+      $default_player = $this->addDefaultCurrentPlayer();
+    }
+    else {
+      $default_player = current($this->getPlayers());
+    }
     for ($i = count($this->players) + 1; $i <= $disposition->getNbPlayers(); $i++) {
-      if ($i == 1 || $this->getMode() == GameManager::MODE_SANDBOX) {
+      if ($i == 1 || $this->getMode() == BasicGameManager::MODE_SANDBOX) {
         $this->addPlayer($default_player, $i);
       }
-      elseif ($this->getMode() == GameManager::MODE_TRAINING) {
+      elseif ($this->getMode() == BasicGameManager::MODE_TRAINING) {
         $computer = new ComputerPlayer();
         $this->addPlayer($computer->useIa($this->getDefaultComputerIa()));
       }
       else {
-        $this->addPlayer(new HumanPlayer('Player ' . $i));
+        $new_human_player = HumanPlayer::createEmptyHumanPlayer();
+        $this->addPlayer($new_human_player);
       }
     }
     return $this;
   }
 
-  protected function getDefaultCurrentPlayer() {
-    return new HumanPlayer('Player 1');
+  protected function addDefaultCurrentPlayer() {
+    $new_human_player = HumanPlayer::createEmptyHumanPlayer();
+    return $new_human_player;
   }
 
   protected function getDefaultComputerIa() {

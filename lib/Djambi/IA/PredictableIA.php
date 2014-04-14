@@ -4,11 +4,10 @@ namespace Djambi\IA;
 
 
 use Djambi\Cell;
-use Djambi\IA;
 use Djambi\Interfaces\MoveInteractionInterface;
 use Djambi\Move;
 
-class PredictableIA extends IA {
+class PredictableIA extends BaseIA {
   protected $strategy;
 
   /**

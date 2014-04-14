@@ -326,7 +326,7 @@ class Grid implements GridInterface {
     return $this->pieceScheme;
   }
 
-  public static function getSidesInfos($i = NULL) {
+  public static function getSidesInfos($order = NULL) {
     $factions = array();
     $factions['R'] = array(
       'id' => 'R',
@@ -352,17 +352,15 @@ class Grid implements GridInterface {
       'class' => 'vert',
       'start_order' => 4,
     );
-    if (is_null($i)) {
-      return $factions;
-    }
-    else {
+    if (!is_null($order)) {
       foreach ($factions as $faction) {
-        if ($faction['start_order'] == $i) {
+        if ($faction['start_order'] == $order) {
           return $faction;
         }
       }
-      throw new GridInvalidException("Undescribed faction : #" . $i);
+      throw new GridInvalidException("Undescribed faction : #" . $order);
     }
+    return $factions;
   }
 
   public function addSide(array $start_origin = NULL, $start_status = Faction::STATUS_READY, $specific_pieces = array()) {
@@ -400,12 +398,10 @@ class Grid implements GridInterface {
 
   public function getDirection($orientation) {
     $directions = $this->getDirections();
-    if (isset($directions[$orientation])) {
-      return $directions[$orientation];
-    }
-    else {
+    if (!isset($directions[$orientation])) {
       throw new GridInvalidException('Unknown direction.');
     }
+    return $directions[$orientation];
   }
 
   public function getSettings() {

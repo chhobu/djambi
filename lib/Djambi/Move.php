@@ -21,7 +21,7 @@ class Move {
   /** @var string */
   private $phase = self::PHASE_PIECE_SELECTION;
   /** @var string */
-  private $type;
+  private $type = 'move';
   /** @var MoveInteractionInterface[] */
   private $interactions = array();
   /** @var bool */
@@ -34,6 +34,18 @@ class Move {
   public function __construct(Faction $faction) {
     $this->setActingFaction($faction);
     $this->setType('move');
+  }
+
+  public function reset() {
+    $this->selectedPiece = NULL;
+    $this->destination = NULL;
+    $this->phase = self::PHASE_PIECE_SELECTION;
+    $this->interactions = array();
+    $this->completed = FALSE;
+    $this->events = array();
+    $this->kills = array();
+    $this->setType('move');
+    return $this;
   }
 
   protected function setActingFaction(Faction $faction) {

@@ -9,7 +9,7 @@ use Djambi\Exceptions\PieceNotFoundException;
 use Djambi\Faction;
 use Djambi\Factories\GameFactory;
 use Djambi\Interfaces\GameManagerInterface;
-use Djambi\Player;
+use Djambi\BasePlayer;
 use Djambi\Players\HumanPlayer;
 
 //
@@ -81,7 +81,7 @@ class DjambiTestBaseContext extends BehatContext {
     return $this->currentPlayer;
   }
 
-  protected function setCurrentPlayer(Player $player) {
+  protected function setCurrentPlayer(BasePlayer $player) {
     $this->currentPlayer = $player;
     return $this;
   }

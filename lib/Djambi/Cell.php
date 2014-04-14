@@ -143,4 +143,8 @@ class Cell {
     return $this->columnName;
   }
 
+  public function isEnabled() {
+    return $this->getType() != self::TYPE_DISABLED;
+  }
+
 }

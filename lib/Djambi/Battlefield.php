@@ -12,6 +12,7 @@ use Djambi\Exceptions\GridInvalidException;
 use Djambi\Exceptions\CellNotFoundException;
 use Djambi\Exceptions\FactionNotFoundException;
 use Djambi\Exceptions\PieceNotFoundException;
+use Djambi\GameManagers\BasicGameManager;
 use Djambi\Interfaces\BattlefieldInterface;
 use Djambi\Interfaces\GameManagerInterface;
 use Djambi\Interfaces\PlayerInterface;
@@ -91,7 +92,7 @@ class Battlefield implements BattlefieldInterface {
     foreach ($scheme_sides as $side) {
       if ($side['start_status'] == Faction::STATUS_READY) {
         /* @var HumanPlayer $player */
-        if ($game->getMode() == GameManager::MODE_SANDBOX) {
+        if ($game->getMode() == BasicGameManager::MODE_SANDBOX) {
           $player = current($players);
         }
         else {
@@ -180,7 +181,7 @@ class Battlefield implements BattlefieldInterface {
       }
     }
     $battlefield->logEvent('info', 'NEW_DJAMBI_GAME');
-    $game->setStatus($ready ? GameManager::STATUS_PENDING : GameManager::STATUS_RECRUITING);
+    $game->setStatus($ready ? BasicGameManager::STATUS_PENDING : BasicGameManager::STATUS_RECRUITING);
     return $battlefield;
   }
 
@@ -222,7 +223,7 @@ class Battlefield implements BattlefieldInterface {
         $faction_data['data'] = array();
       }
       if (!is_null($faction_data['player'])) {
-        $player = call_user_func_array($faction_data['player']['className'] . '::loadPlayer',
+        $player = call_user_func_array($faction_data['player']['className'] . '::fromArray',
           array(array_merge($faction_data['player'], $faction_data['data'])));
       }
       if (!isset($faction_data['id'])) {
@@ -443,6 +444,12 @@ class Battlefield implements BattlefieldInterface {
     }
   }
 
+  /**
+   * @param string $name
+   *
+   * @return Cell
+   * @throws Exceptions\CellNotFoundException
+   */
   public function findCellByName($name) {
     if (isset($this->cells[$name])) {
       return $this->cells[$name];
@@ -738,7 +745,7 @@ class Battlefield implements BattlefieldInterface {
         $faction->setStatus(Faction::STATUS_DRAW)->setRanking($nb_living_factions);
       }
     }
-    $this->getGameManager()->setStatus(GameManager::STATUS_FINISHED);
+    $this->getGameManager()->setStatus(BasicGameManager::STATUS_FINISHED);
     $this->updateSummary();
     $this->buildFinalRanking($nb_living_factions);
     $this->logEvent("event", "END");
@@ -926,7 +933,7 @@ class Battlefield implements BattlefieldInterface {
       }
     }
     $rulers = array();
-    if (!empty($thrones) && $this->getGameManager()->getStatus() == GameManager::STATUS_PENDING) {
+    if (!empty($thrones) && $this->getGameManager()->getStatus() == BasicGameManager::STATUS_PENDING) {
       foreach ($thrones as $throne) {
         $cell = $this->cells[$throne];
         $piece = $cell->getOccupant();
@@ -965,7 +972,7 @@ class Battlefield implements BattlefieldInterface {
         $turn_scheme[$last_playable_turn_scheme]["playable"] = FALSE;
       }
     }
-    elseif ($this->getGameManager()->getStatus() == GameManager::STATUS_DRAW_PROPOSAL) {
+    elseif ($this->getGameManager()->getStatus() == BasicGameManager::STATUS_DRAW_PROPOSAL) {
       foreach ($turn_scheme as $key => $turn) {
         if (!empty($turn['side']) && $turn['playable']) {
           $side = $this->getFactionById($turn['side']);
@@ -1203,17 +1210,16 @@ class Battlefield implements BattlefieldInterface {
     return $this;
   }
 
+  protected function resetCurrentMove() {
+    $this->currentMove = NULL;
+  }
+
   public function getCurrentMove() {
     if (is_null($this->currentMove) && $this->getGameManager()->isPending()) {
       $faction = $this->getPlayingFaction();
       $this->setCurrentMove(new Move($faction));
     }
     return $this->currentMove;
-  }
-
-  public function resetCurrentMove() {
-    $this->currentMove = NULL;
-    return $this;
   }
 
   public function prepareTurn() {

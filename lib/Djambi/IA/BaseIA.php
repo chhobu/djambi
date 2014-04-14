@@ -1,10 +1,11 @@
 <?php
-namespace Djambi;
+namespace Djambi\IA;
 
 use Djambi\Interfaces\IAInterface;
+use Djambi\Move;
 use Djambi\Players\ComputerPlayer;
 
-abstract class IA implements IAInterface {
+abstract class BaseIA implements IAInterface {
   /** @var string */
   private $name;
   /** @var ComputerPlayer */

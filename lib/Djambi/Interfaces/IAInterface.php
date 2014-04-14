@@ -60,4 +60,15 @@ interface IAInterface {
    *   Choix de déplacement à réaliser
    */
   public function decideInteraction(MoveInteractionInterface $move);
+
+  public function setSettings(array $settings);
+
+  /**
+   * @return array
+   */
+  public function getSettings();
+
+  public function addSetting($var, $value);
+
+  public function getSetting($var);
 }
