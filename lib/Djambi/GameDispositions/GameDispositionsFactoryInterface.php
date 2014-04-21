@@ -1,6 +1,6 @@
 <?php
 
-namespace Djambi\Interfaces;
+namespace Djambi\GameDispositions;
 
 
 interface GameDispositionsFactoryInterface {

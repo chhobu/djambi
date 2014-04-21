@@ -1,13 +1,11 @@
 <?php
 namespace Djambi\PieceDescriptions;
 
-use Djambi\PieceDescription;
-
-class Necromobile extends PieceDescription {
+class Necromobile extends BasePieceDescription {
   public function __construct($num, $start_position) {
     $this->setHabilities(array(
       self::HABILITY_MOVE_DEAD_PEACES => TRUE,
     ));
-    parent::__construct('necromobile', 'N', 'Necromobile', $num, $start_position, 5);
+    $this->describePiece('necromobile', 'N', 'Necromobile', $num, $start_position, 5);
   }
 }

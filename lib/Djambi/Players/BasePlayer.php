@@ -8,8 +8,7 @@ namespace Djambi\Players;
 
 use Djambi\Exceptions\PlayerNotFoundException;
 use Djambi\Exceptions\PlayerInvalidException;
-use Djambi\Faction;
-use Djambi\Interfaces\PlayerInterface;
+use Djambi\Gameplay\Faction;
 use Djambi\PersistantDjambiObject;
 
 /**

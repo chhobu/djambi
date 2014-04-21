@@ -1,10 +1,10 @@
 <?php
 
 namespace Djambi\Grids;
-use Djambi\Faction;
-use Djambi\Grid;
 
-class StandardGridWith4Sides extends Grid {
+use Djambi\Gameplay\Faction;
+
+class StandardGridWith4Sides extends BaseGrid {
   public function __construct($settings = NULL) {
     $this->useStandardGrid(9, 9);
     $this->useStandardPieces();

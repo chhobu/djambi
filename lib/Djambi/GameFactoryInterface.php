@@ -1,7 +1,7 @@
 <?php
+namespace Djambi;
 
-namespace Djambi\Interfaces;
-
+use Djambi\GameManagers\GameManagerInterface;
 
 interface GameFactoryInterface {
   /**

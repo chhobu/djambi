@@ -1,10 +1,10 @@
 <?php
 
-namespace Djambi\Interfaces;
+namespace Djambi\Moves;
 
-use Djambi\Cell;
-use Djambi\Move;
-use Djambi\Piece;
+
+use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Piece;
 
 interface MoveInteractionInterface {
 
@@ -34,7 +34,7 @@ interface MoveInteractionInterface {
   /**
    * Exécute une interaction.
    *
-   * @param \Djambi\Cell $cell
+   * @param Cell $cell
    *
    * @return MoveInteractionInterface
    */

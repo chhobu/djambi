@@ -1,9 +1,10 @@
 <?php
 
-namespace Djambi;
+namespace Djambi\GameManagers;
 
 use Djambi\Exceptions\PlayerNotFoundException;
-use Djambi\Interfaces\HumanPlayerInterface;
+use Djambi\PersistantDjambiObject;
+use Djambi\Players\HumanPlayerInterface;
 
 class Signal extends PersistantDjambiObject {
   /** @var HumanPlayerInterface */

@@ -2,14 +2,11 @@
 
 namespace Djambi\Moves;
 
-
-use Djambi\Cell;
 use Djambi\Exceptions\DisallowedActionException;
-use Djambi\Interfaces\MoveInteractionInterface;
-use Djambi\Move;
-use Djambi\Piece;
+use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Piece;
 
-class Necromobility extends MoveInteraction implements MoveInteractionInterface {
+class Necromobility extends BaseMoveInteraction implements MoveInteractionInterface {
 
   public static function getInteractionType() {
     return 'necromobility';

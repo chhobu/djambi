@@ -5,28 +5,45 @@
  */
 
 namespace Djambi\GameDispositions;
-use Djambi\Grid;
+use Djambi\Grids\GridInterface;
 use Djambi\Grids\HexagonalGridWith3Sides;
 use Djambi\Grids\MiniGridWith2Sides;
 use Djambi\Grids\StandardGridWith4Sides;
-use Djambi\Stores\GameOptionsStore;
-use Djambi\Stores\StandardRuleset;
+use Djambi\PersistantDjambiObject;
+use Djambi\GameOptions\GameOptionsStore;
+use Djambi\GameOptions\StandardRuleset;
 
 /**
  * Class DjambiGameDisposition
  */
-abstract class BaseGameDisposition  {
-  /** @var Grid $grid */
+abstract class BaseGameDisposition extends PersistantDjambiObject  {
+  /** @var GridInterface $grid */
   private $grid;
   /** @var int $nb */
   private $nbPlayers = 4;
   /** @var GameOptionsStore $optionsStore */
   private $optionsStore;
 
+  protected function prepareArrayConversion() {
+    $this->addPersistantProperties(array(
+      'grid',
+      'nbPlayers',
+      'optionsStore',
+    ));
+    return parent::prepareArrayConversion();
+  }
+
+  public static function fromArray(array $array, array $context = array()) {
+    return new static();
+  }
+
   public function getNbPlayers() {
     return $this->nbPlayers;
   }
 
+  /**
+   * @return GridInterface
+   */
   public function getGrid() {
     if (is_null($this->grid)) {
       $this->useStandardGrid();
@@ -39,7 +56,7 @@ abstract class BaseGameDisposition  {
     return $this;
   }
 
-  public function setGrid(Grid $scheme) {
+  public function setGrid(GridInterface $scheme) {
     $this->grid = $scheme;
     return $this;
   }
@@ -63,18 +80,18 @@ abstract class BaseGameDisposition  {
     $this->optionsStore = $store;
   }
 
-  public function useMiniGridWith2Sides($settings = array()) {
-    $this->setGrid(new MiniGridWith2Sides($settings));
+  public function useMiniGridWith2Sides() {
+    $this->setGrid(new MiniGridWith2Sides());
     return $this;
   }
 
-  public function useStandardGrid($settings = array()) {
-    $this->setGrid(new StandardGridWith4Sides($settings));
+  public function useStandardGrid() {
+    $this->setGrid(new StandardGridWith4Sides());
     return $this;
   }
 
-  public function useHexagonalGrid($settings = array()) {
-    $this->setGrid(new HexagonalGridWith3Sides($settings));
+  public function useHexagonalGrid() {
+    $this->setGrid(new HexagonalGridWith3Sides());
     return $this;
   }
 

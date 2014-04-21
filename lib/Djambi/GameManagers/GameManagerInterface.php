@@ -1,9 +1,11 @@
 <?php
-namespace Djambi\Interfaces;
+namespace Djambi\GameManagers;
 
-use Djambi\Faction;
+use Djambi\ArrayableInterface;
 use Djambi\GameDispositions\BaseGameDisposition;
-use Djambi\Signal;
+use Djambi\Gameplay\BattlefieldInterface;
+use Djambi\Gameplay\Faction;
+use Djambi\Players\PlayerInterface;
 
 /**
  * Interface GameManagerInterface

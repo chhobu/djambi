@@ -1,17 +1,41 @@
 <?php
-namespace Djambi\Stores;
+namespace Djambi\GameOptions;
+
 use Djambi\Exceptions\GameOptionInvalidException;
-use Djambi\GameOption;
+use Djambi\PersistantDjambiObject;
 
-
-class GameOptionsStore {
+class GameOptionsStore extends PersistantDjambiObject {
+  /**
+   * @var array
+   */
   private $stores;
 
   public function __construct() {
     $this->stores = array();
   }
 
-  public function addInStore(GameOption $option) {
+  public static function fromArray(array $array, array $context = array()) {
+    $args = $array;
+    unset($args['className']);
+    $game_options_store = call_user_func($array['className'] . '::fromArray', $args, $context);
+    $context['gameStore'] = $game_options_store;
+    foreach ($array['stores'] as $store) {
+      foreach ($store as $rule) {
+        $option_args = $rule;
+        unset($rule['className']);
+        $option = call_user_func_array($rule['className'] . '::fromArray', $option_args, $context);
+        $game_options_store->addInStore($option);
+      }
+    }
+    return $game_options_store;
+  }
+
+  protected function prepareArrayConversion() {
+    $this->addPersistantProperties(array('stores'));
+    return parent::prepareArrayConversion();
+  }
+
+  public function addInStore(BaseGameOption $option) {
     $this->stores[$option->getType()][$option->getName()] = $option;
     return $this;
   }
@@ -23,7 +47,7 @@ class GameOptionsStore {
    * @param string $type
    *
    * @throws \Djambi\Exceptions\GameOptionInvalidException
-   * @return GameOption
+   * @return BaseGameOption
    */
   public function retrieve($name, $type = NULL) {
     if (!is_null($type)) {
@@ -47,7 +71,7 @@ class GameOptionsStore {
   /**
    * @param $type
    *
-   * @return GameOption[]
+   * @return BaseGameOption[]
    */
   public function getStore($type) {
     if (isset($this->stores[$type])) {
@@ -57,7 +81,7 @@ class GameOptionsStore {
   }
 
   /**
-   * @return GameOption[]
+   * @return BaseGameOption[]
    */
   public function getAllGameOptions() {
     $items = array();
@@ -80,7 +104,7 @@ class GameOptionsStore {
   public function getAllGameOptionsValues($only_not_default_values = TRUE) {
     $values = array();
     foreach ($this->stores as $store_items) {
-      /* @var GameOption $item */
+      /* @var BaseGameOption $item */
       foreach ($store_items as $item) {
         if (!$only_not_default_values || ($only_not_default_values && $item->getValue() != $item->getDefault())) {
           $values[$item->getName()] = $item->getValue();

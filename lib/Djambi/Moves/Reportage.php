@@ -3,15 +3,13 @@
 namespace Djambi\Moves;
 
 
-use Djambi\Cell;
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\IllogicMoveException;
-use Djambi\Interfaces\MoveInteractionInterface;
-use Djambi\Move;
-use Djambi\Piece;
-use Djambi\Stores\StandardRuleset;
+use Djambi\GameOptions\StandardRuleset;
+use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Piece;
 
-class Reportage extends MoveInteraction implements MoveInteractionInterface {
+class Reportage extends BaseMoveInteraction implements MoveInteractionInterface {
   /** @var Piece[] */
   private $potentialTargets;
 

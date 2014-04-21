@@ -4,7 +4,7 @@
  * Classe permettant de gérer les cellules d'une grille de Djambi.
  */
 
-namespace Djambi;
+namespace Djambi\Gameplay;
 
 use Djambi\Exceptions\GridInvalidException;
 
@@ -100,7 +100,7 @@ class Cell {
    * @param string $type
    *   Type de cellule. Par défaut : std (standard).
    *
-   * @throws Exceptions\GridInvalidException
+   * @throws GridInvalidException
    * @return $this
    */
   public function setType($type) {

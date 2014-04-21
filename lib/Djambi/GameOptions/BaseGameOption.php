@@ -4,11 +4,11 @@
  * Gère les différentes variantes de règles et options de jeu.
  */
 
-namespace Djambi;
+namespace Djambi\GameOptions;
 use Djambi\Exceptions\GameOptionInvalidException;
-use Djambi\Stores\GameOptionsStore;
+use Djambi\PersistantDjambiObject;
 
-class GameOption {
+abstract class BaseGameOption extends PersistantDjambiObject {
   /* @var string */
   private $name;
   /* @var string */
@@ -33,6 +33,53 @@ class GameOption {
   private $genericLabel;
   /* @var array */
   private $genericLabelArgs;
+  /* @var bool */
+  private $definedInConstructor = FALSE;
+
+  public static function fromArray(array $array, array $context = array()) {
+    if (!empty($array['definedFromConstructor'])) {
+      /** @var GameOptionsStore $game_store */
+      $game_store = $context['gameStore'];
+      $option = $game_store->retrieve($array['name']);
+    }
+    else {
+      $facultative_properties = array('widget', 'value', 'default', 'choices');
+      foreach ($facultative_properties as $property) {
+        if (empty($array[$property])) {
+          $array[$property] = NULL;
+        }
+      }
+      $option = new static($context['gameStore'], $array['type'], $array['name'], $array['title'], $array['default'], $array['widget'], $array['choices']);
+    }
+    $option->setValue($array['value']);
+    return $option;
+  }
+
+  protected function prepareArrayConversion() {
+    if ($this->isDefinedInConstructor() && $this->getValue() != $this->getDefault()) {
+      $this->addPersistantProperties(array('value', 'definedInContructor'));
+    }
+    else {
+      $this->addPersistantProperties(array(
+        'name',
+        'title',
+        'widget',
+        'type',
+        'choices',
+        'default',
+        'value',
+        'definedInConstructor',
+      ));
+    }
+    return parent::prepareArrayConversion();
+  }
+
+  public function toArray() {
+    if ($this->isDefinedInConstructor() && $this->getValue() == $this->getDefault()) {
+      return NULL;
+    }
+    return parent::toArray();
+  }
 
   /**
    * @param GameOptionsStore $store
@@ -58,6 +105,7 @@ class GameOption {
       $this->setConfigurable(FALSE);
     }
     $this->setDefault($default);
+    $this->setValue($default);
     $this->setCssClass('game-option');
     $store->addInStore($this);
   }
@@ -171,6 +219,15 @@ class GameOption {
 
   public function getGenericLabelArgs() {
     return $this->genericLabelArgs;
+  }
+
+  public function isDefinedInConstructor() {
+    return $this->definedInConstructor;
+  }
+
+  public function setDefinedInConstructor($bool) {
+    $this->definedInConstructor = $bool;
+    return $this;
   }
 
 }

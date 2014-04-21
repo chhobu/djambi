@@ -2,11 +2,9 @@
 
 namespace Djambi\GameDispositions;
 
-use Djambi\Factories\GameDispositionsFactory;
-
 class GameDisposition2mini extends BaseGameDisposition {
-  public function __construct(GameDispositionsFactory $factory, $settings = NULL) {
-    $this->useMiniGridWith2Sides($settings);
+  public function __construct() {
+    $this->useMiniGridWith2Sides();
     $this->useStandardRuleset();
     $this->setNbPlayers(2);
   }

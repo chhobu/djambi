@@ -1,17 +1,17 @@
 <?php
 
-namespace Djambi\Factories;
+namespace Djambi;
 
 
 use Djambi\Exceptions\Exception;
-use Djambi\BaseGameDisposition;
+use Djambi\GameDispositions\BaseGameDisposition;
+use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\GameManagerInterface;
 use Djambi\IA\DummyIA;
-use Djambi\Interfaces\GameFactoryInterface;
-use Djambi\Interfaces\GameManagerInterface;
-use Djambi\Interfaces\PlayerInterface;
 use Djambi\Players\ComputerPlayer;
 use Djambi\Players\HumanPlayer;
+use Djambi\Players\PlayerInterface;
 
 class GameFactory implements GameFactoryInterface {
   /** @var string */

@@ -2,10 +2,9 @@
 
 namespace Djambi\IA;
 
-
-use Djambi\Cell;
-use Djambi\Interfaces\MoveInteractionInterface;
-use Djambi\Move;
+use Djambi\Gameplay\Cell;
+use Djambi\Moves\Move;
+use Djambi\Moves\MoveInteractionInterface;
 
 class PredictableIA extends BaseIA {
   protected $strategy;

@@ -2,7 +2,6 @@
 
 namespace Djambi\Grids;
 
-use Djambi\Grid;
 use Djambi\PieceDescriptions\Assassin;
 use Djambi\PieceDescriptions\Diplomat;
 use Djambi\PieceDescriptions\Leader;
@@ -10,7 +9,7 @@ use Djambi\PieceDescriptions\Militant;
 use Djambi\PieceDescriptions\Reporter;
 
 
-class MiniGridWith2Sides extends Grid {
+class MiniGridWith2Sides extends BaseGrid {
   public function __construct($settings = NULL) {
     $this->useStandardGrid(7, 7);
     $this->addCommonPiece(new Leader(NULL, array('x' => 0, 'y' => 0)));
@@ -32,6 +31,5 @@ class MiniGridWith2Sides extends Grid {
     $this->addCommonPiece($surprise);
     $this->addSide(array('x' => 1, 'y' => 7));
     $this->addSide(array('x' => 7, 'y' => 1));
-    $this->setSettings($settings);
   }
 }

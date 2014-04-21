@@ -1,11 +1,11 @@
 <?php
 
-namespace Djambi\Interfaces;
+namespace Djambi\Gameplay;
 
 
-use Djambi\Cell;
-use Djambi\Faction;
-use Djambi\Move;
+use Djambi\GameManagers\GameManagerInterface;
+use Djambi\Moves\Move;
+use Djambi\Players\PlayerInterface;
 
 interface BattlefieldInterface {
 
@@ -21,19 +21,6 @@ interface BattlefieldInterface {
    * @return BattlefieldInterface
    */
   public static function createNewBattlefield(GameManagerInterface $game, $players);
-
-  /**
-   * @param GameManagerInterface $game
-   * @param array $data
-   *
-   * @return BattlefieldInterface
-   */
-  public static function loadBattlefield(GameManagerInterface $game, $data);
-
-  /**
-   * @return array
-   */
-  public function toArray();
 
   /**
    * @return BattlefieldInterface
@@ -85,5 +72,12 @@ interface BattlefieldInterface {
    * @return Cell
    */
   public function findCellByName($name);
+
+  /**
+   * @param string $piece_id
+   *
+   * @return Piece
+   */
+  public function getPieceById($piece_id);
 
 }

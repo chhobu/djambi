@@ -1,11 +1,10 @@
 <?php
 
 namespace Djambi\Grids;
-use Djambi\Cell;
-use Djambi\Grid;
 
+use Djambi\Gameplay\Cell;
 
-class HexagonalGridWith3Sides extends Grid {
+class HexagonalGridWith3Sides extends BaseGrid {
   public function __construct($settings = NULL) {
     $this->useHexagonalGrid(9, 9);
     $this->useStandardPieces();

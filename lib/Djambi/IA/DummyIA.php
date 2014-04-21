@@ -2,7 +2,7 @@
 
 namespace Djambi\IA;
 
-use Djambi\Interfaces\MoveInteractionInterface;
+use Djambi\Moves\MoveInteractionInterface;
 use Djambi\Players\ComputerPlayer;
 
 class DummyIA extends BaseIA {

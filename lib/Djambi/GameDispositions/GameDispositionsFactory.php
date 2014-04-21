@@ -1,19 +1,17 @@
 <?php
-namespace Djambi\Factories;
+namespace Djambi\GameDispositions;
+
 use Djambi\Exceptions\DispositionNotFoundException;
-use Djambi\Faction;
-use Djambi\GameDispositions\BaseGameDisposition;
-use Djambi\GameDispositions\GameDispositionCustom;
-use Djambi\Interfaces\GameDispositionsFactoryInterface;
-use Djambi\Interfaces\GridInterface;
-use Djambi\PieceDescription;
+use Djambi\Gameplay\Faction;
+use Djambi\Grids\GridInterface;
+use Djambi\PieceDescriptions\BasePieceDescription;
 
 /**
  * Class DjambiGameDispostionFactory
  */
-class GameDispositionsFactory implements GameDispositionsFactoryInterface, GridInterface {
+class GameDispositionsFactory implements GameDispositionsFactoryInterface {
   /** @var array */
-  private $settings = array();
+  protected $settings = array();
 
   /**
    * Prevents this class from being instancied.
@@ -48,7 +46,7 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface, GridI
   /**
    * @return GameDispositionsFactory
    */
-  public static function buildNewCustomDisposition() {
+  public static function createNewCustomDisposition() {
     $factory = new static();
     return $factory;
   }
@@ -82,11 +80,6 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface, GridI
     return $this->settings;
   }
 
-  protected function setSettings($settings) {
-    $this->settings = $settings;
-    return $this;
-  }
-
   protected function addSetting($setting_name, $setting_value) {
     $this->settings[$setting_name] = $setting_value;
     return $this;
@@ -104,12 +97,12 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface, GridI
   }
 
   public function addSpecialCell($type, $location) {
-    $special_cells = isset($this->settings['special_cells']) ? $this->settings['special_cells'] : array();
+    $special_cells = isset($this->settings['specialCells']) ? $this->settings['specialCells'] : array();
     $special_cells[] = array(
       'type' => $type,
       'location' => $location,
     );
-    $this->addSetting('special_cells', $special_cells);
+    $this->addSetting('specialCells', $special_cells);
     return $this;
   }
 
@@ -119,7 +112,7 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface, GridI
    * @param array $start_position
    * @param string $start_status
    *   Statut de départ de la faction
-   * @param PieceDescription[] $specific_pieces
+   * @param BasePieceDescription[] $specific_pieces
    *   Liste de pièces spécifiques au camp
    *
    * @return GridInterface
@@ -140,10 +133,10 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface, GridI
     return $this;
   }
 
-  public function addCommonPiece(PieceDescription $piece) {
-    $pieces = isset($this->settings['piece_scheme']) ? $this->settings['piece_scheme'] : array();
+  public function addCommonPiece(BasePieceDescription $piece) {
+    $pieces = isset($this->settings['pieceScheme']) ? $this->settings['pieceScheme'] : array();
     $pieces[] = $piece->toArray();
-    $this->addSetting('piece_scheme', $pieces);
+    $this->addSetting('pieceScheme', $pieces);
     return $this;
   }
 

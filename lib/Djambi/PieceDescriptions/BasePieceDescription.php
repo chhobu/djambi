@@ -1,10 +1,10 @@
 <?php
-namespace Djambi;
+namespace Djambi\PieceDescriptions;
 
 use Djambi\Exceptions\GridInvalidException;
-use Djambi\Exceptions\PieceNotFoundException;
+use Djambi\PersistantDjambiObject;
 
-abstract class PieceDescription {
+abstract class BasePieceDescription extends PersistantDjambiObject {
   /** @var string : type de pièce */
   private $type;
   /** @var string : nom court de la pièce */
@@ -24,7 +24,7 @@ abstract class PieceDescription {
   /** @var array : liste des capacités de la pièce */
   protected $habilities = array();
 
-  protected function __construct($type, $generic_shortname, $generic_name, $num, $start_position, $value) {
+  protected function describePiece($type, $generic_shortname, $generic_name, $num, $start_position, $value) {
     $this->type = $type;
     $this->num = $num;
     $this->shortname = $num == 0 ? $generic_shortname : $generic_shortname . $num;
@@ -40,20 +40,16 @@ abstract class PieceDescription {
     $this->setValue($value);
   }
 
-  public function toArray() {
-    return array(
-      'type' => get_class($this),
-      'number' => $this->getNum(),
-      'start_position' => $this->getStartPosition(),
-    );
+  protected function prepareArrayConversion() {
+    $this->addPersistantProperties(array(
+      'num',
+      'startPosition',
+    ));
+    return parent::prepareArrayConversion();
   }
 
-  public static function fromArray(array $data) {
-    $class = $data['type'];
-    if (class_exists($class)) {
-      return new $class($data['number'], $data['start_position']);
-    }
-    throw new GridInvalidException("Cannot load piece description from array");
+  public static function fromArray(array $array, array $context = array()) {
+    return new static(isset($array['num']) ? $array['num'] : NULL, $array['startPosition']);
   }
 
   public function getType() {
@@ -194,33 +190,4 @@ abstract class PieceDescription {
     return $this->getHability(self::HABILITY_MUST_LIVE);
   }
 
-  const HABILIITY_BLOCK_BY_PROXIMITY = 'block_by_proximity';
-  public function hasHabilityBlockAdjacentPieces() {
-    return $this->getHability(self::HABILIITY_BLOCK_BY_PROXIMITY);
-  }
-
-  const HABILITY_CONVERT_PIECES = 'convert_pieces';
-  public function hasHabilityConvertPieces() {
-    return $this->getHability(self::HABILITY_CONVERT_PIECES);
-  }
-
-  const HABILITY_UNCONVERTIBLE = 'unconvertible';
-  public function hasHabilityCanDefect() {
-    return $this->getHability(self::HABILITY_UNCONVERTIBLE);
-  }
-
-  const HABILITY_PROTECT_BY_PROXIMITY = 'protect_by_proximity';
-  public function hasHabilityProtectAdjacentPieces() {
-    return $this->getHability(self::HABILITY_PROTECT_BY_PROXIMITY);
-  }
-
-  const HABILITY_KAMIKAZE = 'kamikaze';
-  public function hasHabilityKamikaze() {
-    return $this->getHability(self::HABILITY_KAMIKAZE);
-  }
-
-  const HABILITY_KILL_FORTIFIED_PIECES = 'enter_fortress';
-  public function hasHabilityEnterFortress() {
-    return $this->getHability(self::HABILITY_KILL_FORTIFIED_PIECES);
-  }
 }

@@ -3,7 +3,7 @@ namespace Djambi\Players;
 
 use Djambi\IA\DummyIA;
 use Djambi\Exceptions\PlayerInvalidException;
-use Djambi\Interfaces\IAInterface;
+use Djambi\IA\IAInterface;
 
 class ComputerPlayer extends BasePlayer {
   const CLASS_NICKNAME = 'bot-';

@@ -1,7 +1,8 @@
 <?php
-namespace Djambi\Interfaces;
+namespace Djambi\Players;
 
-use Djambi\Faction;
+
+use Djambi\Gameplay\Faction;
 
 interface PlayerInterface {
   /**

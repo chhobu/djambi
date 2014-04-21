@@ -6,10 +6,13 @@
  * fournit des schémas pour des cas classiques.
  */
 
-namespace Djambi;
+namespace Djambi\Grids;
 use Djambi\Exceptions\GridInvalidException;
-use Djambi\Interfaces\GridInterface;
+use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Faction;
+use Djambi\PersistantDjambiObject;
 use Djambi\PieceDescriptions\Assassin;
+use Djambi\PieceDescriptions\BasePieceDescription;
 use Djambi\PieceDescriptions\Diplomat;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
@@ -19,7 +22,7 @@ use Djambi\PieceDescriptions\Reporter;
 /**
  * Class DjambiBattlefieldScheme
  */
-class Grid implements GridInterface {
+abstract class BaseGrid extends PersistantDjambiObject implements GridInterface {
   const SHAPE_HEXAGONAL = 'hexagonal';
   const SHAPE_CARDINAL = 'cardinal';
 
@@ -31,54 +34,23 @@ class Grid implements GridInterface {
     self::SHAPE_CARDINAL,
     self::SHAPE_HEXAGONAL,
   );
-  /* @var PieceDescription[] $pieceScheme */
-  private $pieceScheme = array();
+  /* @var BasePieceDescription[] $pieceScheme */
+  protected $pieceScheme = array();
   /* @var string $disposition */
-  private $shape;
+  protected $shape = self::SHAPE_CARDINAL;
   /* @var int $rows */
-  private $rows;
+  protected $rows = 9;
   /* @var int $cols */
-  private $cols;
+  protected $cols = 9;
   /* @var array $specialCells */
-  private $specialCells = array();
+  protected $specialCells = array();
   /* @var array $sides */
-  private $sides;
+  protected $sides = array();
   /* @var array $directions */
-  private $directions = array();
-  /* @var array $settings */
-  private $settings = array();
+  protected $directions = array();
 
-  public function __construct($settings = NULL) {
-    $cols = isset($settings['cols']) ? $settings['cols'] : 9;
-    $rows = isset($settings['rows']) ? $settings['rows'] : 9;
-    $this->specialCells = isset($settings['special_cells']) ? $settings['special_cells'] : array();
-    if (isset($settings['disposition']) && $settings['disposition'] == self::SHAPE_HEXAGONAL) {
-      $this->useHexagonalGrid($rows, $cols);
-    }
-    else {
-      $this->useStandardGrid($rows, $cols);
-    }
-    if (!isset($settings['pieces'])) {
-      $this->useStandardPieces();
-    }
-    else {
-      foreach ($settings['pieces'] as $piece_data) {
-        $piece = PieceDescription::fromArray($piece_data);
-        $this->addCommonPiece($piece);
-      }
-    }
-    if (!empty($settings['sides'])) {
-      foreach ($settings['sides'] as $side) {
-        $pieces = array();
-        if (!empty($side['specific_pieces'])) {
-          foreach ($side['specific_pieces'] as $data) {
-            $pieces[] = PieceDescription::fromArray($data);
-          }
-        }
-        $this->addSide($side['start_position'], $side['start_status'], $pieces);
-      }
-    }
-    $this->setSettings($settings);
+  public static function fromArray(array $array, array $context = array()) {
+    return new static();
   }
 
   protected function useStandardPieces() {
@@ -318,7 +290,7 @@ class Grid implements GridInterface {
     return $this->cols;
   }
 
-  public function addCommonPiece(PieceDescription $piece) {
+  public function addCommonPiece(BasePieceDescription $piece) {
     $this->pieceScheme[$piece->getShortname()] = $piece;
   }
 
@@ -371,10 +343,23 @@ class Grid implements GridInterface {
     else {
       $start_origin['placement'] = self::PIECE_PLACEMENT_SPECIFIC_ONLY;
     }
-    $side_info = array_merge(self::getSidesInfos($nb_sides), $start_origin);
+    $side_info = array_merge(static::getSidesInfos($nb_sides), $start_origin);
     $side_info['start_status'] = $start_status;
     $side_info['specific_pieces'] = $specific_pieces;
     $this->sides[$side_info['id']] = $side_info;
+  }
+
+  public function alterSide($side_order, array $changes) {
+    if (!empty($this->sides)) {
+      foreach ($this->sides as $side_id => $side) {
+        if ($side['start_order'] == $side_order) {
+          foreach ($changes as $change => $new_value) {
+            $this->sides[$side_id][$change] = $new_value;
+          }
+        }
+      }
+    }
+    return $this;
   }
 
   public function getSides() {
@@ -402,17 +387,6 @@ class Grid implements GridInterface {
       throw new GridInvalidException('Unknown direction.');
     }
     return $directions[$orientation];
-  }
-
-  public function getSettings() {
-    return $this->settings;
-  }
-
-  protected function setSettings($settings) {
-    if (is_array($settings)) {
-      $this->settings = $settings;
-    }
-    return $this;
   }
 
 }

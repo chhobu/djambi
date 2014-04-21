@@ -1,13 +1,16 @@
 <?php
 
-namespace Djambi;
-
+namespace Djambi\Moves;
 
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\IllogicMoveException;
-use Djambi\Interfaces\MoveInteractionInterface;
+use Djambi\Gameplay\BattlefieldInterface;
+use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Faction;
+use Djambi\Gameplay\Piece;
+use Djambi\PersistantDjambiObject;
 
-class Move {
+class Move extends PersistantDjambiObject {
   const PHASE_PIECE_SELECTION = 'piece_selection';
   const PHASE_PIECE_DESTINATION = 'piece_destination';
   const PHASE_PIECE_INTERACTIONS = 'move_interactions';
@@ -31,6 +34,47 @@ class Move {
   /** @var array */
   private $events = array();
 
+  protected function prepareArrayConversion() {
+    $this->addDependantObjects(array(
+      'selectedPiece' => 'id',
+      'actingFaction' => 'id',
+      'destination' => 'name',
+    ));
+    $this->addPersistantProperties(array(
+      'phase',
+      'type',
+      'interactions',
+      'kills',
+      'events',
+    ));
+    return parent::prepareArrayConversion();
+  }
+
+  public static function fromArray(array $array, array $context = array()) {
+    /** @var BattlefieldInterface $battlefield */
+    $battlefield = $context['battlefield'];
+    /** @var Move $move */
+    $move = new static($battlefield->getFactionById($array['actingFaction']));
+    if (!empty($array['selectedPiece'])) {
+      $move->setSelectedPiece($battlefield->getPieceById($array['selectedPiece']));
+    }
+    $move->setPhase($array['phase']);
+    $move->setType($array['type']);
+    if (!empty($array['interactions'])) {
+      foreach ($array['interactions'] as $interaction) {
+        $interaction = call_user_func($interaction['className'] . '::fromArray', $interaction, $context);
+        $move->interactions[] = $interaction;
+      }
+    }
+    if (!empty($array['kills'])) {
+      $move->setKills($array['kills']);
+    }
+    if (!empty($array['events'])) {
+      $move->setEvents($array['events']);
+    }
+    return $move;
+  }
+
   public function __construct(Faction $faction) {
     $this->setActingFaction($faction);
     $this->setType('move');
@@ -53,6 +97,9 @@ class Move {
     return $this;
   }
 
+  /**
+   * @return Faction
+   */
   public function getActingFaction() {
     return $this->actingFaction;
   }

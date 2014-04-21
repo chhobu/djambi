@@ -5,19 +5,20 @@
  * d'une partie de Djambi.
  */
 
-namespace Djambi;
+namespace Djambi\Gameplay;
 
 use Djambi\GameManagers\BasicGameManager;
-use Djambi\Interfaces\HumanPlayerInterface;
-use Djambi\Interfaces\PlayerInterface;
+use Djambi\GameOptions\StandardRuleset;
+use Djambi\PersistantDjambiObject;
 use Djambi\Players\ComputerPlayer;
 use Djambi\Players\HumanPlayer;
-use Djambi\Stores\StandardRuleset;
+use Djambi\Players\HumanPlayerInterface;
+use Djambi\Players\PlayerInterface;
 
 /**
  * Class DjambiPoliticalFaction
  */
-class Faction {
+class Faction extends PersistantDjambiObject {
   const DRAW_STATUS_ACCEPTED = 2;
   const DRAW_STATUS_PROPOSED = 1;
   const DRAW_STATUS_REJECTED = 0;
@@ -38,7 +39,7 @@ class Faction {
   /* @var int $ranking */
   private $ranking;
   /* @var string $id */
-  private $id;
+  protected $id;
   /* @var string $name */
   private $name;
   /* @var string $class */
@@ -48,15 +49,15 @@ class Faction {
   /* @var bool $alive */
   private $alive = FALSE;
   /* @var Piece[] $pieces */
-  private $pieces;
+  protected $pieces;
   /* @var Battlefield $battlefield */
-  private $battlefield;
+  protected $battlefield;
   /* @var int $startOrder; */
-  private $startOrder;
+  protected $startOrder;
   /* @var bool $playing */
   private $playing = FALSE;
   /* @var int $skippedTurns */
-  private $skippedTurns;
+  protected $skippedTurns = 0;
   /* @var int $lastDrawProposal */
   private $lastDrawProposal;
   /* @var int $drawStatus */
@@ -64,23 +65,85 @@ class Faction {
   /* @var string $master */
   private $master;
   /* @var PlayerInterface $player */
-  private $player;
+  protected $player;
 
-  public function __construct(Battlefield $battlefield, $id, $name, $class, $start_order, $data, PlayerInterface $player = NULL) {
+  protected function prepareArrayConversion() {
+    $this->addDependantObjects(array('battlefield' => 'id', 'control' => 'id'));
+    $this->addPersistantProperties(array(
+      'id',
+      'name',
+      'class',
+      'startOrder',
+      'status',
+      'ranking',
+      'alive',
+      'playing',
+      'player',
+      'skippedTurns',
+      'lastDrawProposal',
+      'drawStatus',
+      'pieces',
+      'master',
+    ));
+    return parent::prepareArrayConversion();
+  }
+
+  public static function fromArray(array $array, array $context = array()) {
+    /** @var Battlefield $battlefield */
+    $battlefield = $context['battlefield'];
+    if (!empty($array['player'])) {
+      $player = call_user_func($array['player']['className'] . '::fromArray', $array['player'], $context);
+    }
+    else {
+      $player = NULL;
+    }
+    /** @var Faction $faction */
+    $faction = new static($battlefield, $array['id'], $array['name'], $array['class'], $array['startOrder'], $player);
+    $simple_properties = array(
+      'status',
+      'ranking',
+      'alive',
+      'playing',
+      'skippedTurns',
+      'lastDrawProposal',
+      'drawStatus',
+      'master',
+    );
+    foreach ($simple_properties as $property) {
+      if (isset($array[$property])) {
+        if (method_exists($faction, 'set' . ucfirst($property))) {
+          call_user_func(array($faction, 'set' . ucfirst($property)), $array[$property]);
+        }
+        else {
+          $faction->$property = $array[$property];
+        }
+      }
+    }
+    // Définition des pièces
+    $context['faction'] = $faction;
+    foreach ($array['pieces'] as $flat_piece) {
+      $piece = call_user_func($flat_piece['className'] . '::fromArray', $flat_piece, $context);
+      $faction->addPiece($piece);
+    }
+    // Récupération du contrôle
+    foreach ($battlefield->getFactions() as $referenced_faction) {
+      if ($referenced_faction->getId() == $array['control']) {
+        $faction->setControl($referenced_faction);
+      }
+      elseif ($faction->getId() == $referenced_faction->getId()) {
+        $referenced_faction->setControl($faction);
+      }
+    }
+    return $faction;
+  }
+
+  public function __construct(Battlefield $battlefield, $id, $name, $class, $start_order, PlayerInterface $player = NULL) {
     $this->battlefield = $battlefield;
     $this->id = $id;
-    $this->name = $name;
-    $this->class = $class;
+    $this->setName($name);
+    $this->setClass($class);
     $this->startOrder = $start_order;
-    $this->control = $this;
-    $this->setStatus(isset($data['status']) ? $data['status'] : self::STATUS_READY);
-    $this->pieces = array();
-    $this->playing = FALSE;
-    $this->skippedTurns = isset($data['skipped_turns']) ? $data['skipped_turns'] : 0;
-    $this->lastDrawProposal = isset($data['last_draw_proposal']) ? $data['last_draw_proposal'] : 0;
-    $this->drawStatus = isset($data['draw_status']) ? $data['draw_status'] : NULL;
-    $this->ranking = isset($data['ranking']) ? $data['ranking'] : NULL;
-    $this->master = isset($data['master']) ? $data['master'] : NULL;
+    $this->setControl($this);
     $this->player = $player;
     if (!is_null($player)) {
       $player->setFaction($this);
@@ -103,8 +166,18 @@ class Faction {
     return $this->name;
   }
 
+  protected function setName($name) {
+    $this->name = $name;
+    return $this;
+  }
+
   public function getClass() {
     return $this->class;
+  }
+
+  protected function setClass($class) {
+    $this->class = $class;
+    return $this;
   }
 
   public function getStartOrder() {
@@ -198,28 +271,31 @@ class Faction {
   public function setControl(Faction $faction, $log = TRUE) {
     $old_control = $this->control;
     $this->control = $faction;
+    if (is_null($old_control)) {
+      return $this;
+    }
     $grid = $this->getBattlefield();
-    foreach ($grid->getFactions() as $f) {
-      if ($f->getId() != $this->getId() && $f->getControl()->getId() == $this->getId()) {
+    foreach ($grid->getFactions() as $existing_faction) {
+      if ($existing_faction->getId() != $this->getId() && $existing_faction->getControl()->getId() == $this->getId()) {
         if ($grid->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control'
-        || $f->getStatus() == self::STATUS_KILLED) {
-          $f->setControl($faction, FALSE);
+        || $existing_faction->getStatus() == self::STATUS_KILLED) {
+          $existing_faction->setControl($faction, FALSE);
         }
         elseif ($faction->getId() != $this->id) {
-          $f->setControl($f, FALSE);
+          $existing_faction->setControl($existing_faction, FALSE);
         }
       }
-      if ($faction->getId() == $this->id && !$f->isAlive() && $f->getMaster() == $this->id
-          && $f->getControl()->getId() != $this->id) {
-        $f->setControl($this, FALSE);
+      if ($faction->getId() == $this->id && !$existing_faction->isAlive() && $existing_faction->getMaster() == $this->id
+          && $existing_faction->getControl()->getId() != $this->id) {
+        $existing_faction->setControl($this, FALSE);
       }
     }
-    if ($log && !empty($f)) {
+    if ($log && !empty($existing_faction)) {
       if ($faction->getId() != $this->getId()) {
         $this->getBattlefield()->logEvent("event", "CHANGING_SIDE", array(
           'faction1' => $this->getId(),
           'faction2' => $faction->getId(),
-          '!controlled' => $f->getId(),
+          '!controlled' => $existing_faction->getId(),
         ));
       }
       else {
@@ -302,22 +378,22 @@ class Faction {
     return $this;
   }
 
-  public function createPieces($pieces_scheme, $start_scheme, $deads = NULL) {
+  public function createPieces($pieces_scheme, $start_scheme) {
     foreach ($pieces_scheme as $key => $piece_description) {
       $alive = TRUE;
-      if (!is_null($deads) && is_array($deads)) {
-        if (array_search($this->getId() . '-' . $key, $deads) !== FALSE) {
-          $alive = FALSE;
-        }
-      }
       if (!isset($start_scheme[$key])) {
         continue;
       }
       $original_faction_id = $this->getId();
       $start_cell = $this->getBattlefield()->findCell($start_scheme[$key]['x'], $start_scheme[$key]['y']);
       $piece = new Piece($piece_description, $this, $original_faction_id, $start_cell, $alive);
-      $this->pieces[$key] = $piece;
+      $this->addPiece($piece);
     }
+    return $this;
+  }
+
+  protected function addPiece(Piece $piece) {
+    $this->pieces[$piece->getId()] = $piece;
     return $this;
   }
 
@@ -504,34 +580,4 @@ class Faction {
     return FALSE;
   }
 
-  public function toArray() {
-    $data = array();
-    $data['status'] = $this->getStatus();
-    $player = $this->getPlayer();
-    if (!empty($player)) {
-      $data['player'] = $this->getPlayer()->toArray();
-    }
-    else {
-      $data['player'] = NULL;
-    }
-    if ($this->getControl()->getId() != $this->getId()) {
-      $data['control'] = $this->getControl()->getId();
-    }
-    if (!is_null($this->getRanking())) {
-      $data['ranking'] = $this->getRanking();
-    }
-    if (!is_null($this->getMaster())) {
-      $data['master'] = $this->getMaster();
-    }
-    if ($this->skippedTurns > 0) {
-      $data['skipped_turns'] = $this->skippedTurns;
-    }
-    if ($this->lastDrawProposal > 0) {
-      $data['last_draw_proposal'] = $this->lastDrawProposal;
-    }
-    if (!is_null($this->drawStatus)) {
-      $data['draw_status'] = $this->drawStatus;
-    }
-    return $data;
-  }
 }

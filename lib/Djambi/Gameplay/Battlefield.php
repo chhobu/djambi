@@ -5,43 +5,46 @@
  * un plateau de jeu.
  */
 
-namespace Djambi;
+namespace Djambi\Gameplay;
 
-use Djambi\Exceptions\GameOptionInvalidException;
+use Djambi\Exceptions\GameNotFoundException;
 use Djambi\Exceptions\GridInvalidException;
 use Djambi\Exceptions\CellNotFoundException;
 use Djambi\Exceptions\FactionNotFoundException;
 use Djambi\Exceptions\PieceNotFoundException;
 use Djambi\GameManagers\BasicGameManager;
-use Djambi\Interfaces\BattlefieldInterface;
-use Djambi\Interfaces\GameManagerInterface;
-use Djambi\Interfaces\PlayerInterface;
+use Djambi\GameManagers\GameManagerInterface;
+use Djambi\GameOptions\StandardRuleset;
+use Djambi\Grids\BaseGrid;
+use Djambi\Moves\Move;
+use Djambi\PersistantDjambiObject;
+use Djambi\PieceDescriptions\BasePieceDescription;
 use Djambi\Players\HumanPlayer;
-use Djambi\Stores\StandardRuleset;
+use Djambi\Players\PlayerInterface;
 
 /**
  * Class DjambiBattlefield
  */
-class Battlefield implements BattlefieldInterface {
+class Battlefield extends PersistantDjambiObject implements BattlefieldInterface {
 
   /* @var GameManagerInterface */
-  private $gameManager;
+  protected $gameManager;
   /** @var Cell[] */
-  private $cells = array();
+  protected $cells = array();
   /** @var Faction[] */
-  private $factions = array();
+  protected $factions = array();
   /** @var array */
-  private $moves = array();
+  protected $moves = array();
   /** @var array */
-  private $turns = array();
+  protected $turns = array();
   /** @var array */
-  private $events = array();
+  protected $events = array();
   /** @var array */
-  private $summary = array();
+  protected $summary = array();
   /** @var array */
-  private $playOrder;
+  protected $playOrder;
   /** @var int */
-  private $displayedTurnId;
+  protected $displayedTurnId;
   /** @var array */
   private $cellsIndex = array();
   /** @var bool */
@@ -50,6 +53,65 @@ class Battlefield implements BattlefieldInterface {
   private $currentMove;
   /** @var bool */
   private $dirty;
+
+  /**
+   * Préparation à l'enregistrement en BdD : transformation en tableau.
+   *
+   * @return array
+   */
+  protected function prepareArrayConversion() {
+    $this->addPersistantProperties(array(
+      'factions',
+      'moves',
+      'turns',
+      'events',
+      'summary',
+      'playOrder',
+      'displayedTurnId',
+      'currentMove',
+    ));
+    $this->addDependantObjects(array('gameManager' => 'id'));
+    return parent::prepareArrayConversion();
+  }
+
+  /**
+   * Charge une grille de Djambi.
+   *
+   * @param array $array
+   * @param array $context
+   *
+   * @throws CellNotFoundException
+   * @throws FactionNotFoundException
+   * @throws GameNotFoundException
+   * @return Battlefield
+   */
+  public static function fromArray(array $array, array $context = array()) {
+    if (empty($context['gameManager'])) {
+      throw new GameNotFoundException("Cannot load a battlefield without a game manager context !");
+    }
+    /** @var GameManagerInterface $game */
+    $game = $context['gameManager'];
+    $battlefield = new static($game);
+    $battlefield->moves = isset($array['moves']) ? $array['moves'] : $battlefield->moves;
+    $battlefield->turns = isset($array['turns']) ? $array['turns'] : $battlefield->turns;
+    $battlefield->events = isset($array['events']) ? $array['events'] : $battlefield->events;
+    $battlefield->summary = isset($array['summary']) ? $array['summary'] : $battlefield->summary;
+    $battlefield->factions = array();
+    if (isset($array['playOrder'])) {
+      $battlefield->playOrder = $array['playOrder'];
+    }
+    if (isset($array['displayedTurnId'])) {
+      $battlefield->displayedTurnId = $array['displayedTurnId'];
+    }
+    $context['battlefield'] = $battlefield;
+    foreach ($array['factions'] as $key => $faction) {
+      $battlefield->factions[$key] = call_user_func($faction['className'] . '::fromArray', $faction, $context);
+    }
+    if (!empty($array['currentMove'])) {
+      $battlefield->setCurrentMove(call_user_func($array['currentMove']['className'] . '::fromArray', $array['currentMove'], $context));
+    }
+    return $battlefield;
+  }
 
   /**
    * Construction de l'objet DjambiBattlefield.
@@ -62,10 +124,7 @@ class Battlefield implements BattlefieldInterface {
    */
   protected function __construct(GameManagerInterface $gm) {
     $this->gameManager = $gm;
-    $this->setDefaultOptions();
-    $this->moves = array();
-    $this->events = array();
-    $this->summary = array();
+    $this->buildField();
   }
 
   /**
@@ -82,8 +141,6 @@ class Battlefield implements BattlefieldInterface {
    */
   public static function createNewBattlefield(GameManagerInterface $game, $players) {
     $battlefield = new self($game);
-    // Construction de la grille :
-    $battlefield->buildField();
     $scheme = $game->getDisposition()->getGrid();
     $directions = $scheme->getDirections();
     $scheme_sides = $scheme->getSides();
@@ -106,14 +163,14 @@ class Battlefield implements BattlefieldInterface {
       else {
         $player = NULL;
       }
-      $data['status'] = $side['start_status'];
       $faction = new Faction($battlefield, $side['id'],
-        $side['name'], $side['class'], $side['start_order'], $data, $player);
+        $side['name'], $side['class'], $side['start_order'], $player);
+      $faction->setStatus($side['start_status']);
       $battlefield->factions[$side['id']] = $faction;
       // Placement des pièces communes :
       $start_order = $faction->getStartOrder();
       $leader_position = current(array_slice($scheme_sides, $start_order - 1, 1));
-      if (!empty($leader_position['placement']) && $leader_position['placement'] == Grid::PIECE_PLACEMENT_RELATIVE) {
+      if (!empty($leader_position['placement']) && $leader_position['placement'] == BaseGrid::PIECE_PLACEMENT_RELATIVE) {
         $start_scheme = array();
         $axis = NULL;
         foreach ($directions as $orientation => $direction) {
@@ -166,7 +223,7 @@ class Battlefield implements BattlefieldInterface {
       // Placement des pièces spécifiques
       if (!empty($side['specific_pieces'])) {
         $specific_start_positions = array();
-        /* @var PieceDescription $specific_piece_description */
+        /* @var BasePieceDescription $specific_piece_description */
         foreach ($side['specific_pieces'] as $key => $specific_piece_description) {
           if (!is_array($specific_piece_description->getStartPosition())) {
             $cell = $battlefield->findCellByName($specific_piece_description->getStartPosition());
@@ -182,88 +239,6 @@ class Battlefield implements BattlefieldInterface {
     }
     $battlefield->logEvent('info', 'NEW_DJAMBI_GAME');
     $game->setStatus($ready ? BasicGameManager::STATUS_PENDING : BasicGameManager::STATUS_RECRUITING);
-    return $battlefield;
-  }
-
-  /**
-   * Charge une grille de Djambi.
-   *
-   * @param GameManagerInterface $game
-   *   Objet GameManager lié
-   * @param array $data
-   *   Tableau de données permettant de recréer la partie
-   *
-   * @throws Exceptions\FactionNotFoundException
-   * @return Battlefield
-   *   Grille de Djambi courante
-   */
-  public static function loadBattlefield(GameManagerInterface $game, $data) {
-    $battlefield = new self($game);
-    $game->setStatus($data['status']);
-    $battlefield->moves = isset($data['moves']) ? $data['moves'] : $battlefield->moves;
-    $battlefield->turns = isset($data['turns']) ? $data['turns'] : $battlefield->turns;
-    $battlefield->events = isset($data['events']) ? $data['events'] : $battlefield->events;
-    $battlefield->summary = isset($data['summary']) ? $data['summary'] : $battlefield->summary;
-    $battlefield->factions = array();
-    if (isset($data['options']) && is_array($data['options'])) {
-      foreach ($data['options'] as $option => $value) {
-        try {
-          $game->setOption($option, $value);
-        }
-        catch (GameOptionInvalidException $e) {}
-      }
-    }
-    $battlefield->buildField();
-    $scheme = $game->getDisposition()->getGrid();
-    $pieces_scheme = $scheme->getPieceScheme();
-    $sides_scheme = $scheme->getSides();
-    foreach ($data['factions'] as $key => $faction_data) {
-      $player = $id = $name = $class = $start_order = NULL;
-      if (empty($faction_data['data'])) {
-        $faction_data['data'] = array();
-      }
-      if (!is_null($faction_data['player'])) {
-        $player = call_user_func_array($faction_data['player']['className'] . '::fromArray',
-          array(array_merge($faction_data['player'], $faction_data['data'])));
-      }
-      if (!isset($faction_data['id'])) {
-        foreach ($sides_scheme as $side_scheme) {
-          if ($side_scheme['id'] == $key) {
-            $id = $side_scheme['id'];
-            $name = $side_scheme['name'];
-            $start_order = $side_scheme['start_order'];
-            $class = $side_scheme['class'];
-          }
-        }
-      }
-      else {
-        $id = $faction_data['id'];
-        $name = $faction_data['name'];
-        $class = $faction_data['class'];
-        $start_order = $faction_data['start_order'];
-      }
-      if (empty($id) || empty($name) || empty($class) || empty($start_order)) {
-        throw new FactionNotFoundException("Cannot load faction.");
-      }
-      $faction = new Faction($battlefield, $id, $name, $class, $start_order, $faction_data, $player);
-      $positions = array();
-      foreach ($data['positions'] as $cell_name => $piece_id) {
-        $cell = $battlefield->findCellByName($cell_name);
-        $piece_data = explode('-', $piece_id, 2);
-        if ($piece_data[0] == $key) {
-          $positions[$piece_data[1]] = array(
-            'x' => $cell->getX(),
-            'y' => $cell->getY(),
-          );
-        }
-      }
-      $faction->setStatus($faction_data['status']);
-      $faction->createPieces($pieces_scheme, $positions, $data['deads']);
-      $battlefield->factions[] = $faction;
-    }
-    if (!empty($battlefield->summary)) {
-      $battlefield->rebuildFactionsControls($battlefield->summary[max(array_keys($battlefield->summary))]);
-    }
     return $battlefield;
   }
 
@@ -314,19 +289,6 @@ class Battlefield implements BattlefieldInterface {
         }
       }
 
-    }
-    return $this;
-  }
-
-  /**
-   * Charge les options par défaut dans la grille de Djambi.
-
-   * @return Battlefield
-   *   Grille de Djambi courante
-   */
-  protected function setDefaultOptions() {
-    foreach ($this->getGameManager()->getDisposition()->getOptionsStore()->getAllGameOptions() as $object) {
-      $object->setValue($object->getDefault());
     }
     return $this;
   }
@@ -431,7 +393,7 @@ class Battlefield implements BattlefieldInterface {
    * @param int $y
    *   Coordonnée horizontale
    *
-   * @throws Exceptions\CellNotFoundException
+   * @throws CellNotFoundException
    * @return Cell
    *   Cellulue de Djambi
    */
@@ -448,7 +410,7 @@ class Battlefield implements BattlefieldInterface {
    * @param string $name
    *
    * @return Cell
-   * @throws Exceptions\CellNotFoundException
+   * @throws CellNotFoundException
    */
   public function findCellByName($name) {
     if (isset($this->cells[$name])) {
@@ -1443,46 +1405,6 @@ class Battlefield implements BattlefieldInterface {
     }
     $this->moves[] = $move;
     return $this;
-  }
-
-  /**
-   * Préparation à l'enregistrement en BdD : transformation en tableau.
-   *
-   * @return array
-   */
-  public function toArray() {
-    $positions = array();
-    $factions = array();
-    $deads = array();
-    foreach ($this->cells as $key => $cell) {
-      $piece = $cell->getOccupant();
-      if (!empty($piece)) {
-        $positions[$key] = $piece->getId();
-        if (!$piece->isAlive()) {
-          $deads[] = $piece->getId();
-        }
-      }
-    }
-    foreach ($this->factions as $faction) {
-      $factions[$faction->getId()] = $faction->toArray();
-    }
-    $return = array(
-      'id' => $this->getGameManager()->getId(),
-      'positions' => $positions,
-      'factions' => $factions,
-      'moves' => $this->moves,
-      'turns' => isset($this->turns) ? $this->turns : array(),
-      'points' => isset($this->points) ? $this->points : 0,
-      'deads' => $deads,
-      'events' => $this->events,
-      'options' => $this->getGameManager()->getDisposition()->getOptionsStore()->getAllGameOptionsValues(),
-      'summary' => $this->summary,
-      'mode' => $this->getGameManager()->getMode(),
-      'status' => $this->getGameManager()->getStatus(),
-      'disposition' => $this->getGameManager()->getDisposition()->getName(),
-      'scheme_settings' => $this->getGameManager()->getDisposition()->getGrid()->getSettings(),
-    );
-    return $return;
   }
 
 }

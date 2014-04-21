@@ -1,10 +1,10 @@
 <?php
 
-namespace Djambi\Interfaces;
+namespace Djambi\IA;
 
-
-use Djambi\Cell;
-use Djambi\Move;
+use Djambi\Gameplay\Cell;
+use Djambi\Moves\Move;
+use Djambi\Moves\MoveInteractionInterface;
 use Djambi\Players\ComputerPlayer;
 
 interface IAInterface {

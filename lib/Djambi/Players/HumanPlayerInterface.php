@@ -1,8 +1,7 @@
 <?php
-namespace Djambi\Interfaces;
+namespace Djambi\Players;
 
-
-use Djambi\Signal;
+use Djambi\GameManagers\Signal;
 
 interface HumanPlayerInterface extends PlayerInterface {
 

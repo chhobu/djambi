@@ -1,8 +1,6 @@
 <?php
 namespace Djambi\IA;
 
-use Djambi\Interfaces\IAInterface;
-use Djambi\Move;
 use Djambi\Players\ComputerPlayer;
 
 abstract class BaseIA implements IAInterface {

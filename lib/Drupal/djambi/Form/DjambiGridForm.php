@@ -2,10 +2,10 @@
 namespace Drupal\djambi\Form;
 
 use Composer\Autoload\ClassLoader;
-use Djambi\Factories\GameFactory;
+use Djambi\GameFactory;
 use Djambi\GameManagers\BasicGameManager;
-use Djambi\Interfaces\GameManagerInterface;
-use Djambi\Move;
+use Djambi\GameManagers\GameManagerInterface;
+use Djambi\Moves\Move;
 use Drupal\Component\Utility\Crypt;
 use Drupal\Core\Form\FormBase;
 use Drupal\djambi\Players\Drupal8Player;

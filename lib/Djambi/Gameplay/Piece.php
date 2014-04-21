@@ -5,21 +5,24 @@
  * d'état des pièces de Djambi.
  */
 
-namespace Djambi;
+namespace Djambi\Gameplay;
 
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\IllogicMoveException;
 use Djambi\Moves\Manipulation;
+use Djambi\Moves\Move;
 use Djambi\Moves\Murder;
 use Djambi\Moves\Necromobility;
 use Djambi\Moves\Reportage;
 use Djambi\Moves\ThroneEvacuation;
-use Djambi\Stores\StandardRuleset;
+use Djambi\GameOptions\StandardRuleset;
+use Djambi\PersistantDjambiObject;
+use Djambi\PieceDescriptions\BasePieceDescription;
 
 /**
  * Class DjambiPiece
  */
-class Piece {
+class Piece extends PersistantDjambiObject {
   /* @var string $id */
   private $id;
   /* @var Faction $faction */
@@ -34,15 +37,44 @@ class Piece {
   private $movable = FALSE;
   /* @var Cell[] $allowableMoves */
   private $allowableMoves = array();
-  /* @var PieceDescription $description */
+  /* @var BasePieceDescription $description */
   private $description;
 
-  public function __construct(PieceDescription $piece, Faction $faction, $original_faction_id, Cell $position, $alive) {
-    $this->description = $piece;
-    $this->faction = $faction;
-    $this->originalFactionId = $original_faction_id;
-    $this->id = $faction->getId() . '-' . $piece->getShortname();
-    $this->alive = $alive;
+  protected function prepareArrayConversion() {
+    $this->addDependantObjects(array(
+      'faction' => 'id',
+      'position' => 'name',
+      'allowableMoves' => 'name',
+    ));
+    $this->addPersistantProperties(array(
+      'id',
+      'originalFactionId',
+      'alive',
+      'description',
+    ));
+    return parent::prepareArrayConversion();
+  }
+
+  public static function fromArray(array $array, array $context = array()) {
+    /** @var Faction $faction */
+    $faction = $context['faction'];
+    $description = call_user_func($array['description']['className'] . '::fromArray', $array['description'], $context);
+    $cell = $faction->getBattlefield()->findCellByName($array['position']);
+    $piece = new static($description, $faction, $array['originalFactionId'], $cell, $array['alive']);
+    if (!empty($array['allowableMoves'])) {
+      foreach ($array['allowableMoves'] as $direction => $cell) {
+        $piece->allowableMoves[$direction] = $faction->getBattlefield()->findCellByName($cell);
+      }
+    }
+    return $piece;
+  }
+
+  public function __construct(BasePieceDescription $piece, Faction $faction, $original_faction_id, Cell $position, $alive) {
+    $this->setDescription($piece);
+    $this->setFaction($faction);
+    $this->setOriginalFactionId($original_faction_id);
+    $this->setId($faction->getId() . '-' . $piece->getShortname());
+    $this->setAlive($alive);
     $this->setPosition($position);
   }
 
@@ -50,8 +82,18 @@ class Piece {
     return $this->id;
   }
 
+  protected function setId($id) {
+    $this->id = $id;
+    return $this;
+  }
+
   public function getDescription() {
     return $this->description;
+  }
+
+  protected function setDescription(BasePieceDescription $description) {
+    $this->description = $description;
+    return $this;
   }
 
   public function getShortname() {
@@ -70,6 +112,11 @@ class Piece {
     return $this->faction;
   }
 
+  protected function setFaction(Faction $faction) {
+    $this->faction = $faction;
+    return $this;
+  }
+
   public function getBattlefield() {
     return $this->faction->getBattlefield();
   }
@@ -80,6 +127,11 @@ class Piece {
 
   public function getOriginalFactionId() {
     return $this->originalFactionId;
+  }
+
+  public function setOriginalFactionId($id) {
+    $this->originalFactionId = $id;
+    return $this;
   }
 
   public function getImage() {

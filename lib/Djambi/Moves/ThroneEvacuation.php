@@ -2,13 +2,10 @@
 
 namespace Djambi\Moves;
 
-
-use Djambi\Cell;
 use Djambi\Exceptions\DisallowedActionException;
-use Djambi\Interfaces\MoveInteractionInterface;
-use Djambi\Move;
+use Djambi\Gameplay\Cell;
 
-class ThroneEvacuation extends MoveInteraction implements MoveInteractionInterface {
+class ThroneEvacuation extends BaseMoveInteraction implements MoveInteractionInterface {
 
   public static function getInteractionType() {
     return 'throne_evacuation';

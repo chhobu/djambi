@@ -40,7 +40,7 @@ class ShortTempStoreFactory extends TempStoreFactory {
     }
 
     // Store the data for this collection in the database.
-    $this->storage = new DatabaseStorageExpirable($collection, $this->connection);
+    $this->storage = new DatabaseStorageExpirable($collection, $this->serializer, $this->connection);
     return new ShortTempStore($this->storage, $this->lockBackend, $owner);
   }
 

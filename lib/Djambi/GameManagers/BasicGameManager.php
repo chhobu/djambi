@@ -7,20 +7,17 @@
 
 namespace Djambi\GameManagers;
 
-use Djambi\Battlefield;
 use Djambi\Exceptions\DisallowedActionException;
-use Djambi\Exceptions\DispositionNotFoundException;
+use Djambi\Exceptions\GameNotFoundException;
 use Djambi\Exceptions\GameOptionInvalidException;
 use Djambi\Exceptions\GridInvalidException;
 use Djambi\Exceptions\UnpersistableObjectException;
-use Djambi\Faction;
-use Djambi\Factories\GameDispositionsFactory;
 use Djambi\GameDispositions\BaseGameDisposition;
-use Djambi\Interfaces\BattlefieldInterface;
-use Djambi\Interfaces\GameManagerInterface;
-use Djambi\Interfaces\PlayerInterface;
+use Djambi\Gameplay\Battlefield;
+use Djambi\Gameplay\BattlefieldInterface;
+use Djambi\Gameplay\Faction;
 use Djambi\PersistantDjambiObject;
-use Djambi\Signal;
+use Djambi\Players\PlayerInterface;
 
 /**
  * Class DjambiGameManager
@@ -52,6 +49,45 @@ class BasicGameManager extends PersistantDjambiObject implements GameManagerInte
   private $status;
   /** @var BaseGameDisposition */
   private $disposition;
+
+  protected function prepareArrayConversion() {
+    $this->addPersistantProperties(array(
+      'id',
+      'changed',
+      'begin',
+      'mode',
+      'status',
+      'infos',
+      'disposition',
+      'battlefield',
+    ));
+    return parent::prepareArrayConversion();
+  }
+
+  public static function fromArray(array $data, array $context = array()) {
+    if (!isset($data['mode']) || !isset($data['id']) || !isset($data['status']) || !isset($data['disposition'])) {
+      throw new GameNotFoundException("Missing required mode information for loading a game.");
+    }
+    $game = new static($data['mode'], $data['id']);
+    if (isset($data['begin'])) {
+      $game->setBegin($data['begin']);
+    }
+    if (isset($data['changed'])) {
+      $game->setChanged($data['changed']);
+    }
+    if (!empty($data['infos'])) {
+      foreach ($data['infos'] as $info => $value) {
+        $game->setInfo($info, $value);
+      }
+    }
+    $game->setStatus($data['status']);
+    $game->setDisposition(call_user_func($data['disposition']['className'] . '::fromArray', $data['disposition'], $context));
+    if (!empty($data['battlefield'])) {
+      $context['gameManager'] = $game;
+      $game->setBattlefield(call_user_func($data['battlefield']['className'] . '::fromArray', $data['battlefield'], $context));
+    }
+    return $game;
+  }
 
   /**
    * Empêche la création directe d'un GameManager.
@@ -95,58 +131,8 @@ class BasicGameManager extends PersistantDjambiObject implements GameManagerInte
     return $game;
   }
 
-  public static function load($mode, $ide) {
+  public static function load($mode, $id) {
     throw new UnpersistableObjectException("Standard game manager cannot be persisted !");
-  }
-
-  public static function fromArray(array $data, array $context = array()) {
-    if (!is_array($data) || !isset($data['mode']) || !isset($data['id'])) {
-      throw new GameOptionInvalidException("Missing required mode information for loading a game.");
-    }
-    /* @var $game BasicGameManager */
-    $game = new static($data['mode'], $data['id']);
-    $game->loadBattlefield($data);
-    return $game;
-  }
-
-  protected function loadBattlefield($data) {
-    if (isset($data['begin'])) {
-      $this->setBegin($data['begin']);
-    }
-    if (isset($data['changed'])) {
-      $this->setChanged($data['changed']);
-    }
-    if (isset($data['scheme_settings'])) {
-      $scheme_settings = $data['scheme_settings'];
-    }
-    else {
-      $scheme_settings = NULL;
-    }
-    if (isset($data['infos']['disposition_factory'])) {
-      $disposition = call_user_func_array($data['infos']['disposition_factory'] . '::loadDisposition',
-        array($scheme_settings));
-    }
-    elseif (isset($data['disposition'])) {
-      $disposition = GameDispositionsFactory::loadDisposition($data['disposition'], $scheme_settings);
-    }
-    else {
-      throw new DispositionNotFoundException("Missing required disposition data for loading a game.");
-    }
-    $this->setDisposition($disposition);
-    if (isset($data['infos']['battlefield_factory'])) {
-      $battlefield = call_user_func_array($data['infos']['battlefield_factory'] . '::loadBattlefield',
-        array($this, $data));
-    }
-    else {
-      $battlefield = Battlefield::loadBattlefield($this, $data);
-    }
-    if (!empty($data['infos'])) {
-      foreach ($data['infos'] as $info => $value) {
-        $this->setInfo($info, $value);
-      }
-    }
-    $this->setBattlefield($battlefield);
-    return $this;
   }
 
   public function getId() {
@@ -348,11 +334,6 @@ class BasicGameManager extends PersistantDjambiObject implements GameManagerInte
     return $this;
   }
 
-  public function toArray() {
-    // TODO rappatrier la logique de sauvagarde de la classe battlefield
-    return $this->getBattlefield()->toArray();
-  }
-
   /**
    * Recharge la partie en cours.
    * @return BasicGameManager
@@ -466,7 +447,7 @@ class BasicGameManager extends PersistantDjambiObject implements GameManagerInte
       'faction1' => $target->getId(),
       '!player' => $player->displayName(),
     ));
-    $this->save(__CLASS__);
+    $this->save();
     return $this;
   }
 

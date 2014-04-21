@@ -8,7 +8,7 @@ use Djambi\Cell;
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Faction;
 use Djambi\Factories\GameDispositionsFactory;
-use Djambi\Grid;
+use Djambi\BaseGrid;
 use Djambi\Moves\Murder;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
@@ -19,10 +19,10 @@ class MilitantContext extends DjambiTestBaseContext {
    */
   public function initiateNewCustomGame($nb_cells, TableNode $pieces_table) {
     $factory = GameDispositionsFactory::buildNewCustomDisposition();
-    $factory->setShape(Grid::SHAPE_CARDINAL);
+    $factory->setShape(BaseGrid::SHAPE_CARDINAL);
     $dimenstions = sqrt($nb_cells);
     $factory->setDimensions($dimenstions, $dimenstions);
-    $sides = Grid::getSidesInfos();
+    $sides = BaseGrid::getSidesInfos();
     $factions_pieces = array();
     $factions_orders = array();
     $deads = array();

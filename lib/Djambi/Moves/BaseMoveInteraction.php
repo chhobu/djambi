@@ -3,17 +3,37 @@
 namespace Djambi\Moves;
 
 
-use Djambi\Cell;
 use Djambi\Exceptions\IllogicMoveException;
-use Djambi\Interfaces\MoveInteractionInterface;
-use Djambi\Move;
-use Djambi\Piece;
+use Djambi\Gameplay\BattlefieldInterface;
+use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Piece;
 
-abstract class MoveInteraction extends Move implements MoveInteractionInterface {
+abstract class BaseMoveInteraction extends Move implements MoveInteractionInterface {
   /** @var  Move */
   private $triggeringMove;
   /** @var Cell[] */
   private $possibleChoices = array();
+
+  protected function prepareArrayConversion() {
+    $this->addDependantObjects(array('possibleChoices' => 'id'));
+    return parent::prepareArrayConversion();
+  }
+
+  public static function fromArray(array $array, array $context = array()) {
+    /** @var BattlefieldInterface $battlefield */
+    $battlefield = $context['battlefield'];
+    /** @var BaseMoveInteraction $interaction */
+    $interaction = parent::fromArray($array, $context);
+    if (!empty($array['possibleChoices'])) {
+      $interactions = array();
+      /** @var Cell $cell */
+      foreach ($array['possibleChoices'] as $cell) {
+        $interactions[] = $battlefield->findCellByName($cell);
+      }
+      $interaction->setPossibleChoices($interactions);
+    }
+    return $interaction;
+  }
 
   public function __construct(Move $move) {
     $this->setType(static::getInteractionType());

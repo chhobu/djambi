@@ -3,7 +3,6 @@
 namespace Djambi;
 
 use Djambi\Exceptions\UnpersistableObjectException;
-use Djambi\Interfaces\ArrayableInterface;
 
 abstract class PersistantDjambiObject implements ArrayableInterface {
   /** @var array */
@@ -78,9 +77,15 @@ abstract class PersistantDjambiObject implements ArrayableInterface {
       }
       elseif (is_object($attribute_value)) {
         $saved_value = $this->saveReferencedObjectsToArray($attribute_value);
+        if (is_null($saved_value)) {
+          continue;
+        }
       }
       elseif (is_array($attribute_value) && !empty($attribute_value)) {
         $saved_value = $this->saveReferencedArrays($attribute_value);
+        if (is_null($saved_value)) {
+          continue;
+        }
       }
       else {
         $saved_value = $attribute_value;
@@ -91,11 +96,24 @@ abstract class PersistantDjambiObject implements ArrayableInterface {
       if (is_null($primary_key)) {
         continue;
       }
-      $object = $this->retrievePropertyValue($object_name, NULL, FALSE);
-      if (!empty($object) && is_object($object)) {
-        $object_id = $this->retrievePropertyValue($primary_key, $object, FALSE);
-        if (!is_null($object_id)) {
-          $this->saveData($object_name, $object_id);
+      $value = $this->retrievePropertyValue($object_name, NULL, FALSE);
+      if (is_array($value)) {
+        $object_list = $value;
+        foreach ($value as $key => $object) {
+          if (!empty($object) && is_object($object)) {
+            $object_id = $this->retrievePropertyValue($primary_key, $object, FALSE);
+            $object_list[$key] = $object_id;
+          }
+        }
+        $this->saveData($object_name, $object_list);
+      }
+      else {
+        $object = $value;
+        if (!empty($object) && is_object($object)) {
+          $object_id = $this->retrievePropertyValue($primary_key, $object, FALSE);
+          if (!is_null($object_id)) {
+            $this->saveData($object_name, $object_id);
+          }
         }
       }
     }
@@ -142,12 +160,6 @@ abstract class PersistantDjambiObject implements ArrayableInterface {
       }
     }
     return $array;
-  }
-
-  public function __sleep() {
-    $this->prepareArrayConversion();
-    $this->removePersistantProperties(array('className'));
-    return array_merge(array_keys($this->persistantProperties), array_keys($this->dependantObjects));
   }
 
 }
