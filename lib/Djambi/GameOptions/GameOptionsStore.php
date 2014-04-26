@@ -2,7 +2,7 @@
 namespace Djambi\GameOptions;
 
 use Djambi\Exceptions\GameOptionInvalidException;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 
 class GameOptionsStore extends PersistantDjambiObject {
   /**

@@ -1,8 +1,9 @@
 <?php
 
-namespace Djambi;
+namespace Djambi\Persistance;
 
 use Djambi\Exceptions\UnpersistableObjectException;
+use Djambi\Exceptions;
 
 abstract class PersistantDjambiObject implements ArrayableInterface {
   /** @var array */

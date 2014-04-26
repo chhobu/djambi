@@ -6,7 +6,7 @@
 
 namespace Djambi\GameOptions;
 use Djambi\Exceptions\GameOptionInvalidException;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 
 abstract class BaseGameOption extends PersistantDjambiObject {
   /* @var string */

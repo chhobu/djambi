@@ -9,7 +9,7 @@ use Djambi\Grids\GridInterface;
 use Djambi\Grids\HexagonalGridWith3Sides;
 use Djambi\Grids\MiniGridWith2Sides;
 use Djambi\Grids\StandardGridWith4Sides;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\GameOptions\GameOptionsStore;
 use Djambi\GameOptions\StandardRuleset;
 

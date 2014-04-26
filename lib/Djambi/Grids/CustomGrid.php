@@ -39,7 +39,7 @@ class CustomGrid extends BaseGrid {
     }
     else {
       foreach ($array['pieceScheme'] as $piece_data) {
-        $piece = BasePieceDescription::fromArray($piece_data);
+        $piece = call_user_func($piece_data['className'] . '::fromArray', $piece_data);
         $grid->addCommonPiece($piece);
       }
     }
@@ -48,7 +48,7 @@ class CustomGrid extends BaseGrid {
         $pieces = array();
         if (!empty($side['specific_pieces'])) {
           foreach ($side['specific_pieces'] as $data) {
-            $pieces[] = BasePieceDescription::fromArray($data);
+            $pieces[] = call_user_func($data['className'] . '::fromArray', $data);
           }
         }
         $grid->addSide($side['start_position'], $side['start_status'], $pieces);

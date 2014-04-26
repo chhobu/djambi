@@ -2,7 +2,8 @@
 
 namespace Djambi\GameDispositions;
 
-use Djambi\Faction;
+
+use Djambi\Gameplay\Faction;
 
 class GameDisposition2std extends BaseGameDisposition {
   public function __construct() {

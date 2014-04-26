@@ -8,7 +8,7 @@ use Djambi\Gameplay\BattlefieldInterface;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Piece;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 
 class Move extends PersistantDjambiObject {
   const PHASE_PIECE_SELECTION = 'piece_selection';

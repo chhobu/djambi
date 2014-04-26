@@ -2,7 +2,7 @@
 namespace Drupal\djambi\Form;
 
 use Composer\Autoload\ClassLoader;
-use Djambi\GameFactory;
+use Djambi\GameFactories\GameFactory;
 use Djambi\GameManagers\BasicGameManager;
 use Djambi\GameManagers\GameManagerInterface;
 use Djambi\Moves\Move;

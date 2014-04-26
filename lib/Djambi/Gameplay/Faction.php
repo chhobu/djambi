@@ -9,7 +9,7 @@ namespace Djambi\Gameplay;
 
 use Djambi\GameManagers\BasicGameManager;
 use Djambi\GameOptions\StandardRuleset;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\Players\ComputerPlayer;
 use Djambi\Players\HumanPlayer;
 use Djambi\Players\HumanPlayerInterface;
@@ -393,7 +393,7 @@ class Faction extends PersistantDjambiObject {
   }
 
   protected function addPiece(Piece $piece) {
-    $this->pieces[$piece->getId()] = $piece;
+    $this->pieces[$piece->getDescription()->getShortname()] = $piece;
     return $this;
   }
 

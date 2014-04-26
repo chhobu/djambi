@@ -2,7 +2,7 @@
 namespace Djambi\PieceDescriptions;
 
 use Djambi\Exceptions\GridInvalidException;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 
 abstract class BasePieceDescription extends PersistantDjambiObject {
   /** @var string : type de pièce */

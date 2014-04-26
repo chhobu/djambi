@@ -3,7 +3,7 @@
 namespace Djambi\GameManagers;
 
 use Djambi\Exceptions\PlayerNotFoundException;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\Players\HumanPlayerInterface;
 
 class Signal extends PersistantDjambiObject {

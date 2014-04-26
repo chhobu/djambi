@@ -1,6 +1,6 @@
 <?php
 
-namespace Djambi;
+namespace Djambi\Persistance;
 
 
 interface ArrayableInterface {

@@ -1,5 +1,5 @@
 <?php
-namespace Djambi;
+namespace Djambi\GameFactories;
 
 use Djambi\GameManagers\GameManagerInterface;
 

@@ -1,7 +1,7 @@
 <?php
 namespace Djambi\GameManagers;
 
-use Djambi\ArrayableInterface;
+use Djambi\Persistance\ArrayableInterface;
 use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\Gameplay\BattlefieldInterface;
 use Djambi\Gameplay\Faction;

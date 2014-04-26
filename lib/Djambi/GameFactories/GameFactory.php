@@ -1,11 +1,12 @@
 <?php
 
-namespace Djambi;
+namespace Djambi\GameFactories;
 
 
 use Djambi\Exceptions\Exception;
 use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\GameDispositions\GameDispositionsFactory;
+use Djambi\GameFactories\GameFactoryInterface;
 use Djambi\GameManagers\BasicGameManager;
 use Djambi\GameManagers\GameManagerInterface;
 use Djambi\IA\DummyIA;

@@ -16,7 +16,7 @@ use Djambi\Moves\Necromobility;
 use Djambi\Moves\Reportage;
 use Djambi\Moves\ThroneEvacuation;
 use Djambi\GameOptions\StandardRuleset;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\PieceDescriptions\BasePieceDescription;
 
 /**

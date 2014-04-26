@@ -16,7 +16,7 @@ use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\Gameplay\Battlefield;
 use Djambi\Gameplay\BattlefieldInterface;
 use Djambi\Gameplay\Faction;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\Players\PlayerInterface;
 
 /**

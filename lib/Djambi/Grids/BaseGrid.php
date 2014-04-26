@@ -10,7 +10,7 @@ namespace Djambi\Grids;
 use Djambi\Exceptions\GridInvalidException;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\PieceDescriptions\Assassin;
 use Djambi\PieceDescriptions\BasePieceDescription;
 use Djambi\PieceDescriptions\Diplomat;

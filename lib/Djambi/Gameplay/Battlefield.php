@@ -17,7 +17,7 @@ use Djambi\GameManagers\GameManagerInterface;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Grids\BaseGrid;
 use Djambi\Moves\Move;
-use Djambi\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\PieceDescriptions\BasePieceDescription;
 use Djambi\Players\HumanPlayer;
 use Djambi\Players\PlayerInterface;
@@ -46,13 +46,13 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
   /** @var int */
   protected $displayedTurnId;
   /** @var array */
-  private $cellsIndex = array();
+  protected $cellsIndex = array();
   /** @var bool */
-  private $readyToPlay = FALSE;
+  protected $readyToPlay = FALSE;
   /** @var Move */
-  private $currentMove;
+  protected $currentMove;
   /** @var bool */
-  private $dirty;
+  protected $dirty;
 
   /**
    * Préparation à l'enregistrement en BdD : transformation en tableau.
@@ -1209,15 +1209,6 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
 
   protected function isReadyToPlay() {
     return $this->readyToPlay;
-  }
-
-  protected function getCellsIndex() {
-    return $this->cellsIndex;
-  }
-
-  protected function setCellsIndex(array $cells) {
-    $this->cells = $cells;
-    return $this;
   }
 
   public function getSummary() {
