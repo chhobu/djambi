@@ -42,7 +42,7 @@ interface BattlefieldInterface {
    *
    * @return Faction
    */
-  public function getFactionById($id);
+  public function findFactionById($id);
 
   /**
    * @return Cell[]
@@ -78,6 +78,6 @@ interface BattlefieldInterface {
    *
    * @return Piece
    */
-  public function getPieceById($piece_id);
+  public function findPieceById($piece_id);
 
 }

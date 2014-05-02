@@ -34,21 +34,21 @@ class BasicGameManager extends PersistantDjambiObject implements GameManagerInte
   const STATUS_RECRUITING = 'recruiting';
 
   /** @var string */
-  private $id;
+  protected $id;
   /** @var Battlefield $battlefield */
-  private $battlefield;
+  protected $battlefield;
   /** @var int $changed */
-  private $changed;
+  protected $changed;
   /** @var int $created */
-  private $begin;
+  protected $begin;
   /** @var array $infos */
   protected $infos = array();
   /** @var string */
-  private $mode;
+  protected $mode;
   /** @var string */
-  private $status;
+  protected $status;
   /** @var BaseGameDisposition */
-  private $disposition;
+  protected $disposition;
 
   protected function prepareArrayConversion() {
     $this->addPersistantProperties(array(

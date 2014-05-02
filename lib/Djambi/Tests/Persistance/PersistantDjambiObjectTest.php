@@ -6,10 +6,9 @@ use Djambi\GameFactories\GameFactory;
 use Djambi\GameManagers\BasicGameManager;
 use Djambi\GameManagers\Signal;
 use Djambi\Players\HumanPlayer;
+use Djambi\Tests\BaseDjambiTest;
 
-class PersistantDjambiObjectTest extends \PHPUnit_Framework_TestCase {
-
-  const CHECK_SAME_VALUE = '---auto---';
+class PersistantDjambiObjectTest extends BaseDjambiTest {
 
   /**
    * @param ArrayableInterface $object
@@ -19,47 +18,14 @@ class PersistantDjambiObjectTest extends \PHPUnit_Framework_TestCase {
    * @dataProvider addObjectDataProvider
    */
   public function testObjectTransformation($object, $expected_properties, $context = array()) {
-    $array = $object->toArray();
-    $this->assertEquals(count($expected_properties), count($array) - 1, "Array generated from object is not what it is expected");
-    $new_object = $object::fromArray($array, $context);
-    $this->compareObjectsAfterTransformation($object, $new_object, $expected_properties, $context, $array);
+    $this->checkObjectTransformation($object, $expected_properties, $context);
   }
 
   /**
    * @dataProvider addObjectDataProvider
    */
   public function testObjectSerialization($object, $expected_properties, $context = array()) {
-    $string = serialize($object);
-    $new_object = unserialize($string);
-    $this->compareObjectsAfterTransformation($object, $new_object, $expected_properties, $context);
-  }
-
-  /**
-   * @param ArrayableInterface $object
-   * @param ArrayableInterface $new_object
-   * @param array $expected_properties
-   * @param array $context
-   * @param array $array
-   */
-  protected function compareObjectsAfterTransformation($object, $new_object, $expected_properties, $context, $array = NULL) {
-    $this->assertInstanceOf($object->getClassName(), $new_object);
-    $reflection = new \ReflectionClass($object->getClassName());
-    foreach ($expected_properties as $property => $expected_value) {
-      if (!is_null($array)) {
-        $this->assertArrayHasKey($property, $array);
-      }
-      $reflection_property = $reflection->getProperty($property);
-      $reflection_property->setAccessible(TRUE);
-      $actual_value = $reflection_property->getValue($new_object);
-      if ($expected_value == self::CHECK_SAME_VALUE) {
-        $expected_value = $reflection_property->getValue($object);
-      }
-      if (is_object($actual_value) && $actual_value instanceof ArrayableInterface && $expected_value instanceof ArrayableInterface) {
-        $expected_value = $expected_value->toArray();
-        $actual_value = $actual_value->toArray();
-      }
-      $this->assertEquals($expected_value, $actual_value, "Property \"" . $property . "\" fails persisting");
-    }
+    $this->checkObjectSerialization($object, $expected_properties, $context);
   }
 
   public function addObjectDataProvider() {

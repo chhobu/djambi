@@ -10,22 +10,19 @@ namespace Djambi\Tests\PieceDescriptions;
 
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
-use Djambi\GameManagers\BasicGameManager;
 use Djambi\Gameplay\Faction;
 use Djambi\Grids\BaseGrid;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
+use Djambi\Tests\BaseDjambiTest;
 
-class MilitantTest extends \PHPUnit_Framework_TestCase {
+class MilitantTest extends BaseDjambiTest {
 
   const MILITANT1_TEAM1_START_POSITION = 'B6';
   const MILITANT2_TEAM1_START_POSITION = 'E3';
   const THRONE_POSITION = 'D4';
   const LEADER_TEAM2_START_POSITION = 'D3';
   const MILITANT1_TEAM2_START_POSITION = 'F2';
-
-  /** @var BasicGameManager */
-  protected $game;
 
   public function setUp() {
     $disposition = GameDispositionsFactory::createNewCustomDisposition();
@@ -44,51 +41,47 @@ class MilitantTest extends \PHPUnit_Framework_TestCase {
     $factory = new GameFactory();
     $factory->setDisposition($disposition->deliverDisposition());
     $this->game = $factory->createGameManager();
-    $this->game->getBattlefield()->getPieceById('B-M2')->setAlive(FALSE);
-    $this->game->play();
+    $this->game->getBattlefield()->findPieceById('t2-M2')->setAlive(FALSE);
 
     $this->assertEquals('throne', $this->game->getBattlefield()->findCellByName(self::THRONE_POSITION)->getType());
   }
 
   public function testMilitantPossibleMoves() {
+    $this->game->play();
+
     $battlefield = $this->game->getBattlefield();
-    $piece1 = $battlefield->getPieceById('R-M1');
+    $piece1 = $battlefield->findPieceById('t1-M1');
     $expected_moves = array('A6', 'B7', 'B5', 'B4', 'A5', 'C5', 'C7');
-    $this->assertEmpty(array_diff($piece1->getAllowableMovesNames(), $expected_moves));
-    $piece2 = $battlefield->getPieceById('R-M2');
+    $this->checkPossibleMoves($piece1, $expected_moves);
+
+    $piece2 = $battlefield->findPieceById('t1-M2');
     $expected_moves = explode(' ', 'E1 E2 E4 E5 D2 D3 C1 F3 G3 C5 F2 F4 G5');
-    $this->assertEmpty(array_diff($piece2->getAllowableMovesNames(), $expected_moves));
-    $piece3 = $battlefield->getPieceById('B-M1');
+    $this->checkPossibleMoves($piece2, $expected_moves);
+
+    $piece3 = $battlefield->findPieceById('t2-M1');
     $this->assertEmpty($piece3->getAllowableMoves());
   }
 
   public function testMilitantNormalMove() {
+    $this->game->play();
     $grid = $this->game->getBattlefield();
-    $piece1 = $grid->getPieceById('R-M1');
-    $move = $grid->getCurrentMove();
-    $move->selectPiece($piece1);
+    $piece1 = $grid->findPieceById('t1-M1');
     $destination = 'A6';
-    $move->moveSelectedPiece($grid->findCellByName($destination));
+    $this->doMove($piece1, $destination, NULL);
 
-    // Changement de tour
-    $this->assertEquals('B', $grid->getPlayingFaction()->getId());
-    // Changement de case
-    $this->assertEquals($destination, $piece1->getPosition()->getName());
-    $this->assertEquals('R-M1', $grid->findCellByName($destination)->getOccupant()->getId());
-    // Case d'origine libre
-    $this->assertNull($grid->findCellByName(self::MILITANT1_TEAM1_START_POSITION)->getOccupant());
+    $this->checkNewTurn('t2');
+    $this->checkPosition($piece1, $destination);
+    $this->checkEmptyCell(self::MILITANT1_TEAM1_START_POSITION);
   }
 
   /**
    * @expectedException \Djambi\Exceptions\DisallowedActionException
    */
   public function testMilitantForbiddenMoves() {
+    $this->game->play();
     $grid = $this->game->getBattlefield();
-    $piece1 = $grid->getPieceById('R-M1');
-    $move = $grid->getCurrentMove();
-    $move->selectPiece($piece1);
-    $destination = 'D2';
-    $move->moveSelectedPiece($grid->findCellByName($destination));
+    $piece1 = $grid->findPieceById('t1-M1');
+    $this->doMove($piece1, 'D2');
   }
 
   /**
@@ -96,85 +89,58 @@ class MilitantTest extends \PHPUnit_Framework_TestCase {
    */
   public function testMilitantShouldNotKillLeaderInThrone() {
     $grid = $this->game->getBattlefield();
-    $grid->getPieceById('B-L')->setPosition($grid->findCellByName(self::THRONE_POSITION));
+    $grid->findPieceById('t2-L')->setPosition($grid->findCellByName(self::THRONE_POSITION));
+    $this->game->play();
 
-    $piece1 = $grid->getPieceById('R-M1');
-    $move = $grid->getCurrentMove();
-    $move->selectPiece($piece1);
-    $move->moveSelectedPiece($grid->findCellByName(self::THRONE_POSITION));
+    $piece1 = $grid->findPieceById('t1-M1');
+    $this->doMove($piece1, self::THRONE_POSITION);
   }
 
   public function testMilitantCanKillAndBury() {
+    $this->game->play();
     $grid = $this->game->getBattlefield();
 
-    $piece = $grid->getPieceById('R-M2');
-    $move = $grid->getCurrentMove();
-    $move->selectPiece($piece);
+    $piece = $grid->findPieceById('t1-M2');
     $destination = self::MILITANT1_TEAM2_START_POSITION;
     $target = $grid->findCellByName($destination)->getOccupant();
-    $this->assertNotNull($target);
-    $move->moveSelectedPiece($grid->findCellByName($destination));
-
+    $this->assertNotEquals(NULL, $target);
     $bury_in = 'A1';
-    $this->assertInstanceOf('Djambi\\Moves\\Murder', $move->getFirstInteraction());
-    $choices = $move->getFirstInteraction()->findPossibleChoices()->getPossibleChoices();
-    $bury_possible_choices = array();
-    foreach ($choices as $choice) {
-      $bury_possible_choices[] = $choice->getName();
-    }
-    $disallowed_choices = explode(' ', "C6 A7 B6 F2 C6 D4 D3");
-    $this->assertEmpty(array_intersect($bury_possible_choices, $disallowed_choices));
-    $move->getFirstInteraction()->executeChoice($grid->findCellByName($bury_in));
+    $this->doMove($piece, $destination, array(
+      'murder' => array(
+        'type' => 'Djambi\\Moves\\Murder',
+        'choice' => $bury_in,
+        'forbidden_choices' => explode(' ', "C6 A7 B6 F2 C6 D4 D3"),
+      ),
+    ));
 
-    // Changement de tour
-    $this->assertEquals('B', $grid->getPlayingFaction()->getId());
-    // Changement de case
-    $this->assertEquals($destination, $piece->getPosition()->getName());
-    $this->assertEquals('R-M2', $grid->findCellByName($destination)->getOccupant()->getId());
-    // Case d'origine libre
-    $this->assertNull($grid->findCellByName(self::MILITANT2_TEAM1_START_POSITION)->getOccupant());
-    // Pièce cible tuée
+    $this->checkNewTurn('t2');
+    $this->checkPosition($piece, $destination);
+    $this->checkEmptyCell(self::MILITANT2_TEAM1_START_POSITION);
     $this->assertFalse($target->isAlive());
-    // Pièce cible enterrée
-    $this->assertEquals($bury_in, $target->getPosition()->getName());
+    $this->checkPosition($target, $bury_in);
   }
 
   public function testMilitantCanKillLeaderOutsideThroneAndWin() {
+    $this->game->play();
     $grid = $this->game->getBattlefield();
 
-    $piece = $grid->getPieceById('R-M2');
-    $move = $grid->getCurrentMove();
-    $move->selectPiece($piece);
+    $piece = $grid->findPieceById('t1-M2');
     $destination = self::LEADER_TEAM2_START_POSITION;
     $target = $grid->findCellByName($destination)->getOccupant();
-    $this->assertNotNull($target);
-    $move->moveSelectedPiece($grid->findCellByName($destination));
-
+    $this->assertNotEquals(NULL, $target);
     $bury_in = 'A1';
-    $this->assertInstanceOf('Djambi\\Moves\\Murder', $move->getFirstInteraction());
-    $choices = $move->getFirstInteraction()->findPossibleChoices()->getPossibleChoices();
-    $bury_possible_choices = array();
-    foreach ($choices as $choice) {
-      $bury_possible_choices[] = $choice->getName();
-    }
-    $disallowed_choices = explode(' ', "C6 A7 B6 F2 C6 D4 D3");
-    $this->assertEmpty(array_intersect($bury_possible_choices, $disallowed_choices));
-    $move->getFirstInteraction()->executeChoice($grid->findCellByName($bury_in));
+    $this->doMove($piece, $destination, array(
+      'murder' => array(
+        'type' => 'Djambi\\Moves\\Murder',
+        'choice' => $bury_in,
+      ),
+    ));
 
-    // Changement de tour
-    $this->assertEquals(BasicGameManager::STATUS_FINISHED, $this->game->getStatus());
-    // Changement de case
-    $this->assertEquals($destination, $piece->getPosition()->getName());
-    $this->assertEquals('R-M2', $grid->findCellByName($destination)->getOccupant()->getId());
-    // Case d'origine libre
-    $this->assertNull($grid->findCellByName(self::MILITANT2_TEAM1_START_POSITION)->getOccupant());
-    // Pièce cible tuée
+    $this->checkPosition($piece, $destination);
+    $this->checkPosition($target, $bury_in);
+    $this->checkEmptyCell(self::MILITANT2_TEAM1_START_POSITION);
     $this->assertFalse($target->isAlive());
-    // Pièce cible enterrée
-    $this->assertEquals($bury_in, $target->getPosition()->getName());
-    // Gagné !
-    $this->assertEquals(Faction::STATUS_WINNER, $grid->getFactionById('R')->getStatus());
-    $this->assertEquals(Faction::STATUS_KILLED, $grid->getFactionById('B')->getStatus());
-    $this->assertNull($grid->getPlayingFaction());
+    $this->assertEquals(Faction::STATUS_KILLED, $grid->findFactionById('t2')->getStatus());
+    $this->checkGameFinished('t1');
   }
 }

@@ -5,33 +5,19 @@ namespace Djambi\Moves;
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Piece;
+use Djambi\Strings\Glossary;
+use Djambi\Strings\GlossaryTerm;
 
 class Necromobility extends BaseMoveInteraction implements MoveInteractionInterface {
 
-  public static function getInteractionType() {
-    return 'necromobility';
-  }
-
-  public function __construct(Move $move, Piece $target) {
-    parent::__construct($move);
-    $this->selectPiece($target);
-    if ($this->getSelectedPiece()->isAlive()) {
-      throw new DisallowedActionException("Attempt to bury a living piece !");
+  public function setSelectedPiece(Piece $target) {
+    if ($target->isAlive()) {
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_NECROMOVE_ALIVE));
     }
     elseif (!$this->getTriggeringMove()->getSelectedPiece()->getDescription()->hasHabilityMoveDeadPieces()) {
-      throw new DisallowedActionException("Attempt to move dead pieces with an unqualified piece.");
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_NECROMOVE_DISALLOWED));
     }
-  }
-
-  public function moveSelectedPiece(Cell $cell) {
-    parent::moveSelectedPiece($cell);
-    $this->findPossibleChoices();
-    $possible_destinations = $this->getPossibleChoices();
-    if (!isset($possible_destinations[$cell->getName()])) {
-      throw new DisallowedActionException("Attempt to move a dead piece into an occupied cell.");
-    }
-    $this->executeChoice($cell);
-    return $this;
+    return parent::setSelectedPiece($target);
   }
 
   public function findPossibleChoices() {
@@ -41,7 +27,14 @@ class Necromobility extends BaseMoveInteraction implements MoveInteractionInterf
   }
 
   public function executeChoice(Cell $cell) {
-    $this->getTriggeringMove()->getSelectedPiece()->necromove($this, $this->getSelectedPiece(), $cell);
+    $possible_destinations = $this->getPossibleChoices();
+    if (!isset($possible_destinations[$cell->getName()])) {
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_KILL_WRONG_GRAVE,
+        array('%location' => $cell->getName())));
+    }
+    $this->getTriggeringMove()->getSelectedPiece()->getFaction()
+      ->getBattlefield()->logMove($this->getSelectedPiece(), $cell, "necromobility", $this->getTriggeringMove()->getSelectedPiece());
+    $this->getSelectedPiece()->setPosition($cell);
     $this->checkCompleted();
     return $this;
   }

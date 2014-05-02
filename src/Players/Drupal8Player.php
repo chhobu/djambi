@@ -35,7 +35,8 @@ class Drupal8Player extends HumanPlayer {
       $player->setAccount($context['account']);
     }
     else {
-      $player->setAccount(user_load($data['account']));
+      $account = user_load($data['account']);
+      $player->setAccount($account);
     }
     return $player;
   }

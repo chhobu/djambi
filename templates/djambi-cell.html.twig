@@ -1,0 +1,5 @@
+<div class="cell cell-type-{{ cell.type }} cell-reachable-{{ cell.isReachable() ? 'yes' : 'no' }} cell-occupation-{{ cell.occupant is null ? 'empty' : 'full' }}" title="{{ 'Cell @name'|t({ '@name': cell.name }) }}" data-cell-name="{{ cell.name }}">
+  {% if cell.occupant is not null %}
+    {{ piece }}
+  {% endif %}
+</div>

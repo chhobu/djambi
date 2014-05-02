@@ -18,6 +18,8 @@ use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
 use Djambi\PieceDescriptions\Necromobile;
 use Djambi\PieceDescriptions\Reporter;
+use Djambi\Strings\Glossary;
+use Djambi\Strings\GlossaryTerm;
 
 /**
  * Class DjambiBattlefieldScheme
@@ -300,27 +302,27 @@ abstract class BaseGrid extends PersistantDjambiObject implements GridInterface 
 
   public static function getSidesInfos($order = NULL) {
     $factions = array();
-    $factions['R'] = array(
-      'id' => 'R',
-      'name' => 'Red',
+    $factions['t1'] = array(
+      'id' => 't1',
+      'name' => new GlossaryTerm(Glossary::RED),
       'class' => 'rouge',
       'start_order' => 1,
     );
-    $factions['B'] = array(
-      'id' => 'B',
-      'name' => 'Blue',
+    $factions['t2'] = array(
+      'id' => 't2',
+      'name' => new GlossaryTerm(Glossary::BLUE),
       'class' => 'bleu',
       'start_order' => 2,
     );
-    $factions['J'] = array(
-      'id' => 'J',
-      'name' => 'Yellow',
+    $factions['t3'] = array(
+      'id' => 't3',
+      'name' => new GlossaryTerm(Glossary::YELLOW),
       'class' => 'jaune',
       'start_order' => 3,
     );
-    $factions['V'] = array(
-      'id' => 'V',
-      'name' => 'Green',
+    $factions['t4'] = array(
+      'id' => 't4',
+      'name' => new GlossaryTerm(Glossary::GREEN),
       'class' => 'vert',
       'start_order' => 4,
     );

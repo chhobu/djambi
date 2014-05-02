@@ -10,3 +10,37 @@ function djambi_permission() {
     ),
   );
 }
+
+/**
+ * Implements hook_theme().
+ */
+function djambi_theme() {
+  return array(
+    'djambi_grid' => array(
+      'render element' => 'form',
+      'file' => 'djambi.theme.inc',
+    ),
+    'djambi_cardinal_grid' => array(
+      'variables' => array('game' => NULL, 'cells' => NULL, 'caption' => NULL),
+      'file' => 'djambi.theme.inc',
+    ),
+    'djambi_hexagonal_grid' => array(
+      'variables' => array('game' => NULL, 'cells' => NULL, 'caption' => NULL),
+      'template' => 'djambi-hexagonal-grid',
+    ),
+    'djambi_cell' => array(
+      'variables' => array('cell' => NULL),
+      'template' => 'djambi-cell',
+      'file' => 'djambi.theme.inc',
+    ),
+    'djambi_piece' => array(
+      'variables' => array('piece' => NULL),
+      'template' => 'djambi-piece',
+      'file' => 'djambi.theme.inc',
+    ),
+    'djambi_piece_full_name' => array(
+      'variables' => array('piece' => NULL, 'html' => TRUE),
+      'template' => 'djambi-piece-full-name',
+    ),
+  );
+}

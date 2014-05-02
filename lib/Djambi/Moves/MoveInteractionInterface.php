@@ -16,20 +16,14 @@ interface MoveInteractionInterface {
   /** @return Move */
   public function getTriggeringMove();
 
-  /** @return bool */
-  public function isCompleted();
-
-  /** @return string */
-  public function getType();
-
-  /** @return string */
-  public static function getInteractionType();
-
   /** @return MoveInteractionInterface */
   public function findPossibleChoices();
 
   /** @return Cell[] */
   public function getPossibleChoices();
+
+  /** @return bool */
+  public function isCompleted();
 
   /**
    * Exécute une interaction.

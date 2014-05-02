@@ -111,10 +111,10 @@ class GameDispositionsTest extends \PHPUnit_Framework_TestCase {
     $this->assertNbFactions(4);
     $this->assertNbPiecePerFaction(9);
 
-    $this->assertEquals($this->getGame()->getBattlefield()->getFactionById('B')->getStatus(), Faction::STATUS_VASSALIZED);
-    $this->assertEquals($this->getGame()->getBattlefield()->getFactionById('B')->getControl()->getId(), 'R');
-    $this->assertEquals($this->getGame()->getBattlefield()->getFactionById('V')->getStatus(), Faction::STATUS_VASSALIZED);
-    $this->assertEquals($this->getGame()->getBattlefield()->getFactionById('V')->getControl()->getId(), 'J');
+    $this->assertEquals($this->getGame()->getBattlefield()->findFactionById('t2')->getStatus(), Faction::STATUS_VASSALIZED);
+    $this->assertEquals($this->getGame()->getBattlefield()->findFactionById('t2')->getControl()->getId(), 't1');
+    $this->assertEquals($this->getGame()->getBattlefield()->findFactionById('t4')->getStatus(), Faction::STATUS_VASSALIZED);
+    $this->assertEquals($this->getGame()->getBattlefield()->findFactionById('t4')->getControl()->getId(), 't3');
   }
 
   protected function assertNbFactions($expected) {

@@ -21,6 +21,8 @@ use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\PieceDescriptions\BasePieceDescription;
 use Djambi\Players\HumanPlayer;
 use Djambi\Players\PlayerInterface;
+use Djambi\Strings\Glossary;
+use Djambi\Strings\GlossaryTerm;
 
 /**
  * Class DjambiBattlefield
@@ -310,7 +312,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
    * @return Faction
    *   Faction si trouvée, FALSE sinon.
    */
-  public function getFactionById($id) {
+  public function findFactionById($id) {
     foreach ($this->factions as $faction) {
       if ($faction->getId() == $id) {
         $faction->setBattlefield($this);
@@ -331,7 +333,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
       return NULL;
     }
     $play_order = current($this->getPlayOrder());
-    return $this->getFactionById($play_order["side"]);
+    return $this->findFactionById($play_order["side"]);
   }
 
   /**
@@ -344,15 +346,16 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
    * @return Piece
    *   Renvoie la pièce associée.
    */
-  public function getPieceById($piece_id) {
+  public function findPieceById($piece_id) {
     list($faction_id, $piece_description_id) = explode("-", $piece_id, 2);
-    $faction = $this->getFactionById($faction_id);
+    $faction = $this->findFactionById($faction_id);
     $pieces = $faction->getPieces();
     if (isset($pieces[$piece_description_id])) {
       return $pieces[$piece_description_id];
     }
     else {
-      throw new PieceNotFoundException("Piece " . $piece_id . " not found.");
+      throw new PieceNotFoundException(new GlossaryTerm(Glossary::EXCEPTION_PIECE_NOT_FOUND,
+        array('@piece' => $piece_id)));
     }
   }
 
@@ -398,12 +401,10 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
    *   Cellulue de Djambi
    */
   public function findCell($x, $y) {
-    if (isset($this->cellsIndex[$x][$y])) {
-      return $this->findCellByName($this->cellsIndex[$x][$y]);
-    }
-    else {
+    if (!isset($this->cellsIndex[$x][$y])) {
       throw new CellNotFoundException('X:' . $x . '-Y:' . $y);
     }
+    return $this->findCellByName($this->cellsIndex[$x][$y]);
   }
 
   /**
@@ -413,12 +414,11 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
    * @throws CellNotFoundException
    */
   public function findCellByName($name) {
-    if (isset($this->cells[$name])) {
-      return $this->cells[$name];
+    if (!isset($this->cells[$name])) {
+      throw new CellNotFoundException(new GlossaryTerm(Glossary::EXCEPTION_CELL_NOT_FOUND,
+        array('@name' => $name)));
     }
-    else {
-      throw new CellNotFoundException($name);
-    }
+    return $this->cells[$name];
   }
 
   public function cleanupMovableStates() {
@@ -509,7 +509,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     krsort($inverted_moves);
     foreach ($inverted_moves as $key => $move) {
       if ($move['turn'] >= $turn) {
-        $piece = $this->getPieceById($move['target']);
+        $piece = $this->findPieceById($move['target']);
         $position = $this->findCellByName($move['from']);
         $piece->setPosition($position);
         if ($move['type'] == 'murder' || $move['type'] == 'elimination') {
@@ -650,7 +650,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     else {
       $faction_id = $move['acting_faction'];
     }
-    $acting_faction = $this->getFactionById($faction_id);
+    $acting_faction = $this->findFactionById($faction_id);
     if ($acting_faction) {
       $changing_cells[$move['from']] = $acting_faction->getClass();
       $changing_cells[$move['to']] = $acting_faction->getClass();
@@ -678,9 +678,9 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
    */
   protected function rebuildFactionsControls($summary) {
     foreach ($summary['factions'] as $faction_key => $data) {
-      $faction = $this->getFactionById($faction_key);
+      $faction = $this->findFactionById($faction_key);
       $faction->setStatus($data['status']);
-      $faction->setControl($this->getFactionById($data['control']), FALSE);
+      $faction->setControl($this->findFactionById($data['control']), FALSE);
       $faction->setMaster(isset($data['master']) ? $data['master'] : NULL);
     }
     return $this;
@@ -696,14 +696,14 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     $nb_living_factions = count($living_factions);
     if ($nb_living_factions == 1) {
       $winner_id = current($living_factions);
-      $winner = $this->getFactionById($winner_id);
+      $winner = $this->findFactionById($winner_id);
       $winner->setStatus(Faction::STATUS_WINNER)->setRanking(1);
       $this->logEvent('event', 'THE_WINNER_IS', array('faction1' => $winner->getId()));
     }
     else {
       $this->logEvent("event", "DRAW");
       foreach ($living_factions as $faction_id) {
-        $faction = $this->getFactionById($faction_id);
+        $faction = $this->findFactionById($faction_id);
         $faction->setStatus(Faction::STATUS_DRAW)->setRanking($nb_living_factions);
       }
     }
@@ -783,7 +783,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
                 }
               }
               // Prise de contrôle
-              $faction->setControl($this->getFactionById(current($kings)));
+              $faction->setControl($this->findFactionById(current($kings)));
               $changes = TRUE;
             }
           }
@@ -937,7 +937,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     elseif ($this->getGameManager()->getStatus() == BasicGameManager::STATUS_DRAW_PROPOSAL) {
       foreach ($turn_scheme as $key => $turn) {
         if (!empty($turn['side']) && $turn['playable']) {
-          $side = $this->getFactionById($turn['side']);
+          $side = $this->findFactionById($turn['side']);
           if (!is_null($side->getDrawStatus())) {
             $turn_scheme[$key]['playable'] = FALSE;
           }
@@ -1035,7 +1035,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
       }
     }
     $current_order = current($this->playOrder);
-    $selected_faction = $this->getFactionById($current_order["side"]);
+    $selected_faction = $this->findFactionById($current_order["side"]);
     $selected_faction->setPlaying(TRUE);
     $begin = !empty($last_turn) ? $last_turn['end'] + 1 : time();
     if ($new_turn) {
@@ -1062,7 +1062,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
       $this->cleanupMovableStates();
     }
     $current_order = current($this->playOrder);
-    $active_faction = $this->getFactionById($current_order["side"]);
+    $active_faction = $this->findFactionById($current_order["side"]);
     $can_move = FALSE;
     foreach ($active_faction->getControlledPieces() as $piece) {
       $moves = $piece->buildAllowableMoves();
@@ -1229,7 +1229,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     if (!empty($vassals) && !empty($players) && count($vassals) == count($players)) {
       foreach ($vassals as $id) {
         $control = current($players);
-        $this->getFactionById($id)->setControl($control, TRUE);
+        $this->findFactionById($id)->setControl($control, TRUE);
         next($players);
       }
     }
@@ -1251,7 +1251,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     }
     foreach ($this->events as $event) {
       if ($event['event'] == 'GAME_OVER') {
-        $faction = $this->getFactionById($event['args']['faction1']);
+        $faction = $this->findFactionById($event['args']['faction1']);
         if (!$faction->isAlive()) {
           $infos['eliminations'][$faction->getId()] = $event['turn'];
         }
@@ -1274,7 +1274,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
       if ($last_turn != $turn) {
         $rank = $begin + $i;
       }
-      $this->getFactionById($faction_key)->setRanking($rank);
+      $this->findFactionById($faction_key)->setRanking($rank);
       $last_turn = $turn;
     }
     return $this;

@@ -1,0 +1,11 @@
+{% if html %}
+<span class="piece-name piece-type-{{ piece.description.type }} faction-origine-{{ piece.faction.class }} faction-{{ piece.faction.control.class }}">
+{% endif %}
+{% if piece.description.num is empty %}
+  {{ '@side @piece'|t({ '@side': piece.faction.name, '@piece': piece.description.genericName }) }}
+{% else %}
+  {{ '@side @piece #@num'|t({ '@side': piece.faction.name, '@piece': piece.description.genericName, '@num': piece.description.num }) }}
+{% endif %}
+{% if html %}
+</span>
+{% endif %}

@@ -35,19 +35,19 @@ class Faction extends PersistantDjambiObject {
   const STATUS_READY = 'ready';
 
   /* @var string $status */
-  private $status;
+  protected $status;
   /* @var int $ranking */
-  private $ranking;
+  protected $ranking;
   /* @var string $id */
   protected $id;
   /* @var string $name */
-  private $name;
+  protected $name;
   /* @var string $class */
-  private $class;
+  protected $class;
   /* @var Faction $control */
-  private $control;
+  protected $control;
   /* @var bool $alive */
-  private $alive = FALSE;
+  protected $alive = FALSE;
   /* @var Piece[] $pieces */
   protected $pieces;
   /* @var Battlefield $battlefield */
@@ -55,15 +55,15 @@ class Faction extends PersistantDjambiObject {
   /* @var int $startOrder; */
   protected $startOrder;
   /* @var bool $playing */
-  private $playing = FALSE;
+  protected $playing = FALSE;
   /* @var int $skippedTurns */
   protected $skippedTurns = 0;
   /* @var int $lastDrawProposal */
-  private $lastDrawProposal;
+  protected $lastDrawProposal;
   /* @var int $drawStatus */
-  private $drawStatus;
+  protected $drawStatus;
   /* @var string $master */
-  private $master;
+  protected $master;
   /* @var PlayerInterface $player */
   protected $player;
 
@@ -475,7 +475,7 @@ class Faction extends PersistantDjambiObject {
     $this->getBattlefield()->getGameManager()->setStatus(BasicGameManager::STATUS_PENDING);
     $factions = $this->getBattlefield()->getFactions();
     foreach ($factions as $faction) {
-      $this->getBattlefield()->getFactionById($faction->getId())->setDrawStatus(NULL);
+      $this->getBattlefield()->findFactionById($faction->getId())->setDrawStatus(NULL);
     }
     $this->getBattlefield()->getGameManager()->save(__METHOD__);
     return $this;

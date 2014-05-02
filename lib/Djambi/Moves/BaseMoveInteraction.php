@@ -2,56 +2,69 @@
 
 namespace Djambi\Moves;
 
-
-use Djambi\Exceptions\IllogicMoveException;
-use Djambi\Gameplay\BattlefieldInterface;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Piece;
+use Djambi\Persistance\PersistantDjambiObject;
 
-abstract class BaseMoveInteraction extends Move implements MoveInteractionInterface {
+abstract class BaseMoveInteraction extends PersistantDjambiObject implements MoveInteractionInterface {
+  /** @var Piece */
+  protected $selectedPiece;
+  /** @var Cell */
+  protected $destination;
   /** @var  Move */
-  private $triggeringMove;
+  protected $triggeringMove;
   /** @var Cell[] */
-  private $possibleChoices = array();
+  protected $possibleChoices;
+  /** @var boolean */
+  protected $completed;
 
   protected function prepareArrayConversion() {
-    $this->addDependantObjects(array('possibleChoices' => 'id'));
+    $this->addPersistantProperties('completed');
+    $this->addDependantObjects(array(
+      'possibleChoices' => 'name',
+      'selectedPiece' => 'id',
+      'destination' => 'name',
+    ));
     return parent::prepareArrayConversion();
   }
 
   public static function fromArray(array $array, array $context = array()) {
-    /** @var BattlefieldInterface $battlefield */
-    $battlefield = $context['battlefield'];
+    /** @var Move $move */
+    $move = $context['move'];
+    $grid = $move->getSelectedPiece()->getFaction()->getBattlefield();
     /** @var BaseMoveInteraction $interaction */
-    $interaction = parent::fromArray($array, $context);
-    if (!empty($array['possibleChoices'])) {
-      $interactions = array();
+    $interaction = new static($context['move'], $grid->findPieceById($array['selectedPiece']));
+    if (!empty($array['possibleChoices']) && !empty($interaction->getTriggeringMove()->getSelectedPiece())) {
+      $choices = array();
       /** @var Cell $cell */
-      foreach ($array['possibleChoices'] as $cell) {
-        $interactions[] = $battlefield->findCellByName($cell);
+      foreach ($array['possibleChoices'] as $cell_name) {
+        $choices[] = $grid->findCellByName($cell_name);
       }
-      $interaction->setPossibleChoices($interactions);
+      $interaction->setPossibleChoices($choices);
     }
     return $interaction;
   }
 
-  public function __construct(Move $move) {
-    $this->setType(static::getInteractionType());
-    $this->setTriggeringMove($move);
+  public function __construct(Move $move, Piece $selected_piece = NULL) {
+    $this->triggeringMove = $move;
+    if (!is_null($selected_piece)) {
+      static::setSelectedPiece($selected_piece);
+    }
+    else {
+      static::setSelectedPiece($move->getSelectedPiece());
+    }
   }
 
   public function getTriggeringMove() {
     return $this->triggeringMove;
   }
 
-  protected function setTriggeringMove(Move $move) {
-    $this->triggeringMove = $move;
-    return $this;
+  public function getSelectedPiece() {
+    return $this->selectedPiece;
   }
 
-  public function selectPiece(Piece $piece) {
-    $this->setSelectedPiece($piece);
-    $this->setPhase(self::PHASE_PIECE_DESTINATION);
+  protected function setSelectedPiece(Piece $piece) {
+    $this->selectedPiece = $piece;
     return $this;
   }
 
@@ -64,12 +77,23 @@ abstract class BaseMoveInteraction extends Move implements MoveInteractionInterf
     return $this->getTriggeringMove()->checkCompleted();
   }
 
+  public function isCompleted() {
+    return $this->completed;
+  }
+
+  protected function setCompleted($bool) {
+    $this->completed = $bool ? TRUE : FALSE;
+  }
+
   public function triggerInteraction(MoveInteractionInterface $interaction) {
     $this->getTriggeringMove()->triggerInteraction($interaction);
     return $this;
   }
 
   public function getPossibleChoices() {
+    if (is_null($this->possibleChoices)) {
+      $this->findPossibleChoices();
+    }
     return $this->possibleChoices;
   }
 
@@ -83,14 +107,8 @@ abstract class BaseMoveInteraction extends Move implements MoveInteractionInterf
     return $this;
   }
 
-  public function moveSelectedPiece(Cell $cell) {
-    if ($this->getPhase() == self::PHASE_PIECE_DESTINATION) {
-      $this->setDestination($cell);
-      return $this;
-    }
-    else {
-      throw new IllogicMoveException("Attempt to choose piece destination before piece selection phase during move interactions.");
-    }
+  protected function getDestination() {
+    return $this->destination;
   }
 
 }

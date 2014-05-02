@@ -7,14 +7,6 @@
 
 namespace Djambi\Gameplay;
 
-use Djambi\Exceptions\DisallowedActionException;
-use Djambi\Exceptions\IllogicMoveException;
-use Djambi\Moves\Manipulation;
-use Djambi\Moves\Move;
-use Djambi\Moves\Murder;
-use Djambi\Moves\Necromobility;
-use Djambi\Moves\Reportage;
-use Djambi\Moves\ThroneEvacuation;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\PieceDescriptions\BasePieceDescription;
@@ -24,21 +16,21 @@ use Djambi\PieceDescriptions\BasePieceDescription;
  */
 class Piece extends PersistantDjambiObject {
   /* @var string $id */
-  private $id;
+  protected $id;
   /* @var Faction $faction */
-  private $faction;
+  protected $faction;
   /* @var string $originalFactionId */
-  private $originalFactionId;
+  protected $originalFactionId;
   /* @var  bool $alive */
-  private $alive;
+  protected $alive;
   /* @var Cell $position */
-  private $position;
+  protected $position;
   /* @var bool $movable */
-  private $movable = FALSE;
+  protected $movable = FALSE;
   /* @var Cell[] $allowableMoves */
-  private $allowableMoves = array();
+  protected $allowableMoves = array();
   /* @var BasePieceDescription $description */
-  private $description;
+  protected $description;
 
   protected function prepareArrayConversion() {
     $this->addDependantObjects(array(
@@ -96,18 +88,6 @@ class Piece extends PersistantDjambiObject {
     return $this;
   }
 
-  public function getShortname() {
-    return $this->getDescription()->getShortname();
-  }
-
-  public function getLongname() {
-    return $this->getDescription()->echoName();
-  }
-
-  public function getType() {
-    return $this->getDescription()->getType();
-  }
-
   public function getFaction() {
     return $this->faction;
   }
@@ -122,7 +102,7 @@ class Piece extends PersistantDjambiObject {
   }
 
   public function getOriginalFaction() {
-    return $this->getBattlefield()->getFactionById($this->originalFactionId);
+    return $this->getBattlefield()->findFactionById($this->originalFactionId);
   }
 
   public function getOriginalFactionId() {
@@ -132,10 +112,6 @@ class Piece extends PersistantDjambiObject {
   public function setOriginalFactionId($id) {
     $this->originalFactionId = $id;
     return $this;
-  }
-
-  public function getImage() {
-    return $this->getDescription()->getImagePattern();
   }
 
   public function getPosition() {
@@ -260,185 +236,21 @@ class Piece extends PersistantDjambiObject {
     return count($this->allowableMoves);
   }
 
-  public function evaluateMove(Move $move) {
-    $move_ok = $this->prepareMove($move, TRUE);
-    if (!$move_ok) {
-      throw new DisallowedActionException("Unauthorized move : piece " . $this->getId()
-        . " from " . $this->getPosition()->getName() . " to " . $move->getDestination()->getName());
-    }
-    foreach ($move->getInteractions() as $interaction) {
-      $interaction->findPossibleChoices();
-    }
-    return $this;
-  }
-
-  public function executeMove(Move $move, $allow_interactions = TRUE) {
-    $destination = $move->getDestination();
-    $move_ok = $this->prepareMove($move, $allow_interactions);
-    if (!$move_ok) {
-      throw new DisallowedActionException("Unauthorized move : piece " . $this->getId()
-        . " from " . $this->getPosition()->getName() . " to " . $destination->getName());
-    }
-    elseif (empty($destination)) {
-      throw new IllogicMoveException("Undefined destination in move execution.");
-    }
-    else {
-      $target = $destination->getOccupant();
-      $this->faction->getBattlefield()->logMove($this, $destination, 'move', $target);
-      $this->setPosition($destination);
-      foreach ($move->getKills() as $kill) {
-        $this->kill($move, $kill['victim'], $kill['position']);
-      }
-      foreach ($move->getEvents() as $event) {
-        if ($event['type'] == 'diplomat_golden_move') {
-          $golden_move = new Manipulation($move, $event['target']);
-          $golden_move->moveSelectedPiece($event['position']);
-          $move->triggerInteraction($golden_move);
-          $this->getBattlefield()->logEvent('event', 'DIPLOMAT_GOLDEN_MOVE', array('piece' => $this->getId()));
-        }
-        elseif ($event['type'] == 'assassin_golden_move') {
-          $this->getBattlefield()->logEvent('event', 'ASSASSIN_GOLDEN_MOVE', array('piece' => $this->getId()));
-        }
-      }
-    }
-    return $this;
-  }
-
-  protected function prepareMove(Move $move, $allow_interactions) {
-    $destination = $move->getDestination();
-    $current_cell = $this->getPosition();
-    $move_ok = FALSE;
-    $extra_interaction = FALSE;
-    // Vérifie si la pièce dispose d'un droit d'interaction supplémentaire
-    // lors d'une évacuation de trône :
-    if (!$allow_interactions && $this->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_EXTRA_INTERACTIONS) == 'extended') {
-      $target = $destination->getOccupant();
-      if ($current_cell->getType() == Cell::TYPE_THRONE && !empty($target) && $target->getDescription()->hasHabilityAccessThrone()) {
-        $extra_interaction = TRUE;
-      }
-    }
-    // Vérifie les conséquences d'un déplacement si le déplacement se fait
-    // sur une case occupée :
-    if ($destination->getName() != $current_cell->getName()) {
-      $target = $destination->getOccupant();
-      if (!empty($target)) {
-        // ----> Manipulation ?
-        if ($this->getDescription()->hasHabilityMoveLivingPieces()) {
-          if ($this->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_DIPLOMACY) == 'vassal') {
-            $can_manipulate = $target->getFaction()->getId() != $this->getFaction()->getId();
-          }
-          else {
-            $can_manipulate = $target->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId();
-          }
-          if ($can_manipulate && $target->isAlive() && ($allow_interactions || $extra_interaction)) {
-            if ($allow_interactions) {
-              $move->triggerInteraction(new Manipulation($move, $target));
-            }
-            elseif ($extra_interaction) {
-              $move->triggerEvent(array(
-                'type' => 'diplomate_golden_move',
-                'target' => $target,
-                'position' => $current_cell,
-              ));
-            }
-            $move_ok = TRUE;
-          }
-        }
-        // ----> Necromobilité ?
-        elseif (!$target->isAlive() && $this->getDescription()->hasHabilityMoveDeadPieces() && $allow_interactions) {
-          $move->triggerInteraction(new Necromobility($move, $target));
-          $move_ok = TRUE;
-        }
-        // ----> Assassinat ?
-        elseif ($target->isAlive()) {
-          // Signature de l'assassin
-          $test = $this->getDescription()->hasHabilityKillByAttack();
-          if ($this->getDescription()->hasHabilitySignature() && $test && ($allow_interactions || $extra_interaction)) {
-            $move->triggerKill($target, $current_cell);
-            $move_ok = TRUE;
-            if ($extra_interaction) {
-              $move->triggerEvent(array('type' => 'assassin_golden_move'));
-            }
-          }
-          // Déplacement du corps de la victime :
-          elseif ($test && $allow_interactions) {
-            $move->triggerInteraction(new Murder($move, $target));
-            $move_ok = TRUE;
-          }
-        }
-      }
-      else {
-        // ----> reportage ?
-        // Eventuel choix de la victime du reporter :
-        if ($this->getDescription()->hasHabilityKillByProximity() && $allow_interactions) {
-          $grid = $this->faction->getBattlefield();
-          $next_cells = $grid->findNeighbourCells($destination, FALSE);
-          $victims = array();
-          foreach ($next_cells as $key) {
-            $cell = $this->getBattlefield()->findCell($key['x'], $key['y']);
-            $occupant = $cell->getOccupant();
-            if (!empty($occupant)) {
-              if ($occupant->isAlive() && $occupant->getId() != $this->getId()) {
-                if ($grid->getGameManager()->getOption(StandardRuleset::RULE_REPORTERS) == 'foxnews' ||
-                    $occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) {
-                  $canibalism = $grid->getGameManager()->getOption(StandardRuleset::RULE_CANIBALISM);
-                  if ($canibalism != 'ethical' || $occupant->getFaction()->getControl()->isAlive()) {
-                    $victims[$cell->getName()] = $occupant;
-                  }
-                }
-              }
-            }
-          }
-          if ($grid->getGameManager()->getOption(StandardRuleset::RULE_REPORTERS) == 'pravda' && count($victims) > 1) {
-            $reportage = new Reportage($move);
-            $move->triggerInteraction($reportage->setPotentialTargets($victims));
-          }
-          elseif (!empty($victims)) {
-            /* @var Piece $victim */
-            foreach ($victims as $victim) {
-              $move->triggerKill($victim, $victim->getPosition());
-            }
-          }
-        }
-        $move_ok = TRUE;
-      }
-    }
-    if ($move_ok && !$this->getDescription()->hasHabilityAccessThrone() && $destination->getType() == Cell::TYPE_THRONE) {
-      $move->triggerInteraction(new ThroneEvacuation($move));
-    }
-    return $move_ok;
-  }
-
-  public function kill(Move $move, Piece $victim, Cell $destination) {
-    $victim->setAlive(FALSE);
-    $this->faction->getBattlefield()->logMove($victim, $destination, "murder", $this);
-    $victim->setPosition($destination);
-    if ($victim->getDescription()->hasHabilityMustLive()) {
+  public function dieDieDie(Cell $destination) {
+    $this->setAlive(FALSE);
+    $this->faction->getBattlefield()->logMove($this, $destination, "murder", $this);
+    $this->setPosition($destination);
+    if ($this->getDescription()->hasHabilityMustLive()) {
       $this->getBattlefield()->logEvent('event', 'LEADER_KILLED', array(
-        'faction1' => $victim->getFaction()->getId(),
-        'piece' => $victim->getId(),
+        'faction1' => $this->getFaction()->getId(),
+        'piece' => $this->getId(),
       ));
-      $victim->getFaction()->dieDieDie(Faction::STATUS_KILLED);
-      $victim->getFaction()->setControl($this->faction->getControl());
-      $victim->getFaction()->setMaster($this->faction->getControl()->getId());
+      $this->getFaction()->dieDieDie(Faction::STATUS_KILLED);
+      $this->getFaction()->setControl($this->faction->getControl());
+      $this->getFaction()->setMaster($this->faction->getControl()->getId());
       $this->faction->getBattlefield()->updateSummary();
       $this->faction->getBattlefield()->getPlayOrder(TRUE);
     }
-  }
-
-  public function evacuate(Move $move) {
-    $this->executeMove($move, FALSE);
-    return $this;
-  }
-
-  public function manipulate(Manipulation $move, Piece $victim, Cell $destination) {
-    $this->faction->getBattlefield()->logMove($victim, $destination, "manipulation", $this);
-    $victim->setPosition($destination);
-  }
-
-  public function necromove(Necromobility $move, Piece $victim, Cell $destination) {
-    $this->faction->getBattlefield()->logMove($victim, $destination, "necromobility", $this);
-    $victim->setPosition($destination);
   }
 
   public function checkAvailableMove(Cell $cell, $allow_interactions, $force_empty = FALSE) {

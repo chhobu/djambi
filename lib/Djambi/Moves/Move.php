@@ -4,11 +4,14 @@ namespace Djambi\Moves;
 
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\IllogicMoveException;
+use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\BattlefieldInterface;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Piece;
 use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Strings\Glossary;
+use Djambi\Strings\GlossaryTerm;
 
 class Move extends PersistantDjambiObject {
   const PHASE_PIECE_SELECTION = 'piece_selection';
@@ -29,7 +32,7 @@ class Move extends PersistantDjambiObject {
   private $interactions = array();
   /** @var bool */
   private $completed = FALSE;
-  /** @var array */
+  /** @var Piece[] */
   private $kills = array();
   /** @var array */
   private $events = array();
@@ -54,9 +57,9 @@ class Move extends PersistantDjambiObject {
     /** @var BattlefieldInterface $battlefield */
     $battlefield = $context['battlefield'];
     /** @var Move $move */
-    $move = new static($battlefield->getFactionById($array['actingFaction']));
+    $move = new static($battlefield->findFactionById($array['actingFaction']));
     if (!empty($array['selectedPiece'])) {
-      $move->setSelectedPiece($battlefield->getPieceById($array['selectedPiece']));
+      $move->setSelectedPiece($battlefield->findPieceById($array['selectedPiece']));
     }
     $move->setPhase($array['phase']);
     $move->setType($array['type']);
@@ -106,10 +109,10 @@ class Move extends PersistantDjambiObject {
 
   public function selectPiece(Piece $piece) {
     if ($this->getActingFaction()->getId() != $piece->getFaction()->getControl()->getId()) {
-      throw new DisallowedActionException("Attempt to select an uncontrolled piece.");
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MOVE_UNCONTROLLED));
     }
     if (!$piece->isAlive() || !$piece->isMovable()) {
-      throw new DisallowedActionException("Attempt to select an unselectable piece.");
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MOVE_UNMOVABLE));
     }
     $this->setSelectedPiece($piece);
     $this->setPhase(self::PHASE_PIECE_DESTINATION);
@@ -136,28 +139,41 @@ class Move extends PersistantDjambiObject {
 
   protected function setDestination(Cell $cell) {
     if (!in_array($cell->getName(), $this->getSelectedPiece()->getAllowableMovesNames())) {
-      throw new DisallowedActionException("Disallowed move : piece " . $this->getSelectedPiece()->getId() . " to " . $cell->getName());
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MOVE_DISALLOWED,
+        array('%piece_id' => $this->getSelectedPiece()->getId(), '%location' => $cell->getName())));
     }
     $this->destination = $cell;
     return $this;
   }
 
-  public function moveSelectedPiece(Cell $cell) {
-    if ($this->getPhase() == self::PHASE_PIECE_DESTINATION) {
-      $this->setDestination($cell);
+  public function executeChoice(Cell $cell) {
+    if ($this->getPhase() == self::PHASE_PIECE_SELECTION) {
+      throw new IllogicMoveException(new GlossaryTerm(Glossary::EXCEPTION_MOVE_ILLOGIC));
+    }
+    $this->setDestination($cell);
+    if ($this->prepareMove($this->getPhase() != self::PHASE_PIECE_INTERACTIONS)) {
+      $this->executeMove();
       $this->setPhase(self::PHASE_PIECE_INTERACTIONS);
-      $this->getSelectedPiece()->executeMove($this);
       $this->checkCompleted();
-      return $this;
     }
     else {
-      throw new IllogicMoveException("Attempt to choose piece destination before piece selection phase.");
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MOVE_DISALLOWED,
+        array('%piece_id' => $this->getSelectedPiece()->getId(), '%location' => $cell)));
     }
+    return $this;
   }
 
-  public function tryMoveSelectedPiece(Cell $cell) {
+  public function evaluateChoice(Cell $cell) {
     $this->setDestination($cell);
-    $this->getSelectedPiece()->evaluateMove($this);
+    if ($this->prepareMove(TRUE)) {
+      foreach ($this->getInteractions() as $interaction) {
+        $interaction->findPossibleChoices();
+      }
+    }
+    else {
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MOVE_DISALLOWED,
+        array('%piece_id' => $this->getSelectedPiece()->getId(), '%location' => $cell)));
+    }
     return $this;
   }
 
@@ -211,7 +227,7 @@ class Move extends PersistantDjambiObject {
     return $this->completed;
   }
 
-  protected function checkCompleted() {
+  public function checkCompleted() {
     $interaction = $this->getFirstInteraction();
     if (is_null($interaction) && $this->getPhase() == self::PHASE_PIECE_INTERACTIONS) {
       $this->setCompleted(TRUE);
@@ -225,7 +241,7 @@ class Move extends PersistantDjambiObject {
   }
 
   public function triggerKill(Piece $piece, Cell $location) {
-    $this->kills[$piece->getId()] = array('victim' => $piece, 'position' => $location);
+    $this->kills[$location->getName()] = $piece;
     return $this;
   }
 
@@ -250,6 +266,147 @@ class Move extends PersistantDjambiObject {
   protected function setEvents(array $events) {
     $this->events = $events;
     return $this;
+  }
+
+  protected function prepareMove($allow_interactions) {
+    $current_cell = $this->getSelectedPiece()->getPosition();
+    $battlefield = $this->getSelectedPiece()->getFaction()->getBattlefield();
+    $target = $this->getDestination()->getOccupant();
+    $move_ok = FALSE;
+    $extra_interaction = FALSE;
+    // Vérifie si la pièce dispose d'un droit d'interaction supplémentaire
+    // lors d'une évacuation de trône :
+    if (!$allow_interactions && $battlefield->getGameManager()->getOption(StandardRuleset::RULE_EXTRA_INTERACTIONS) == 'extended') {
+      if ($current_cell->getType() == Cell::TYPE_THRONE && !empty($target) && $target->getDescription()->hasHabilityAccessThrone()) {
+        $extra_interaction = TRUE;
+      }
+    }
+    // Vérifie les conséquences d'un déplacement si le déplacement se fait
+    // sur une case occupée :
+    if ($this->getDestination()->getName() != $current_cell->getName()) {
+      if (!empty($target)) {
+        $this->checkTrigerringManipulation($move_ok, $target, $allow_interactions, $extra_interaction);
+        $this->checkTrigerringNecromobily($move_ok, $target, $allow_interactions);
+        $this->checkTrigerringMurder($move_ok, $target, $allow_interactions, $extra_interaction);
+      }
+      else {
+        $this->checkTriggeringReportage($allow_interactions);
+        $move_ok = TRUE;
+      }
+    }
+    if ($move_ok && !$this->getSelectedPiece()->getDescription()->hasHabilityAccessThrone()
+      && $this->getDestination()->getType() == Cell::TYPE_THRONE) {
+      $this->triggerInteraction(new ThroneEvacuation($this));
+    }
+    return $move_ok;
+  }
+
+  protected function executeMove() {
+    $target = $this->getDestination()->getOccupant();
+    $battlefield = $this->getSelectedPiece()->getFaction()->getBattlefield();
+    $battlefield->logMove($this->getSelectedPiece(), $this->getDestination(), 'move', $target);
+    $this->getSelectedPiece()->setPosition($this->getDestination());
+    foreach ($this->getKills() as $location => $victim) {
+      $victim->dieDieDie($battlefield->findCellByName($location));
+    }
+    foreach ($this->getEvents() as $event) {
+      if ($event['type'] == 'diplomat_golden_move') {
+        $golden_move = new Manipulation($this, $event['target']);
+        $golden_move->executeChoice($event['position']);
+        $this->triggerInteraction($golden_move);
+        $battlefield->logEvent('event', 'DIPLOMAT_GOLDEN_MOVE', array('piece' => $this->getSelectedPiece()->getId()));
+      }
+      elseif ($event['type'] == 'assassin_golden_move') {
+        $battlefield->logEvent('event', 'ASSASSIN_GOLDEN_MOVE', array('piece' => $this->getSelectedPiece()->getId()));
+      }
+    }
+    return $this;
+  }
+
+  protected function checkTrigerringManipulation(&$move_ok, Piece $target, $allow_interactions, $extra_interaction) {
+    $piece = $this->getSelectedPiece();
+    if ($piece->getDescription()->hasHabilityMoveLivingPieces()) {
+      if ($piece->getFaction()->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_DIPLOMACY) == 'vassal') {
+        $can_manipulate = $target->getFaction()->getId() != $piece->getFaction()->getId();
+      }
+      else {
+        $can_manipulate = $target->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId();
+      }
+      if ($can_manipulate && $target->isAlive() && ($allow_interactions || $extra_interaction)) {
+        if ($allow_interactions) {
+          $this->triggerInteraction(new Manipulation($this, $target));
+        }
+        elseif ($extra_interaction) {
+          $this->triggerEvent(array(
+            'type' => 'diplomate_golden_move',
+            'target' => $target,
+            'position' => $piece->getPosition(),
+          ));
+        }
+        $move_ok = TRUE;
+      }
+    }
+  }
+
+  protected function checkTrigerringNecromobily(&$move_ok, Piece $target, $allow_interactions) {
+    if (!$target->isAlive() && $this->getSelectedPiece()->getDescription()->hasHabilityMoveDeadPieces() && $allow_interactions) {
+      $this->triggerInteraction(new Necromobility($this, $target));
+      $move_ok = TRUE;
+    }
+  }
+
+  protected function checkTrigerringMurder(&$move_ok, Piece $target, $allow_interactions, $extra_interaction) {
+    $piece = $this->getSelectedPiece();
+    if ($target->isAlive()) {
+      // Signature de l'assassin
+      $test = $piece->getDescription()->hasHabilityKillByAttack();
+      if ($piece->getDescription()->hasHabilitySignature() && $test && ($allow_interactions || $extra_interaction)) {
+        $this->triggerKill($target, $piece->getPosition());
+        $move_ok = TRUE;
+        if ($extra_interaction) {
+          $this->triggerEvent(array('type' => 'assassin_golden_move'));
+        }
+      }
+      // Déplacement du corps de la victime :
+      elseif ($test && $allow_interactions) {
+        $this->triggerInteraction(new Murder($this, $target));
+        $move_ok = TRUE;
+      }
+    }
+  }
+
+  protected function checkTriggeringReportage($allow_interactions) {
+    $piece = $this->getSelectedPiece();
+    if ($piece->getDescription()->hasHabilityKillByProximity() && $allow_interactions) {
+      $grid = $piece->getFaction()->getBattlefield();
+      $next_cells = $grid->findNeighbourCells($this->getDestination(), FALSE);
+      $victims = array();
+      foreach ($next_cells as $key) {
+        $cell = $grid->findCell($key['x'], $key['y']);
+        $occupant = $cell->getOccupant();
+        if (!empty($occupant)) {
+          if ($occupant->isAlive() && $occupant->getId() != $piece->getId()) {
+            if ($grid->getGameManager()->getOption(StandardRuleset::RULE_REPORTERS) == 'foxnews' ||
+              $occupant->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId()) {
+              $canibalism = $grid->getGameManager()->getOption(StandardRuleset::RULE_CANIBALISM);
+              if ($canibalism != 'ethical' || $occupant->getFaction()->getControl()->isAlive()) {
+                $victims[$cell->getName()] = $occupant->getPosition();
+              }
+            }
+          }
+        }
+      }
+      if ($grid->getGameManager()->getOption(StandardRuleset::RULE_REPORTERS) == 'pravda' && count($victims) > 1) {
+        $reportage = new Reportage($this);
+        $this->triggerInteraction($reportage->setTargets($victims));
+      }
+      elseif (!empty($victims)) {
+        /* @var Cell $victim_cell */
+        foreach ($victims as $victim_cell) {
+          $this->triggerKill($victim_cell->getOccupant(), $victim_cell);
+        }
+      }
+    }
   }
 
 }
