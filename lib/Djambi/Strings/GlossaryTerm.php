@@ -25,12 +25,16 @@ class GlossaryTerm extends PersistantDjambiObject {
   }
 
   protected function prepareArrayConversion() {
-    $this->addPersistantProperties(array('string', 'args'));
+    $save[] = 'string';
+    if (!empty($this->getArgs())) {
+      $save[] = 'args';
+    }
+    $this->addPersistantProperties($save);
     parent::prepareArrayConversion();
   }
 
   public static function fromArray(array $data, array $context = array()) {
-    $args = is_array($data['args']) ? $data['args'] : array();
+    $args = !empty($data['args']) && is_array($data['args']) ? $data['args'] : array();
     return new static($data['string'], $args);
   }
 

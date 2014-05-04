@@ -86,7 +86,6 @@ class GlossaryTermTest extends BaseDjambiTest {
     $term1 = new GlossaryTerm(Glossary::BLUE);
     $values[] = array($term1, array(
       'string' => Glossary::BLUE,
-      'args' => array(),
       ));
     $term2 = new GlossaryTerm("Test n°!num %check is ?color", array(
       '!num' => 2,

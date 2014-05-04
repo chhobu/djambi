@@ -165,10 +165,7 @@ abstract class PersistantDjambiObject implements ArrayableInterface {
 
   public function __sleep() {
     $keys = get_object_vars($this);
-    unset($keys['className']);
-    unset($keys['dependantObjects']);
-    unset($keys['persistantData']);
-    unset($keys['persistantProperties']);
+    unset($keys['className'], $keys['dependantObjects'], $keys['persistantData'], $keys['persistantProperties']);
     return array_keys($keys);
   }
 

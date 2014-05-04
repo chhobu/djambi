@@ -67,6 +67,12 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
     }
     else {
       $this->assertNotEmpty($interactions, "The move did not trigger any interactions");
+      $nb_cells = 0;
+      foreach ($grid->getCells() as $cell) {
+        if ($cell->isEnabled()) {
+          $nb_cells++;
+        }
+      }
       foreach ($expected_interactions as $expected) {
         $interaction = $move->getFirstInteraction();
         $this->assertNotEmpty($interaction, "The move did not trigger all expected interactions");
@@ -84,10 +90,11 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
           $this->assertEmpty($diff2, "Some expected choices are not possible : " . implode(', ', $diff2));
         }
         if (!empty($expected['forbidden_choices'])) {
+          $expected['forbidden_choices'] = array_unique($expected['forbidden_choices']);
           $intersect = array_intersect($possible_choices, $expected['forbidden_choices']);
           $this->assertEmpty($intersect, "Some possible choices were not forbidden : " . implode(', ', $intersect));
-          $intersect2 = array_intersect($expected['forbidden_choices'], $possible_choices);
-          $this->assertEmpty($intersect2, "Some forbidden choices are possible : " . implode(', ', $intersect2));
+
+          $this->assertEquals($nb_cells, count($possible_choices) + count($expected['forbidden_choices']), "Some forbidden choices were forgotten.");
         }
         $interaction->executeChoice($grid->findCellByName($expected['choice']));
       }
@@ -101,31 +108,30 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
    * @param array $context
    */
   protected function checkObjectTransformation($object, $expected_properties, $context = array()) {
-    $array = $object->toArray();
-    $this->assertEquals(count($expected_properties), count($array) - 1, "Array generated from object is not what it is expected");
-    $new_object = $object::fromArray($array, $context);
-    $this->compareObjectsAfterTransformation($object, $new_object, $expected_properties, $context, $array);
+    $converted_object = $object->toArray();
+    $this->assertEquals(count($expected_properties), count($converted_object) - 1, "Array generated from object is not what it is expected");
+    $new_object = $object::fromArray($converted_object, $context);
+    $this->compareObjectsAfterTransformation($object, $new_object, $expected_properties, $converted_object);
   }
 
   protected function checkObjectSerialization($object, $expected_properties, $context = array()) {
     $string = serialize($object);
     $new_object = unserialize($string);
-    $this->compareObjectsAfterTransformation($object, $new_object, $expected_properties, $context);
+    $this->compareObjectsAfterTransformation($object, $new_object, $expected_properties);
   }
 
   /**
    * @param ArrayableInterface $object
    * @param ArrayableInterface $new_object
    * @param array $expected_properties
-   * @param array $context
-   * @param array $array
+   * @param null $converted_object
    */
-  protected function compareObjectsAfterTransformation($object, $new_object, $expected_properties, $context, $array = NULL) {
+  protected function compareObjectsAfterTransformation($object, $new_object, $expected_properties, $converted_object = NULL) {
     $this->assertInstanceOf($object->getClassName(), $new_object);
     $reflection = new \ReflectionClass($object->getClassName());
     foreach ($expected_properties as $property => $expected_value) {
-      if (!is_null($array)) {
-        $this->assertArrayHasKey($property, $array);
+      if (!is_null($converted_object)) {
+        $this->assertArrayHasKey($property, $converted_object);
       }
       $reflection_property = $reflection->getProperty($property);
       $reflection_property->setAccessible(TRUE);
@@ -134,14 +140,14 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
         $expected_value = $reflection_property->getValue($object);
       }
       if (is_array($expected_value)) {
-        foreach ($expected_value as $key => $expected_array_element) {
-          if (is_object($expected_array_element) && $expected_array_element instanceof ArrayableInterface) {
-            $expected_converted_element = $expected_array_element->toArray();
-            $actual_array_element = $actual_value[$key];
-            if ($actual_array_element instanceof ArrayableInterface) {
-              $actual_array_element = $actual_array_element->toArray();
+        foreach ($expected_value as $key => $expected_array) {
+          if (is_object($expected_array) && $expected_array instanceof ArrayableInterface) {
+            $converted_array = $expected_array->toArray();
+            $actual_array = $actual_value[$key];
+            if ($actual_array instanceof ArrayableInterface) {
+              $actual_array = $actual_array->toArray();
             }
-            $this->assertEquals($expected_converted_element, $actual_array_element);
+            $this->assertEquals($converted_array, $actual_array);
           }
           else {
             $this->assertEquals($expected_value[$key], $actual_value[$key]);

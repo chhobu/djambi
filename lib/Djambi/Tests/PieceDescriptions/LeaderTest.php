@@ -3,7 +3,7 @@
  * Created by PhpStorm.
  * User: buchho
  * Date: 02/05/14
- * Time: 12:08
+ * Time: 14:24
  */
 
 namespace Djambi\Tests\PieceDescriptions;
@@ -12,19 +12,18 @@ use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
 use Djambi\Gameplay\Faction;
 use Djambi\Grids\BaseGrid;
-use Djambi\PieceDescriptions\Diplomat;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
 use Djambi\Tests\BaseDjambiTest;
 
-class DiplomatTest extends BaseDjambiTest {
+class LeaderTest extends BaseDjambiTest {
 
-  const MILITANT1_TEAM1_START_POSITION = 'B6';
-  const DIPLOMAT_TEAM1_START_POSITION = 'E3';
+  const MILITANT1_TEAM1_START_POSITION = 'A7';
+  const MILITANT2_TEAM1_START_POSITION = 'E3';
   const THRONE_POSITION = 'D4';
-  const LEADER_TEAM1_START_POSITION = 'A7';
+  const LEADER_TEAM1_START_POSITION = 'B6';
   const LEADER_TEAM2_START_POSITION = 'D3';
-  const MILITANT1_TEAM2_START_POSITION = 'F2';
+  const MILITANT1_TEAM2_START_POSITION = 'B3';
   const MILITANT2_TEAM2_START_POSITION = 'C6';
 
   public function setUp() {
@@ -33,8 +32,8 @@ class DiplomatTest extends BaseDjambiTest {
     $disposition->setDimensions(7, 7);
     $disposition->addSide(array(), Faction::STATUS_READY, array(
       new Leader(NULL, self::LEADER_TEAM1_START_POSITION),
-      new Militant(NULL, self::MILITANT1_TEAM1_START_POSITION),
-      new Diplomat(NULL, self::DIPLOMAT_TEAM1_START_POSITION),
+      new Militant(1, self::MILITANT1_TEAM1_START_POSITION),
+      new Militant(2, self::MILITANT2_TEAM1_START_POSITION),
     ));
     $disposition->addSide(array(), Faction::STATUS_READY, array(
       new Leader(NULL, self::LEADER_TEAM2_START_POSITION),
@@ -49,90 +48,63 @@ class DiplomatTest extends BaseDjambiTest {
     $this->assertEquals('throne', $this->game->getBattlefield()->findCellByName(self::THRONE_POSITION)->getType());
   }
 
-  public function testDiplomatPossibleMoves() {
+  public function testLeaderPossibleMoves() {
     $this->game->play();
     $battlefield = $this->game->getBattlefield();
-    $piece = $battlefield->findPieceById('t1-D');
-    $expected_moves = explode(' ', 'D3 F2 E2 F3 E4 F4 D2 E1 G3 E5 E6 E7 G5 C5 C1');
+    $piece = $battlefield->findPieceById('t1-L');
+    $expected_moves = explode(' ', 'B5 B7 A6 C7 A5 B4 B3 D4 C5');
     $this->checkPossibleMoves($piece, $expected_moves);
   }
 
-  public function testDiplomatNormalMove() {
+  public function testLeaderNormalMove() {
     $this->game->play();
     $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-D');
-    $destination = 'C1';
+    $piece1 = $grid->findPieceById('t1-L');
+    $destination = 'B4';
     $this->doMove($piece1, $destination, NULL);
 
     $this->checkNewTurn('t2');
     $this->checkPosition($piece1, $destination);
-    $this->checkEmptyCell(self::DIPLOMAT_TEAM1_START_POSITION);
+    $this->checkEmptyCell(self::LEADER_TEAM1_START_POSITION);
   }
 
   /**
    * @dataProvider provideForbiddenDestinations
    * @expectedException \Djambi\Exceptions\DisallowedActionException
    */
-  public function testDiplomatForbiddenMoves($position) {
+  public function testLeaderForbiddenMoves($position) {
     $this->game->play();
     $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-D');
+    $piece1 = $grid->findPieceById('t1-L');
     $this->doMove($piece1, $position);
   }
 
   public function provideForbiddenDestinations() {
     return array(
-      array(self::THRONE_POSITION),
       array(self::MILITANT2_TEAM2_START_POSITION),
       array(self::MILITANT1_TEAM1_START_POSITION),
       array('C3'),
     );
   }
 
-  public function testDiplomatCanManipulateLeaderInThroneAndEvacuate() {
-    $grid = $this->game->getBattlefield();
-    $target = $grid->findPieceById('t2-L')->setPosition($grid->findCellByName(self::THRONE_POSITION));
-    $this->game->play();
-
-    $destination = self::THRONE_POSITION;
-    $evacuation = 'A4';
-    $manipulation = 'A2';
-    $piece = $grid->findPieceById('t1-D');
-    $this->doMove($piece, $destination, array(
-      'manipulation' => array(
-        'type' => 'Djambi\\Moves\\Manipulation',
-        'choice' => $manipulation,
-      ),
-      'evacuation' => array(
-        'type' => 'Djambi\\Moves\\ThroneEvacuation',
-        'choice' => $evacuation,
-      ),
-    ));
-
-    $this->checkPosition($piece, $evacuation);
-    $this->checkPosition($target, $manipulation);
-    $this->assertTrue($target->isAlive());
-    $this->checkNewTurn('t2');
-  }
-
-  public function testDiplomatManipulation() {
+  public function testLeaderKill() {
     $this->game->play();
     $grid = $this->game->getBattlefield();
 
-    $piece = $grid->findPieceById('t1-D');
+    $piece = $grid->findPieceById('t1-L');
     $destination = self::MILITANT1_TEAM2_START_POSITION;
     $target = $grid->findCellByName($destination)->getOccupant();
     $placement = 'A2';
     $this->doMove($piece, $destination, array(
       'manipulation' => array(
-        'type' => 'Djambi\\Moves\\Manipulation',
+        'type' => 'Djambi\\Moves\\Murder',
         'choice' => $placement,
         'forbidden_choices' => array(
           self::THRONE_POSITION,
           self::MILITANT1_TEAM2_START_POSITION,
           self::MILITANT1_TEAM1_START_POSITION,
-          self::LEADER_TEAM1_START_POSITION,
           self::LEADER_TEAM2_START_POSITION,
+          self::MILITANT2_TEAM1_START_POSITION,
           self::MILITANT2_TEAM2_START_POSITION,
         ),
       ),
@@ -141,8 +113,30 @@ class DiplomatTest extends BaseDjambiTest {
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
     $this->checkPosition($target, $placement);
-    $this->checkEmptyCell(self::DIPLOMAT_TEAM1_START_POSITION);
-    $this->assertTrue($target->isAlive());
+    $this->checkEmptyCell(self::LEADER_TEAM1_START_POSITION);
+    $this->assertFalse($target->isAlive());
+  }
+
+  public function testLeaderKillThroneLeader() {
+    $grid = $this->game->getBattlefield();
+    $target = $grid->findPieceById('t2-L')->setPosition($grid->findCellByName(self::THRONE_POSITION));
+    $this->game->play();
+
+    $piece = $grid->findPieceById('t1-L');
+    $placement = 'A2';
+    $this->doMove($piece, self::THRONE_POSITION, array(
+      'manipulation' => array(
+        'type' => 'Djambi\\Moves\\Murder',
+        'choice' => $placement,
+      ),
+    ));
+
+    $this->checkPosition($piece, self::THRONE_POSITION);
+    $this->checkPosition($target, $placement);
+    $this->checkEmptyCell(self::LEADER_TEAM1_START_POSITION);
+    $this->assertFalse($target->isAlive());
+    $this->checkGameFinished('t1');
+    $this->assertEquals(Faction::STATUS_KILLED, $grid->findFactionById('t2')->getStatus());
   }
 
 }

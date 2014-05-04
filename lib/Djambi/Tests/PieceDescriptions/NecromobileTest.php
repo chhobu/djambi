@@ -145,6 +145,7 @@ class NecromobileTest extends BaseDjambiTest {
           self::MILITANT_DEAD_START_POSITION,
           self::LEADER_TEAM3_START_POSITION,
           self::THRONE_POSITION,
+          self::MILITANT1_TEAM1_START_POSITION,
         ),
       ),
     ));
