@@ -145,4 +145,22 @@ class DiplomatTest extends BaseDjambiTest {
     $this->assertTrue($target->isAlive());
   }
 
+  /**
+   * @expectedException \Djambi\Exceptions\DisallowedActionException
+   */
+  public function testBadManipulation() {
+    $this->game->play();
+    $grid = $this->game->getBattlefield();
+
+    $piece = $grid->findPieceById('t1-D');
+    $destination = self::MILITANT1_TEAM2_START_POSITION;
+    $placement = self::MILITANT1_TEAM2_START_POSITION;
+    $this->doMove($piece, $destination, array(
+      'manipulation' => array(
+        'type' => 'Djambi\\Moves\\Manipulation',
+        'choice' => $placement,
+      ),
+    ));
+  }
+
 }

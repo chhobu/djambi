@@ -10,14 +10,16 @@ use Djambi\Strings\GlossaryTerm;
 
 class Necromobility extends BaseMoveInteraction implements MoveInteractionInterface {
 
-  public function setSelectedPiece(Piece $target) {
-    if ($target->isAlive()) {
-      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_NECROMOVE_ALIVE));
+  public static function isTriggerable(Move $move, Piece $target = NULL, $allow_interactions = TRUE) {
+    if (!empty($target) && self::checkNecromobilityPossibility($move->getSelectedPiece(), $target, $allow_interactions) && $allow_interactions) {
+      $move->triggerInteraction(new static($move, $target));
+      return TRUE;
     }
-    elseif (!$this->getTriggeringMove()->getSelectedPiece()->getDescription()->hasHabilityMoveDeadPieces()) {
-      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_NECROMOVE_DISALLOWED));
-    }
-    return parent::setSelectedPiece($target);
+    return FALSE;
+  }
+
+  public static function checkNecromobilityPossibility(Piece $piece, Piece $target, $allow_interactions) {
+    return $allow_interactions && !$target->isAlive() && $piece->getDescription()->hasHabilityMoveDeadPieces();
   }
 
   public function findPossibleChoices() {

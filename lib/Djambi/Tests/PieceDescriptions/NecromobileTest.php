@@ -156,4 +156,18 @@ class NecromobileTest extends BaseDjambiTest {
     $this->assertFalse($target->isAlive());
   }
 
+  /**
+   * @expectedException \Djambi\Exceptions\DisallowedActionException
+   */
+  public function testBadNecromobility() {
+    $this->game->play();
+    $grid = $this->game->getBattlefield();
+
+    $piece = $grid->findPieceById('t1-N');
+    $destination = self::MILITANT_DEAD_START_POSITION;
+    $this->doMove($piece, $destination, array(
+      'necromobility' => array('choice' => self::THRONE_POSITION),
+    ));
+  }
+
 }

@@ -1,7 +1,10 @@
 <?php
 use Djambi\GameManagers\GameManagerInterface;
+use Djambi\Gameplay\Cell;
 use Djambi\Grids\BaseGrid;
+use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Render\Element;
+use Drupal\djambi\Form\DjambiFormBase;
 
 function theme_djambi_grid($variables) {
   $structure = array();
@@ -73,21 +76,28 @@ function template_preprocess_djambi_piece(&$variables) {
   $piece = $variables['piece'];
   $extra_classes = array();
   if (!empty($piece)) {
-    $variables['piece_representation'] = $piece->getId();
     $move = $piece->getFaction()->getBattlefield()->getCurrentMove();
     if (!empty($move) && !empty($move->getSelectedPiece()) && $move->getSelectedPiece()->getId() == $piece->getId()) {
       $extra_classes[] = 'selected';
     }
+    if ($piece->isSelectable()) {
+      $variables['piece_form_label'] = 'edit-cells-' . Unicode::strtolower($piece->getPosition()->getName());
+    }
+    $variables['piece_full_name'] = DjambiFormBase::printPieceFullName($piece, FALSE);
   }
   $variables['extra_classes'] = implode(' ', $extra_classes);
 }
 
 function template_preprocess_djambi_cell(&$variables) {
-  /** @var \Djambi\Gameplay\Cell $cell */
+  /** @var Cell $cell */
   $cell = $variables['cell'];
   $piece = array(
     '#theme' => 'djambi_piece',
     '#piece' => $cell->getOccupant(),
   );
+  $variables['throne'] = $cell->getType() == Cell::TYPE_THRONE;
+  if ($cell->isSelectable()) {
+    $variables['cell_form_label'] = 'edit-cells-' . Unicode::strtolower($cell->getName());
+  }
   $variables['piece'] = drupal_render($piece);
 }

@@ -7,7 +7,9 @@
 
 namespace Djambi\Gameplay;
 
-use Djambi\GameOptions\StandardRuleset;
+use Djambi\Moves\Manipulation;
+use Djambi\Moves\Murder;
+use Djambi\Moves\Necromobility;
 use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\PieceDescriptions\BasePieceDescription;
 
@@ -31,6 +33,8 @@ class Piece extends PersistantDjambiObject {
   protected $allowableMoves = array();
   /* @var BasePieceDescription $description */
   protected $description;
+  /* @var bool $selectable */
+  protected $selectable = FALSE;
 
   protected function prepareArrayConversion() {
     $this->addDependantObjects(array(
@@ -261,75 +265,26 @@ class Piece extends PersistantDjambiObject {
         $move_ok = TRUE;
       }
     }
-    else {
-      $can_attack = $this->checkAttackingPossibility($occupant);
-      $can_manipulate = $this->checkManipulatingPossibility($occupant);
-      if (!$allow_interactions) {
-        $move_ok = FALSE;
-        if ($this->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_EXTRA_INTERACTIONS) == 'extended') {
-          if ($occupant->isAlive() && $occupant->getDescription()->hasHabilityKillThroneLeader()) {
-            if ($can_manipulate || $can_attack) {
-              $move_ok = TRUE;
-            }
-          }
-        }
-      }
-      else {
-        if ($occupant->isAlive() && ($can_attack || $can_manipulate)) {
-          if ($can_attack) {
-            if ($cell->getType() == Cell::TYPE_THRONE) {
-              if ($this->getDescription()->hasHabilityKillThroneLeader()) {
-                $move_ok = TRUE;
-              }
-            }
-            else {
-              $move_ok = TRUE;
-            }
-          }
-          elseif ($can_manipulate) {
-            $move_ok = TRUE;
-          }
-        }
-        elseif (!$occupant->isAlive() && $this->getDescription()->hasHabilityMoveDeadPieces()) {
-          $move_ok = TRUE;
-        }
-      }
+    elseif (Murder::checkMurderingPossibility($this, $occupant, $allow_interactions)
+    || Manipulation::checkManipulatingPossibility($this, $occupant, $allow_interactions)
+    || Necromobility::checkNecromobilityPossibility($this, $occupant, $allow_interactions)) {
+      $move_ok = TRUE;
     }
     return $move_ok;
   }
 
-  public function checkAttackingPossibility(Piece $occupant) {
-    $can_attack = FALSE;
-    if ($this->getDescription()->hasHabilityKillByAttack()) {
-      $canibalism = $this->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_CANIBALISM);
-      if ($canibalism == 'yes') {
-        $can_attack = TRUE;
-      }
-      elseif ($canibalism == 'vassals') {
-        $can_attack = ($occupant->getFaction()->getId() != $this->getFaction()->getId()) ? TRUE : FALSE;
-      }
-      else {
-        $can_attack = ($occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) ? TRUE : FALSE;
-        if ($canibalism == 'ethical' && !$occupant->getFaction()->getControl()->isAlive()) {
-          $can_attack = FALSE;
-        }
-      }
-    }
-    return $can_attack;
+  public function setSelectable($bool) {
+    $this->selectable = $bool;
+    return $this;
   }
 
-  public function checkManipulatingPossibility(Piece $occupant) {
-    $can_manipulate = FALSE;
-    if ($this->getDescription()->hasHabilityMoveLivingPieces()) {
-      $manipulation_rule = $this->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_DIPLOMACY);
-      if ($manipulation_rule == 'vassal') {
-        $can_manipulate = ($occupant->getFaction()->getId() != $this->getFaction()->getId()) ? TRUE : FALSE;
-      }
-      else {
-        $can_manipulate = ($occupant->getFaction()->getControl()->getId() != $this->getFaction()->getControl()->getId()) ? TRUE : FALSE;
-      }
-    }
-    return $can_manipulate;
+  public function isSelectable() {
+    return $this->selectable;
+  }
+
+  protected function prepareSerialization() {
+    $this->addUnserializableProperties(array('selectable'));
+    return parent::prepareSerialization();
   }
 
 }

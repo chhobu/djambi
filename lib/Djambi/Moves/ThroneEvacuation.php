@@ -3,8 +3,16 @@
 namespace Djambi\Moves;
 
 use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Piece;
 
 class ThroneEvacuation extends BaseMoveInteraction implements MoveInteractionInterface {
+
+  public static function isTriggerable(Move $move, Piece $target = NULL, $allow_interactions = TRUE) {
+    if (!$move->getSelectedPiece()->getDescription()->hasHabilityAccessThrone() && $move->getDestination()->getType() == Cell::TYPE_THRONE) {
+      $move->triggerInteraction(new static($move));
+    }
+    return TRUE;
+  }
 
   public function findPossibleChoices() {
     $possible_choices = array();

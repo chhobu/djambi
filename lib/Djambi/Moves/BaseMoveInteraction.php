@@ -2,6 +2,7 @@
 
 namespace Djambi\Moves;
 
+use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Piece;
 use Djambi\Persistance\PersistantDjambiObject;
@@ -45,7 +46,7 @@ abstract class BaseMoveInteraction extends PersistantDjambiObject implements Mov
     return $interaction;
   }
 
-  public function __construct(Move $move, Piece $selected_piece = NULL) {
+  protected function __construct(Move $move, Piece $selected_piece = NULL) {
     $this->triggeringMove = $move;
     if (!is_null($selected_piece)) {
       static::setSelectedPiece($selected_piece);
@@ -85,11 +86,6 @@ abstract class BaseMoveInteraction extends PersistantDjambiObject implements Mov
     $this->completed = $bool ? TRUE : FALSE;
   }
 
-  public function triggerInteraction(MoveInteractionInterface $interaction) {
-    $this->getTriggeringMove()->triggerInteraction($interaction);
-    return $this;
-  }
-
   public function getPossibleChoices() {
     if (is_null($this->possibleChoices)) {
       $this->findPossibleChoices();
@@ -102,13 +98,16 @@ abstract class BaseMoveInteraction extends PersistantDjambiObject implements Mov
     return $this;
   }
 
-  protected function setDestination(Cell $cell) {
-    $this->destination = $cell;
-    return $this;
-  }
-
-  protected function getDestination() {
-    return $this->destination;
+  public static function allowExtraInteractions(Piece $selected) {
+    $extra_interaction = FALSE;
+    // Vérifie si la pièce dispose d'un droit d'interaction supplémentaire
+    // lors d'une évacuation de trône :
+    if ($selected->getFaction()->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_EXTRA_INTERACTIONS) == 'extended') {
+      if ($selected->getPosition()->getType() == Cell::TYPE_THRONE && !empty($target) && $target->getDescription()->hasHabilityAccessThrone()) {
+        $extra_interaction = TRUE;
+      }
+    }
+    return $extra_interaction;
   }
 
 }

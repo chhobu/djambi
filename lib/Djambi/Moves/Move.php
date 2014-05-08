@@ -4,7 +4,6 @@ namespace Djambi\Moves;
 
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\IllogicMoveException;
-use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\BattlefieldInterface;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
@@ -19,23 +18,23 @@ class Move extends PersistantDjambiObject {
   const PHASE_PIECE_INTERACTIONS = 'move_interactions';
 
   /** @var Faction */
-  private $actingFaction;
+  protected $actingFaction;
   /** @var Piece */
-  private $selectedPiece;
+  protected $selectedPiece;
   /** @var Cell */
   protected $destination;
   /** @var string */
-  private $phase = self::PHASE_PIECE_SELECTION;
+  protected $phase = self::PHASE_PIECE_SELECTION;
   /** @var string */
-  private $type = 'move';
+  protected $type = 'move';
   /** @var MoveInteractionInterface[] */
-  private $interactions = array();
+  protected $interactions = array();
   /** @var bool */
-  private $completed = FALSE;
+  protected $completed = FALSE;
   /** @var Piece[] */
-  private $kills = array();
+  protected $kills = array();
   /** @var array */
-  private $events = array();
+  protected $events = array();
 
   protected function prepareArrayConversion() {
     $this->addDependantObjects(array(
@@ -269,34 +268,26 @@ class Move extends PersistantDjambiObject {
   }
 
   protected function prepareMove($allow_interactions) {
-    $current_cell = $this->getSelectedPiece()->getPosition();
-    $battlefield = $this->getSelectedPiece()->getFaction()->getBattlefield();
     $target = $this->getDestination()->getOccupant();
     $move_ok = FALSE;
-    $extra_interaction = FALSE;
-    // Vérifie si la pièce dispose d'un droit d'interaction supplémentaire
-    // lors d'une évacuation de trône :
-    if (!$allow_interactions && $battlefield->getGameManager()->getOption(StandardRuleset::RULE_EXTRA_INTERACTIONS) == 'extended') {
-      if ($current_cell->getType() == Cell::TYPE_THRONE && !empty($target) && $target->getDescription()->hasHabilityAccessThrone()) {
-        $extra_interaction = TRUE;
-      }
-    }
     // Vérifie les conséquences d'un déplacement si le déplacement se fait
     // sur une case occupée :
-    if ($this->getDestination()->getName() != $current_cell->getName()) {
+    if ($this->getDestination()->getName() != $this->getSelectedPiece()->getPosition()->getName()) {
       if (!empty($target)) {
-        $this->checkTrigerringManipulation($move_ok, $target, $allow_interactions, $extra_interaction);
-        $this->checkTrigerringNecromobily($move_ok, $target, $allow_interactions);
-        $this->checkTrigerringMurder($move_ok, $target, $allow_interactions, $extra_interaction);
+        $manipulable = Manipulation::isTriggerable($this, $target, $allow_interactions);
+        $necromovable = Necromobility::isTriggerable($this, $target, $allow_interactions);
+        $murderable = Murder::isTriggerable($this, $target, $allow_interactions);
+        if ($manipulable || $necromovable || $murderable) {
+          $move_ok = TRUE;
+        }
       }
       else {
-        $this->checkTriggeringReportage($allow_interactions);
+        Reportage::isTriggerable($this, NULL, $allow_interactions);
         $move_ok = TRUE;
       }
     }
-    if ($move_ok && !$this->getSelectedPiece()->getDescription()->hasHabilityAccessThrone()
-      && $this->getDestination()->getType() == Cell::TYPE_THRONE) {
-      $this->triggerInteraction(new ThroneEvacuation($this));
+    if ($move_ok) {
+      ThroneEvacuation::isTriggerable($this);
     }
     return $move_ok;
   }
@@ -311,9 +302,7 @@ class Move extends PersistantDjambiObject {
     }
     foreach ($this->getEvents() as $event) {
       if ($event['type'] == 'diplomat_golden_move') {
-        $golden_move = new Manipulation($this, $event['target']);
-        $golden_move->executeChoice($event['position']);
-        $this->triggerInteraction($golden_move);
+        Manipulation::triggerGoldenMove($this, $event['target'], $event['position']);
         $battlefield->logEvent('event', 'DIPLOMAT_GOLDEN_MOVE', array('piece' => $this->getSelectedPiece()->getId()));
       }
       elseif ($event['type'] == 'assassin_golden_move') {
@@ -321,92 +310,6 @@ class Move extends PersistantDjambiObject {
       }
     }
     return $this;
-  }
-
-  protected function checkTrigerringManipulation(&$move_ok, Piece $target, $allow_interactions, $extra_interaction) {
-    $piece = $this->getSelectedPiece();
-    if ($piece->getDescription()->hasHabilityMoveLivingPieces()) {
-      if ($piece->getFaction()->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_DIPLOMACY) == 'vassal') {
-        $can_manipulate = $target->getFaction()->getId() != $piece->getFaction()->getId();
-      }
-      else {
-        $can_manipulate = $target->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId();
-      }
-      if ($can_manipulate && $target->isAlive() && ($allow_interactions || $extra_interaction)) {
-        if ($allow_interactions) {
-          $this->triggerInteraction(new Manipulation($this, $target));
-        }
-        elseif ($extra_interaction) {
-          $this->triggerEvent(array(
-            'type' => 'diplomate_golden_move',
-            'target' => $target,
-            'position' => $piece->getPosition(),
-          ));
-        }
-        $move_ok = TRUE;
-      }
-    }
-  }
-
-  protected function checkTrigerringNecromobily(&$move_ok, Piece $target, $allow_interactions) {
-    if (!$target->isAlive() && $this->getSelectedPiece()->getDescription()->hasHabilityMoveDeadPieces() && $allow_interactions) {
-      $this->triggerInteraction(new Necromobility($this, $target));
-      $move_ok = TRUE;
-    }
-  }
-
-  protected function checkTrigerringMurder(&$move_ok, Piece $target, $allow_interactions, $extra_interaction) {
-    $piece = $this->getSelectedPiece();
-    if ($target->isAlive()) {
-      // Signature de l'assassin
-      $test = $piece->getDescription()->hasHabilityKillByAttack();
-      if ($piece->getDescription()->hasHabilitySignature() && $test && ($allow_interactions || $extra_interaction)) {
-        $this->triggerKill($target, $piece->getPosition());
-        $move_ok = TRUE;
-        if ($extra_interaction) {
-          $this->triggerEvent(array('type' => 'assassin_golden_move'));
-        }
-      }
-      // Déplacement du corps de la victime :
-      elseif ($test && $allow_interactions) {
-        $this->triggerInteraction(new Murder($this, $target));
-        $move_ok = TRUE;
-      }
-    }
-  }
-
-  protected function checkTriggeringReportage($allow_interactions) {
-    $piece = $this->getSelectedPiece();
-    if ($piece->getDescription()->hasHabilityKillByProximity() && $allow_interactions) {
-      $grid = $piece->getFaction()->getBattlefield();
-      $next_cells = $grid->findNeighbourCells($this->getDestination(), FALSE);
-      $victims = array();
-      foreach ($next_cells as $key) {
-        $cell = $grid->findCell($key['x'], $key['y']);
-        $occupant = $cell->getOccupant();
-        if (!empty($occupant)) {
-          if ($occupant->isAlive() && $occupant->getId() != $piece->getId()) {
-            if ($grid->getGameManager()->getOption(StandardRuleset::RULE_REPORTERS) == 'foxnews' ||
-              $occupant->getFaction()->getControl()->getId() != $piece->getFaction()->getControl()->getId()) {
-              $canibalism = $grid->getGameManager()->getOption(StandardRuleset::RULE_CANIBALISM);
-              if ($canibalism != 'ethical' || $occupant->getFaction()->getControl()->isAlive()) {
-                $victims[$cell->getName()] = $occupant->getPosition();
-              }
-            }
-          }
-        }
-      }
-      if ($grid->getGameManager()->getOption(StandardRuleset::RULE_REPORTERS) == 'pravda' && count($victims) > 1) {
-        $reportage = new Reportage($this);
-        $this->triggerInteraction($reportage->setTargets($victims));
-      }
-      elseif (!empty($victims)) {
-        /* @var Cell $victim_cell */
-        foreach ($victims as $victim_cell) {
-          $this->triggerKill($victim_cell->getOccupant(), $victim_cell);
-        }
-      }
-    }
   }
 
 }

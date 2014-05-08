@@ -33,4 +33,6 @@ interface MoveInteractionInterface {
    * @return MoveInteractionInterface
    */
   public function executeChoice(Cell $cell);
+
+  public static function isTriggerable(Move $move, Piece $target = NULL, $allow_interactions = TRUE);
 }

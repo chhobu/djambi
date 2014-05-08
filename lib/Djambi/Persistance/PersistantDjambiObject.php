@@ -5,7 +5,7 @@ namespace Djambi\Persistance;
 use Djambi\Exceptions\UnpersistableObjectException;
 use Djambi\Exceptions;
 
-abstract class PersistantDjambiObject implements ArrayableInterface {
+abstract class PersistantDjambiObject extends SerializableDjambiObject implements ArrayableInterface {
   /** @var array */
   private $persistantProperties = array();
   /** @var array */
@@ -163,10 +163,14 @@ abstract class PersistantDjambiObject implements ArrayableInterface {
     return $array;
   }
 
-  public function __sleep() {
-    $keys = get_object_vars($this);
-    unset($keys['className'], $keys['dependantObjects'], $keys['persistantData'], $keys['persistantProperties']);
-    return array_keys($keys);
+  protected function prepareSerialization() {
+    $this->addUnserializableProperties(array(
+      'className',
+      'dependantObjects',
+      'persistantData',
+      'persistantProperties',
+    ));
+    return parent::prepareSerialization();
   }
 
 }

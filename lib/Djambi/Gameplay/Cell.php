@@ -7,23 +7,24 @@
 namespace Djambi\Gameplay;
 
 use Djambi\Exceptions\GridInvalidException;
+use Djambi\Persistance\SerializableDjambiObject;
 
-class Cell {
+class Cell extends SerializableDjambiObject {
   const TYPE_STANDARD = 'std';
   const TYPE_THRONE = 'throne';
   const TYPE_DISABLED = 'disabled';
   const TYPE_FORTRESS = 'fortress';
 
   /** @var string : Nom de la cellule */
-  private $name;
+  protected $name;
   /** @var int : Coordonnée verticale de la cellule */
-  private $x;
+  protected $x;
   /** @var int : Coordonnée horizontale de la cellule */
-  private $y;
+  protected $y;
   /** @var Piece : Pièce placée sur la cellule */
-  private $occupant;
+  protected $occupant;
   /** @var string : Type de cellule. Par défaut : 'std' (standard). */
-  private $type = self::TYPE_STANDARD;
+  protected $type = self::TYPE_STANDARD;
   /** @var array : liste des types implémentés */
   protected $implementedTypes = array(
     self::TYPE_STANDARD,
@@ -31,11 +32,13 @@ class Cell {
     self::TYPE_THRONE,
   );
   /** @var Cell[] : liste des cellules voisines */
-  private $neighbours = array();
+  protected $neighbours = array();
   /** @var bool : définit si une cellule est accessible par une pièce sélectionnée */
-  private $reachable = FALSE;
+  protected $reachable = FALSE;
   /** @var string : Nom de la colonne sur laquelle se trouve la cellule */
-  private $columnName;
+  protected $columnName;
+  /** @var bool */
+  protected $selectable = FALSE;
 
   /**
    * Ajoute une cellule dans la grille.
@@ -145,6 +148,20 @@ class Cell {
 
   public function isEnabled() {
     return $this->getType() != self::TYPE_DISABLED;
+  }
+
+  public function setSelectable($bool) {
+    $this->selectable = $bool;
+    return $this;
+  }
+
+  public function isSelectable() {
+    return $this->selectable;
+  }
+
+  protected function prepareSerialization() {
+    $this->addUnserializableProperties(array('selectable'));
+    return parent::prepareSerialization();
   }
 
 }

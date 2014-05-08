@@ -150,4 +150,23 @@ class ReporterTest extends BaseDjambiTest {
     $this->assertTrue($leader->isAlive());
   }
 
+  /**
+   * @expectedException \Djambi\Exceptions\DisallowedActionException
+   */
+  public function testBadReportage() {
+    $grid = $this->game->getBattlefield();
+    $leader_position = 'D2';
+    $grid->findPieceById('t2-L')->setPosition($grid->findCellByName($leader_position));
+    $this->game->play();
+
+    $piece = $grid->findPieceById('t1-R');
+    $destination = 'E2';
+    $expected_interaction = array(
+      'reportage' => array(
+        'choice' => self::THRONE_POSITION,
+      ),
+    );
+    $this->doMove($piece, $destination, $expected_interaction);
+  }
+
 }

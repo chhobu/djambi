@@ -143,4 +143,22 @@ class MilitantTest extends BaseDjambiTest {
     $this->assertEquals(Faction::STATUS_KILLED, $grid->findFactionById('t2')->getStatus());
     $this->checkGameFinished('t1');
   }
+
+  /**
+   * @expectedException \Djambi\Exceptions\DisallowedActionException
+   */
+  public function testMilitantBadKill() {
+    $this->game->play();
+    $grid = $this->game->getBattlefield();
+
+    $piece = $grid->findPieceById('t1-M2');
+    $destination = self::MILITANT1_TEAM2_START_POSITION;
+    $bury_in = 'C6';
+    $this->doMove($piece, $destination, array(
+      'murder' => array(
+        'type' => 'Djambi\\Moves\\Murder',
+        'choice' => $bury_in,
+      ),
+    ));
+  }
 }

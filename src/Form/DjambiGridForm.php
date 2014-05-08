@@ -1,13 +1,11 @@
 <?php
 namespace Drupal\djambi\Form;
 
-use Composer\Autoload\ClassLoader;
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\Exception;
 use Djambi\GameFactories\GameFactory;
 use Djambi\GameManagers\BasicGameManager;
 use Djambi\GameManagers\GameManagerInterface;
-use Djambi\Gameplay\Piece;
 use Djambi\Moves\Manipulation;
 use Djambi\Moves\Move;
 use Djambi\Moves\MoveInteractionInterface;
@@ -15,20 +13,15 @@ use Djambi\Moves\Murder;
 use Djambi\Moves\Necromobility;
 use Djambi\Moves\Reportage;
 use Djambi\Moves\ThroneEvacuation;
-use Djambi\Strings\Glossary;
 use Drupal\Component\Utility\Crypt;
-use Drupal\Core\Form\FormBase;
 use Drupal\djambi\Players\Drupal8Player;
 use Drupal\djambi\Services\ShortTempStore;
 use Drupal\djambi\Services\ShortTempStoreFactory;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
-class DjambiGridForm extends FormBase {
+class DjambiGridForm extends DjambiFormBase {
 
   const COOKIE_NAME = 'djambiplayerid';
-
-  /** @var GameManagerInterface */
-  protected $gameManager;
 
   /** @var ShortTempStore */
   protected $tmpStore;
@@ -44,9 +37,6 @@ class DjambiGridForm extends FormBase {
   public static function create(ContainerInterface $container) {
     /** @var DjambiGridForm $form */
     $form = parent::create($container);
-    /** @var ClassLoader $class_loader */
-    $class_loader = $container->get('class_loader');
-    $class_loader->set('Djambi', array(drupal_get_path('module', 'djambi') . '/lib'));
     /** @var ShortTempStoreFactory $tmp_store_factory */
     $tmp_store_factory = $container->get('djambi.shorttempstore');
     $user = $form->currentUser();
@@ -69,7 +59,6 @@ class DjambiGridForm extends FormBase {
     }
     $form->setTmpStore($tmp_store_factory->get('djambi', $owner));
     $form->gameId = $game_id_prefix . $user_prefix . $owner;
-    Glossary::getInstance()->setTranslaterHandler(array($form, 'translateDjambiStrings'));
     return $form;
   }
 
@@ -86,23 +75,6 @@ class DjambiGridForm extends FormBase {
 
   protected function setTmpStore(ShortTempStore $tmp_store) {
     $this->tmpStore = $tmp_store;
-    return $this;
-  }
-
-  /**
-   * @return GameManagerInterface
-   */
-  protected function getGameManager() {
-    return $this->gameManager;
-  }
-
-  /**
-   * @param GameManagerInterface $game_manager
-   *
-   * @return $this
-   */
-  protected function setGameManager(GameManagerInterface $game_manager) {
-    $this->gameManager = $game_manager;
     return $this;
   }
 
@@ -185,25 +157,6 @@ class DjambiGridForm extends FormBase {
     return $form;
   }
 
-  /**
-   * Form validation handler.
-   *
-   * @param array $form
-   *   An associative array containing the structure of the form.
-   * @param array $form_state
-   *   An associative array containing the current state of the form.
-   */
-  public function validateForm(array &$form, array &$form_state) {
-  }
-
-  /**
-   * Form submission handler.
-   *
-   * @param array $form
-   *   An associative array containing the structure of the form.
-   * @param array $form_state
-   *   An associative array containing the current state of the form.
-   */
   public function submitForm(array &$form, array &$form_state) {
     $this->updateStoredGameManager();
   }
@@ -234,10 +187,10 @@ class DjambiGridForm extends FormBase {
         $interaction = $grid->getCurrentMove()->getFirstInteraction();
         $args = array();
         if ($interaction->getSelectedPiece()->isAlive()) {
-          $args['!target'] = $this->printPieceFullName($interaction->getSelectedPiece());
+          $args['!target'] = static::printPieceFullName($interaction->getSelectedPiece());
         }
         if ($interaction->getSelectedPiece()->getId() != $interaction->getTriggeringMove()->getSelectedPiece()) {
-          $args['!piece'] = $this->printPieceFullName($interaction->getTriggeringMove()
+          $args['!piece'] = static::printPieceFullName($interaction->getTriggeringMove()
             ->getSelectedPiece());
         }
         if ($interaction instanceof Murder) {
@@ -271,7 +224,8 @@ class DjambiGridForm extends FormBase {
     $cell_choices = array();
     foreach ($grid->getPlayingFaction()->getPieces() as $piece) {
       if ($piece->isMovable()) {
-        $cell_choices[$piece->getPosition()->getName()] = $this->printPieceFullName($piece) . ' (' . $piece->getPosition()->getName() . ')';
+        $cell_choices[$piece->getPosition()->getName()] = static::printPieceFullName($piece) . ' (' . $piece->getPosition()->getName() . ')';
+        $piece->setSelectable(TRUE);
       }
     }
     asort($cell_choices);
@@ -306,7 +260,9 @@ class DjambiGridForm extends FormBase {
     $cell_choices = array();
     $selected_piece = $grid->getCurrentMove()->getSelectedPiece();
     foreach ($selected_piece->getAllowableMoves() as $free_cell) {
-      $cell_choices[$free_cell->getName()] = $free_cell->getName();
+      $cell_choices[$free_cell->getName()] = $free_cell->getName()
+      . (!empty($free_cell->getOccupant()) ? ' ' . t("(occupied by !piece)", array('!piece' => static::printPieceFullName($free_cell->getOccupant()))) : "");
+      $free_cell->setSelectable(TRUE);
     }
     ksort($cell_choices);
     $grid_form['cells'] = array(
@@ -314,7 +270,7 @@ class DjambiGridForm extends FormBase {
       '#required' => TRUE,
       '#options' => $cell_choices,
       '#title' => t('!piece is selected. Now select its destination...', array(
-        '!piece' => $this->printPieceFullName($selected_piece),
+        '!piece' => static::printPieceFullName($selected_piece),
       )),
     );
     $grid_form['actions']['validation']['#validate'] = array(array($this, 'validatePieceDestination'));
@@ -350,10 +306,11 @@ class DjambiGridForm extends FormBase {
     $grid->getCurrentMove()->reset();
   }
 
-  protected function buildFormGridFreeCellSelection($grid_form, MoveInteractionInterface $interaction, $message) {
+  protected function buildFormGridFreeCellSelection(&$grid_form, MoveInteractionInterface $interaction, $message) {
     $cell_choices = array();
     foreach ($interaction->getPossibleChoices() as $free_cell) {
       $cell_choices[$free_cell->getName()] = $free_cell->getName();
+      $free_cell->setSelectable(TRUE);
     }
     ksort($cell_choices);
     $grid_form['cells'] = array(
@@ -368,11 +325,12 @@ class DjambiGridForm extends FormBase {
     $this->addCancelPieceSelectionButton($grid_form['actions']);
   }
 
-  protected function buildFormGridVictimChoice($grid_form, Reportage $interaction, $message) {
+  protected function buildFormGridVictimChoice(&$grid_form, Reportage $interaction, $message) {
     $cell_choices = array();
     foreach ($interaction->getPossibleChoices() as $cell) {
-      $cell_choices[$cell->getName()] = $this->printPieceFullName($cell->getOccupant())
+      $cell_choices[$cell->getName()] = static::printPieceFullName($cell->getOccupant())
         . ' (' . $cell->getName() . ')';
+      $cell->getOccupant()->setSelectable(TRUE);
     }
     asort($cell_choices);
     $grid_form['cells'] = array(
@@ -387,46 +345,22 @@ class DjambiGridForm extends FormBase {
     $this->addCancelPieceSelectionButton($grid_form['actions']);
   }
 
-  protected function validateInteractionChoice(&$form, &$form_state) {
-    $move = $this->getGameManager()->getBattlefield()->getCurrentMove();
+  public function validateInteractionChoice(&$form, &$form_state) {
+    $grid = $this->getGameManager()->getBattlefield();
+    $move = $grid->getCurrentMove();
     if (!empty($move) && !empty($move->getInteractions())) {
       try {
-        $move->getFirstInteraction()->executeChoice($form_state['values']['cells']);
+        $move->getFirstInteraction()->executeChoice($grid->findCellByName($form_state['values']['cells']));
       }
       catch (Exception $exception) {
         $this->setFormError('cells', $form_state, $this->t('Invalid choice detected : @exception. Please select an other option.',
           array('@exception' => $exception->getMessage())));
       }
     }
-    $this->validatePieceSelectionCancel($form, $form_state);
-    $this->setFormError('cells', $form_state, $this->t('Invalid move data. Please start again your actions.'));
-  }
-
-  protected function printPieceFullName(Piece $piece, $html = TRUE) {
-    $elements = array(
-      '#theme' => 'djambi_piece_full_name',
-      '#piece' => $piece,
-      '#html' => $html,
-    );
-    return drupal_render($elements);
-  }
-
-  public function translateDjambiStrings($string, $args) {
-    $piece_replacements = array(
-      '!piece_id_1' => TRUE,
-      '%piece_id_1' => FALSE,
-      '%piece_id_2' => FALSE,
-      '!piece_id_2' => TRUE,
-      '%piece_id' => FALSE,
-      '!piece_id' => TRUE,
-    );
-    foreach ($piece_replacements as $replacement => $html) {
-      if (isset($args[$replacement])) {
-        $args[$replacement] = $this->printPieceFullName($this->getGameManager()->getBattlefield()
-            ->findPieceById($args[$replacement]), $html);
-      }
+    else {
+      $this->validatePieceSelectionCancel($form, $form_state);
+      $this->setFormError('cells', $form_state, $this->t('Invalid move data. Please start again your actions.'));
     }
-    return $this->t($string, $args);
   }
 
 }
