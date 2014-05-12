@@ -37,7 +37,10 @@ class Necromobility extends BaseMoveInteraction implements MoveInteractionInterf
     $this->getTriggeringMove()->getSelectedPiece()->getFaction()
       ->getBattlefield()->logMove($this->getSelectedPiece(), $cell, "necromobility", $this->getTriggeringMove()->getSelectedPiece());
     $this->getSelectedPiece()->setPosition($cell);
-    $this->checkCompleted();
-    return $this;
+    return parent::executeChoice($cell);
+  }
+
+  public function revert() {
+    $this->getSelectedPiece()->setPosition($this->getTriggeringMove()->getDestination());
   }
 }

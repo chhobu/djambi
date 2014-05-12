@@ -114,6 +114,12 @@ class AssassinTest extends BaseDjambiTest {
     $this->checkPosition($piece, $destination);
     $this->checkPosition($target, self::ASSASSIN_TEAM1_START_POSITION);
     $this->assertFalse($target->isAlive());
+
+    $grid->cancelLastTurn();
+    $this->checkNewTurn('t1');
+    $this->checkPosition($piece, self::ASSASSIN_TEAM1_START_POSITION);
+    $this->checkPosition($target, $destination);
+    $this->assertTrue($target->isAlive());
   }
 
 }

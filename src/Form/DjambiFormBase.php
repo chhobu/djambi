@@ -21,6 +21,15 @@ abstract class DjambiFormBase extends FormBase {
   /** @var GameManagerInterface */
   protected $gameManager;
 
+  /**
+   * Returns a unique string identifying the form.
+   * @return string
+   *   The unique string identifying the form.
+   */
+  public function getFormId() {
+    return 'djambi_grid_form';
+  }
+
   public static function create(ContainerInterface $container) {
     $form = parent::create($container);
     /** @var ClassLoader $class_loader */

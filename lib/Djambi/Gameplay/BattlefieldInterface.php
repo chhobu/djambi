@@ -62,9 +62,9 @@ interface BattlefieldInterface {
   public function getPlayingFaction();
 
   /**
-   * @return Move
+   * @return Turn
    */
-  public function getCurrentMove();
+  public function getCurrentTurn();
 
   /**
    * @param string $name

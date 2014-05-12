@@ -68,11 +68,12 @@ class Manipulation extends BaseMoveInteraction implements MoveInteractionInterfa
       throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MANIPULATION_BAD_DESTINATION,
         array('%piece_id' => $this->getSelectedPiece()->getId(), '%location' => $cell->getName())));
     }
-    $this->getTriggeringMove()->getSelectedPiece()->getFaction()
-      ->getBattlefield()->logMove($this->getSelectedPiece(), $cell, "manipulation", $this->getTriggeringMove()->getSelectedPiece());
     $this->getSelectedPiece()->setPosition($cell);
-    $this->checkCompleted();
-    return $this;
+    return parent::executeChoice($cell);
+  }
+
+  public function revert() {
+    $this->getSelectedPiece()->setPosition($this->getTriggeringMove()->getDestination());
   }
 
 }

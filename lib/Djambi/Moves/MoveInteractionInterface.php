@@ -22,7 +22,9 @@ interface MoveInteractionInterface {
   /** @return Cell[] */
   public function getPossibleChoices();
 
-  /** @return bool */
+  /** @return Cell */
+  public function getChoice();
+
   public function isCompleted();
 
   /**
@@ -33,6 +35,8 @@ interface MoveInteractionInterface {
    * @return MoveInteractionInterface
    */
   public function executeChoice(Cell $cell);
+
+  public function revert();
 
   public static function isTriggerable(Move $move, Piece $target = NULL, $allow_interactions = TRUE);
 }

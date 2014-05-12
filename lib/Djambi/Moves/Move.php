@@ -16,39 +16,47 @@ class Move extends PersistantDjambiObject {
   const PHASE_PIECE_SELECTION = 'piece_selection';
   const PHASE_PIECE_DESTINATION = 'piece_destination';
   const PHASE_PIECE_INTERACTIONS = 'move_interactions';
+  const PHASE_FINISHED = 'finished';
 
   /** @var Faction */
   protected $actingFaction;
   /** @var Piece */
   protected $selectedPiece;
   /** @var Cell */
+  protected $origin;
+  /** @var Cell */
   protected $destination;
   /** @var string */
   protected $phase = self::PHASE_PIECE_SELECTION;
-  /** @var string */
-  protected $type = 'move';
   /** @var MoveInteractionInterface[] */
   protected $interactions = array();
-  /** @var bool */
-  protected $completed = FALSE;
   /** @var Piece[] */
   protected $kills = array();
   /** @var array */
   protected $events = array();
 
   protected function prepareArrayConversion() {
-    $this->addDependantObjects(array(
+    $objects = array(
       'selectedPiece' => 'id',
       'actingFaction' => 'id',
       'destination' => 'name',
-    ));
-    $this->addPersistantProperties(array(
-      'phase',
-      'type',
-      'interactions',
-      'kills',
-      'events',
-    ));
+      'origin' => 'name',
+    );
+    if (!empty($this->kills)) {
+      $objects['kills'] = 'id';
+    }
+    $this->addDependantObjects($objects);
+    $persist = array();
+    if (!$this->isCompleted()) {
+      $persist[] = 'phase';
+    }
+    if (!empty($this->events)) {
+      $persist[] = 'events';
+    }
+    if (!empty($this->interactions)) {
+      $persist[] = 'interactions';
+    }
+    $this->addPersistantProperties($persist);
     return parent::prepareArrayConversion();
   }
 
@@ -57,19 +65,38 @@ class Move extends PersistantDjambiObject {
     $battlefield = $context['battlefield'];
     /** @var Move $move */
     $move = new static($battlefield->findFactionById($array['actingFaction']));
+    if (!empty($array['phase'])) {
+      $move->setPhase($array['phase']);
+    }
+    else {
+      $move->setPhase(static::PHASE_FINISHED);
+    }
     if (!empty($array['selectedPiece'])) {
       $move->setSelectedPiece($battlefield->findPieceById($array['selectedPiece']));
     }
-    $move->setPhase($array['phase']);
-    $move->setType($array['type']);
+    if (!empty($array['destination'])) {
+      $move->destination = $battlefield->findCellByName($array['destination']);
+    }
+    if (!empty($array['origin'])) {
+      $move->origin = $battlefield->findCellByName($array['origin']);
+    }
+    if (!empty($array['phase'])) {
+      $move->setPhase($array['phase']);
+    }
+    else {
+      $move->setPhase(static::PHASE_FINISHED);
+    }
     if (!empty($array['interactions'])) {
+      $context['move'] = $move;
       foreach ($array['interactions'] as $interaction) {
         $interaction = call_user_func($interaction['className'] . '::fromArray', $interaction, $context);
         $move->interactions[] = $interaction;
       }
     }
     if (!empty($array['kills'])) {
-      $move->setKills($array['kills']);
+      foreach ($array['kills'] as $position => $piece_id) {
+        $move->kills[$position] = $battlefield->findPieceById($piece_id);
+      }
     }
     if (!empty($array['events'])) {
       $move->setEvents($array['events']);
@@ -79,19 +106,6 @@ class Move extends PersistantDjambiObject {
 
   public function __construct(Faction $faction) {
     $this->setActingFaction($faction);
-    $this->setType('move');
-  }
-
-  public function reset() {
-    $this->selectedPiece = NULL;
-    $this->destination = NULL;
-    $this->phase = self::PHASE_PIECE_SELECTION;
-    $this->interactions = array();
-    $this->completed = FALSE;
-    $this->events = array();
-    $this->kills = array();
-    $this->setType('move');
-    return $this;
   }
 
   protected function setActingFaction(Faction $faction) {
@@ -114,6 +128,7 @@ class Move extends PersistantDjambiObject {
       throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MOVE_UNMOVABLE));
     }
     $this->setSelectedPiece($piece);
+    $this->setOrigin($piece->getPosition());
     $this->setPhase(self::PHASE_PIECE_DESTINATION);
     return $this;
   }
@@ -143,6 +158,15 @@ class Move extends PersistantDjambiObject {
     }
     $this->destination = $cell;
     return $this;
+  }
+
+  protected function setOrigin(Cell $cell) {
+    $this->origin = $cell;
+    return $this;
+  }
+
+  public function getOrigin() {
+    return $this->origin;
   }
 
   public function executeChoice(Cell $cell) {
@@ -208,28 +232,14 @@ class Move extends PersistantDjambiObject {
     return $this;
   }
 
-  public function getType() {
-    return $this->type;
-  }
-
-  protected function setType($type) {
-    $this->type = $type;
-    return $this;
-  }
-
-  protected function setCompleted($bool) {
-    $this->completed = $bool ? TRUE : FALSE;
-    return $this;
-  }
-
   public function isCompleted() {
-    return $this->completed;
+    return $this->phase == static::PHASE_FINISHED;
   }
 
   public function checkCompleted() {
     $interaction = $this->getFirstInteraction();
     if (is_null($interaction) && $this->getPhase() == self::PHASE_PIECE_INTERACTIONS) {
-      $this->setCompleted(TRUE);
+      $this->setPhase(static::PHASE_FINISHED);
       $this->endMove();
     }
     return $this->isCompleted();
@@ -293,9 +303,7 @@ class Move extends PersistantDjambiObject {
   }
 
   protected function executeMove() {
-    $target = $this->getDestination()->getOccupant();
     $battlefield = $this->getSelectedPiece()->getFaction()->getBattlefield();
-    $battlefield->logMove($this->getSelectedPiece(), $this->getDestination(), 'move', $target);
     $this->getSelectedPiece()->setPosition($this->getDestination());
     foreach ($this->getKills() as $location => $victim) {
       $victim->dieDieDie($battlefield->findCellByName($location));
@@ -310,6 +318,30 @@ class Move extends PersistantDjambiObject {
       }
     }
     return $this;
+  }
+
+  public function revert($full_clean = TRUE) {
+    /** @var MoveInteractionInterface $interaction */
+    foreach (array_reverse($this->interactions) as $interaction) {
+      $interaction->revert();
+    }
+    foreach ($this->kills as $victim) {
+      $victim->setAlive(TRUE);
+      if ($this->getSelectedPiece()->getDescription()->hasHabilitySignature()) {
+        $victim->setPosition($this->getDestination());
+      }
+    }
+    $this->getSelectedPiece()->setPosition($this->getOrigin());
+    if ($full_clean) {
+      $this->getSelectedPiece()->buildAllowableMoves();
+      $this->setPhase(static::PHASE_PIECE_SELECTION);
+      $this->selectedPiece = NULL;
+      $this->destination = NULL;
+      $this->origin = NULL;
+      $this->interactions = array();
+      $this->kills = array();
+      $this->events = array();
+    }
   }
 
 }

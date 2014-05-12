@@ -30,7 +30,7 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
    * @return BaseGameDisposition
    *   Objet étendant la classe abstraite DjambiGameDisposition
    */
-  public static function loadDisposition($code, $scheme_settings = NULL) {
+  public static function useDisposition($code, $scheme_settings = NULL) {
     $class = '\Djambi\GameDispositions\GameDisposition' . $code;
     if (class_exists($class)) {
       return new $class(new self(), $scheme_settings);

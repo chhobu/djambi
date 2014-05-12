@@ -118,6 +118,13 @@ class MilitantTest extends BaseDjambiTest {
     $this->checkEmptyCell(self::MILITANT2_TEAM1_START_POSITION);
     $this->assertFalse($target->isAlive());
     $this->checkPosition($target, $bury_in);
+
+    $grid->cancelLastTurn();
+    $this->checkNewTurn('t1');
+    $this->checkPosition($piece, self::MILITANT2_TEAM1_START_POSITION);
+    $this->checkEmptyCell($bury_in);
+    $this->assertTrue($target->isAlive());
+    $this->checkPosition($target, $destination);
   }
 
   public function testMilitantCanKillLeaderOutsideThroneAndWin() {

@@ -73,7 +73,11 @@ class Murder extends BaseMoveInteraction implements MoveInteractionInterface {
         array('%location' => $cell->getName())));
     }
     $this->getSelectedPiece()->dieDieDie($cell);
-    $this->checkCompleted();
-    return $this;
+    return parent::executeChoice($cell);
+  }
+
+  public function revert() {
+    $this->getSelectedPiece()->setPosition($this->getTriggeringMove()->getDestination())
+      ->setAlive(TRUE);
   }
 }

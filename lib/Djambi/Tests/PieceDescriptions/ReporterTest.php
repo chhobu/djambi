@@ -119,6 +119,12 @@ class ReporterTest extends BaseDjambiTest {
     $this->checkPosition($piece, $destination);
     $this->checkPosition($target, self::MILITANT1_TEAM2_START_POSITION);
     $this->assertFalse($target->isAlive());
+
+    $grid->cancelLastTurn();
+    $this->checkNewTurn('t1');
+    $this->checkPosition($piece, self::REPORTER_TEAM1_START_POSITION);
+    $this->checkPosition($target, self::MILITANT1_TEAM2_START_POSITION);
+    $this->assertTrue($target->isAlive());
   }
 
   public function testMultipleReportage() {
@@ -146,6 +152,14 @@ class ReporterTest extends BaseDjambiTest {
     $this->checkPosition($piece, $destination);
     $this->checkPosition($target, self::MILITANT1_TEAM2_START_POSITION);
     $this->assertFalse($target->isAlive());
+    $this->checkPosition($leader, $leader_position);
+    $this->assertTrue($leader->isAlive());
+
+    $grid->cancelLastTurn();
+    $this->checkNewTurn('t1');
+    $this->checkPosition($piece, self::REPORTER_TEAM1_START_POSITION);
+    $this->checkPosition($target, self::MILITANT1_TEAM2_START_POSITION);
+    $this->assertTrue($target->isAlive());
     $this->checkPosition($leader, $leader_position);
     $this->assertTrue($leader->isAlive());
   }

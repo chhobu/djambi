@@ -63,7 +63,10 @@ class Reportage extends BaseMoveInteraction implements MoveInteractionInterface 
         array('%location' => $cell->getName())));
     }
     $cell->getOccupant()->dieDieDie($cell);
-    $this->checkCompleted();
-    return $this;
+    return parent::executeChoice($cell);
+  }
+
+  public function revert() {
+    $this->getChoice()->getOccupant()->setAlive(TRUE);
   }
 }

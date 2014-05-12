@@ -76,7 +76,7 @@ function template_preprocess_djambi_piece(&$variables) {
   $piece = $variables['piece'];
   $extra_classes = array();
   if (!empty($piece)) {
-    $move = $piece->getFaction()->getBattlefield()->getCurrentMove();
+    $move = $piece->getFaction()->getBattlefield()->getCurrentTurn()->getMove();
     if (!empty($move) && !empty($move->getSelectedPiece()) && $move->getSelectedPiece()->getId() == $piece->getId()) {
       $extra_classes[] = 'selected';
     }

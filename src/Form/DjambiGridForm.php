@@ -113,15 +113,6 @@ class DjambiGridForm extends DjambiFormBase {
   }
 
   /**
-   * Returns a unique string identifying the form.
-   * @return string
-   *   The unique string identifying the form.
-   */
-  public function getFormId() {
-    return 'djambi_grid_form';
-  }
-
-  /**
    * Form constructor.
    *
    * @param array $form
@@ -163,7 +154,7 @@ class DjambiGridForm extends DjambiFormBase {
 
   protected function buildFormGrid(array &$grid_form) {
     $grid = $this->getGameManager()->getBattlefield();
-    $current_phase = $grid->getCurrentMove()->getPhase();
+    $current_phase = $grid->getCurrentTurn()->getMove()->getPhase();
 
     $grid_form['actions'] = array(
       '#type' => 'actions',
@@ -184,7 +175,7 @@ class DjambiGridForm extends DjambiFormBase {
         break;
 
       case(Move::PHASE_PIECE_INTERACTIONS):
-        $interaction = $grid->getCurrentMove()->getFirstInteraction();
+        $interaction = $grid->getCurrentTurn()->getMove()->getFirstInteraction();
         $args = array();
         if ($interaction->getSelectedPiece()->isAlive()) {
           $args['!target'] = static::printPieceFullName($interaction->getSelectedPiece());
@@ -243,11 +234,11 @@ class DjambiGridForm extends DjambiFormBase {
     try {
       $piece = $grid->findCellByName($form_state['values']['cells'])
         ->getOccupant();
-      $old_selected_piece = $grid->getCurrentMove()->getSelectedPiece();
+      $old_selected_piece = $grid->getCurrentTurn()->getMove()->getSelectedPiece();
       if (!is_null($old_selected_piece) && $old_selected_piece->getId() != $piece->getId()) {
-        $grid->getCurrentMove()->reset();
+        $grid->getCurrentTurn()->resetMove();
       }
-      $grid->getCurrentMove()->selectPiece($piece);
+      $grid->getCurrentTurn()->getMove()->selectPiece($piece);
     }
     catch (Exception $exception) {
       $this->setFormError('cells', $form_state, $this->t('Invalid piece selection detected : @message. Please choose a movable piece.',
@@ -258,7 +249,7 @@ class DjambiGridForm extends DjambiFormBase {
   protected function buildFormGridPieceDestination(&$grid_form) {
     $grid = $this->getGameManager()->getBattlefield();
     $cell_choices = array();
-    $selected_piece = $grid->getCurrentMove()->getSelectedPiece();
+    $selected_piece = $grid->getCurrentTurn()->getMove()->getSelectedPiece();
     foreach ($selected_piece->getAllowableMoves() as $free_cell) {
       $cell_choices[$free_cell->getName()] = $free_cell->getName()
       . (!empty($free_cell->getOccupant()) ? ' ' . t("(occupied by !piece)", array('!piece' => static::printPieceFullName($free_cell->getOccupant()))) : "");
@@ -291,7 +282,7 @@ class DjambiGridForm extends DjambiFormBase {
     $grid = $this->getGameManager()->getBattlefield();
     try {
       $cell = $grid->findCellByName($form_state['values']['cells']);
-      $grid->getCurrentMove()->executeChoice($cell);
+      $grid->getCurrentTurn()->getMove()->executeChoice($cell);
     }
     catch (DisallowedActionException $exception) {
       $this->setFormError('cells', $form_state, $this->t('You have selected an unreachable cell. Please choose a valid destination.'));
@@ -303,7 +294,7 @@ class DjambiGridForm extends DjambiFormBase {
 
   public function validatePieceSelectionCancel(array &$form, array &$form_state) {
     $grid = $this->getGameManager()->getBattlefield();
-    $grid->getCurrentMove()->reset();
+    $grid->getCurrentTurn()->resetMove();
   }
 
   protected function buildFormGridFreeCellSelection(&$grid_form, MoveInteractionInterface $interaction, $message) {
@@ -347,7 +338,7 @@ class DjambiGridForm extends DjambiFormBase {
 
   public function validateInteractionChoice(&$form, &$form_state) {
     $grid = $this->getGameManager()->getBattlefield();
-    $move = $grid->getCurrentMove();
+    $move = $grid->getCurrentTurn()->getMove();
     if (!empty($move) && !empty($move->getInteractions())) {
       try {
         $move->getFirstInteraction()->executeChoice($grid->findCellByName($form_state['values']['cells']));

@@ -251,9 +251,6 @@ class Piece extends PersistantDjambiObject {
       ));
       $this->getFaction()->dieDieDie(Faction::STATUS_KILLED);
       $this->getFaction()->setControl($this->faction->getControl());
-      $this->getFaction()->setMaster($this->faction->getControl()->getId());
-      $this->faction->getBattlefield()->updateSummary();
-      $this->faction->getBattlefield()->getPlayOrder(TRUE);
     }
   }
 

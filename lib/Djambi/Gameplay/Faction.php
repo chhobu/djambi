@@ -62,8 +62,6 @@ class Faction extends PersistantDjambiObject {
   protected $lastDrawProposal;
   /* @var int $drawStatus */
   protected $drawStatus;
-  /* @var string $master */
-  protected $master;
   /* @var PlayerInterface $player */
   protected $player;
 
@@ -83,7 +81,6 @@ class Faction extends PersistantDjambiObject {
       'lastDrawProposal',
       'drawStatus',
       'pieces',
-      'master',
     ));
     return parent::prepareArrayConversion();
   }
@@ -107,7 +104,6 @@ class Faction extends PersistantDjambiObject {
       'skippedTurns',
       'lastDrawProposal',
       'drawStatus',
-      'master',
     );
     foreach ($simple_properties as $property) {
       if (isset($array[$property])) {
@@ -196,10 +192,6 @@ class Faction extends PersistantDjambiObject {
     return $this->skippedTurns;
   }
 
-  public function getMaster() {
-    return $this->master;
-  }
-
   public function addSkippedTurn() {
     $this->skippedTurns++;
     return $this;
@@ -248,11 +240,6 @@ class Faction extends PersistantDjambiObject {
     return $this;
   }
 
-  public function setMaster($master) {
-    $this->master = $master;
-    return $this;
-  }
-
   /**
    * @return Piece[]
    */
@@ -285,7 +272,7 @@ class Faction extends PersistantDjambiObject {
           $existing_faction->setControl($existing_faction, FALSE);
         }
       }
-      if ($faction->getId() == $this->id && !$existing_faction->isAlive() && $existing_faction->getMaster() == $this->id
+      if ($faction->getId() == $this->id && !$existing_faction->isAlive()
           && $existing_faction->getControl()->getId() != $this->id) {
         $existing_faction->setControl($this, FALSE);
       }
@@ -410,7 +397,6 @@ class Faction extends PersistantDjambiObject {
   public function withdraw() {
     $this->getBattlefield()->logEvent('event', 'WITHDRAWAL', array('faction1' => $this->getId()));
     $this->dieDieDie(self::STATUS_WITHDRAW);
-    $this->getBattlefield()->updateSummary();
     $this->getBattlefield()->changeTurn();
     return $this;
   }
@@ -431,7 +417,7 @@ class Faction extends PersistantDjambiObject {
     if ($this->canComeBackAfterWithdraw()) {
       $this->setStatus(self::STATUS_READY);
       $this->getBattlefield()->logEvent('event', 'COMEBACK_AFTER_WITHDRAW', array('faction1' => $this->getId()));
-      $this->getBattlefield()->updateSummary();
+      // $this->getBattlefield()->updateSummary();
       $this->getBattlefield()->getGameManager(__METHOD__);
     }
     return $this;

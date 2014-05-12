@@ -11,7 +11,10 @@ namespace Djambi\Tests\PieceDescriptions;
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
 use Djambi\Gameplay\Faction;
+use Djambi\Gameplay\Turn;
 use Djambi\Grids\BaseGrid;
+use Djambi\Moves\Manipulation;
+use Djambi\Moves\Move;
 use Djambi\PieceDescriptions\Diplomat;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
@@ -113,6 +116,14 @@ class DiplomatTest extends BaseDjambiTest {
     $this->checkPosition($target, $manipulation);
     $this->assertTrue($target->isAlive());
     $this->checkNewTurn('t2');
+
+    $grid->cancelLastTurn();
+    $this->checkNewTurn('t1');
+    $this->checkPosition($piece, self::DIPLOMAT_TEAM1_START_POSITION);
+    $this->checkPosition($target, $destination);
+    $this->assertTrue($target->isAlive());
+    $this->checkEmptyCell($manipulation);
+    $this->checkEmptyCell($evacuation);
   }
 
   public function testDiplomatManipulation() {
@@ -143,6 +154,13 @@ class DiplomatTest extends BaseDjambiTest {
     $this->checkPosition($target, $placement);
     $this->checkEmptyCell(self::DIPLOMAT_TEAM1_START_POSITION);
     $this->assertTrue($target->isAlive());
+
+    $grid->cancelLastTurn();
+    $this->checkNewTurn('t1');
+    $this->checkPosition($piece, self::DIPLOMAT_TEAM1_START_POSITION);
+    $this->checkPosition($target, $destination);
+    $this->checkEmptyCell($placement);
+    $this->assertTrue($target->isAlive());
   }
 
   /**
@@ -161,6 +179,52 @@ class DiplomatTest extends BaseDjambiTest {
         'choice' => $placement,
       ),
     ));
+  }
+
+  public function testMovePersistance() {
+    $grid = $this->game->getBattlefield();
+    $grid->findPieceById('t2-L')->setPosition($grid->findCellByName(self::THRONE_POSITION));
+    $this->game->play();
+
+    $destination = self::THRONE_POSITION;
+    $manipulation = 'A2';
+    $piece = $grid->findPieceById('t1-D');
+    $this->doMove($piece, $destination, array(
+      'manipulation' => array(
+        'choice' => $manipulation,
+      ),
+    ), FALSE);
+    $this->assertEquals('t1', $grid->getPlayingFaction()->getId());
+
+    $move = $grid->getCurrentTurn()->getMove();
+    $properties = array(
+      'selectedPiece' => $piece,
+      'actingFaction' => $piece->getFaction(),
+      'destination' => $grid->findCellByName($destination),
+      'phase' => Move::PHASE_PIECE_INTERACTIONS,
+      'interactions' => self::CHECK_SAME_VALUE,
+      'origin' => $grid->findCellByName(self::DIPLOMAT_TEAM1_START_POSITION),
+    );
+    $context = array('battlefield' => $grid);
+    /** @var Move $saved_move */
+    $saved_move = $this->checkObjectTransformation($move, $properties, $context);
+    $this->checkObjectSerialization($move, $properties);
+
+    /** @var Manipulation $interaction1 */
+    $interaction1 = current($saved_move->getInteractions());
+    $this->assertEquals($manipulation, $interaction1->getChoice()->getName());
+    $this->assertEquals(NULL, $saved_move->getFirstInteraction()->getChoice());
+
+    $grid->getCurrentTurn()->resetMove();
+    $this->doMove($piece, $destination, array(
+      'manipulation' => array('choice' => $manipulation),
+      'evacuation' => array('choice' => 'D5'),
+    ));
+    $saved_turn_array = end($grid->getPastTurns());
+    $saved_move = Turn::fromArray($saved_turn_array, $context)->getMove();
+    $this->assertEquals(NULL, $saved_move->getFirstInteraction());
+    $interactions = $saved_move->getInteractions();
+    $this->assertEquals('D5', $interactions[1]->getChoice()->getName());
   }
 
 }

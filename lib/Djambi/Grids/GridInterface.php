@@ -22,14 +22,42 @@ interface GridInterface {
    */
   public function addSide(array $start_origin = NULL, $start_status = Faction::STATUS_READY, $specific_pieces = array());
 
+  /**
+   * @param $side_order
+   * @param array $changes
+   *
+   * @return GridInterface
+   */
   public function alterSide($side_order, array $changes);
 
+  /**
+   * @param $type
+   * @param $location
+   *
+   * @return GridInterface
+   */
   public function addSpecialCell($type, $location);
 
+  /**
+   * @param BasePieceDescription $piece
+   *
+   * @return GridInterface
+   */
   public function addCommonPiece(BasePieceDescription $piece);
 
+  /**
+   * @param $shape
+   *
+   * @return GridInterface
+   */
   public function setShape($shape);
 
+  /**
+   * @param $cols
+   * @param $rows
+   *
+   * @return GridInterface
+   */
   public function setDimensions($cols, $rows);
 
   /**

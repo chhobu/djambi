@@ -154,6 +154,12 @@ class NecromobileTest extends BaseDjambiTest {
     $this->checkPosition($piece, $destination);
     $this->checkPosition($target, $bury_in);
     $this->assertFalse($target->isAlive());
+
+    $grid->cancelLastTurn();
+    $this->checkNewTurn('t1');
+    $this->checkPosition($piece, self::NECRO_TEAM1_START_POSITION);
+    $this->checkPosition($target, $destination);
+    $this->assertFalse($target->isAlive());
   }
 
   /**

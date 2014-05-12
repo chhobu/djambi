@@ -6,7 +6,6 @@ namespace Djambi\GameFactories;
 use Djambi\Exceptions\Exception;
 use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\GameDispositions\GameDispositionsFactory;
-use Djambi\GameFactories\GameFactoryInterface;
 use Djambi\GameManagers\BasicGameManager;
 use Djambi\GameManagers\GameManagerInterface;
 use Djambi\IA\DummyIA;
@@ -141,7 +140,7 @@ class GameFactory implements GameFactoryInterface {
   }
 
   protected function getDefaultDisposition() {
-    return GameDispositionsFactory::loadDisposition('4std');
+    return GameDispositionsFactory::useDisposition('4std');
   }
 
   protected function addDefaultPlayers() {

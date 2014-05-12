@@ -25,8 +25,11 @@ class ThroneEvacuation extends BaseMoveInteraction implements MoveInteractionInt
   }
 
   public function executeChoice(Cell $cell) {
-    $this->getTriggeringMove()->executeChoice($cell);
-    $this->checkCompleted();
-    return $this;
+    $this->getSelectedPiece()->setPosition($cell);
+    return parent::executeChoice($cell);
+  }
+
+  public function revert() {
+    $this->getSelectedPiece()->setPosition($this->getTriggeringMove()->getDestination());
   }
 }

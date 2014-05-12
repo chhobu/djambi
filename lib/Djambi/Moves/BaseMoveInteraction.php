@@ -10,22 +10,22 @@ use Djambi\Persistance\PersistantDjambiObject;
 abstract class BaseMoveInteraction extends PersistantDjambiObject implements MoveInteractionInterface {
   /** @var Piece */
   protected $selectedPiece;
-  /** @var Cell */
-  protected $destination;
   /** @var  Move */
   protected $triggeringMove;
   /** @var Cell[] */
   protected $possibleChoices;
-  /** @var boolean */
-  protected $completed;
+  /** @var Cell */
+  protected $choice;
 
   protected function prepareArrayConversion() {
-    $this->addPersistantProperties('completed');
-    $this->addDependantObjects(array(
-      'possibleChoices' => 'name',
-      'selectedPiece' => 'id',
-      'destination' => 'name',
-    ));
+    $refs['selectedPiece'] = 'id';
+    if (!empty($this->choice)) {
+      $refs['choice'] = 'name';
+    }
+    else {
+      $refs['possibleChoices'] = 'name';
+    }
+    $this->addDependantObjects($refs);
     return parent::prepareArrayConversion();
   }
 
@@ -35,11 +35,14 @@ abstract class BaseMoveInteraction extends PersistantDjambiObject implements Mov
     $grid = $move->getSelectedPiece()->getFaction()->getBattlefield();
     /** @var BaseMoveInteraction $interaction */
     $interaction = new static($context['move'], $grid->findPieceById($array['selectedPiece']));
-    if (!empty($array['possibleChoices']) && !empty($interaction->getTriggeringMove()->getSelectedPiece())) {
+    if (!empty($array['choice'])) {
+      $interaction->choice = $grid->findCellByName($array['choice']);
+    }
+    elseif (!empty($array['possibleChoices']) && !empty($interaction->getTriggeringMove()->getSelectedPiece())) {
       $choices = array();
       /** @var Cell $cell */
       foreach ($array['possibleChoices'] as $cell_name) {
-        $choices[] = $grid->findCellByName($cell_name);
+        $choices[$cell_name] = $grid->findCellByName($cell_name);
       }
       $interaction->setPossibleChoices($choices);
     }
@@ -73,17 +76,13 @@ abstract class BaseMoveInteraction extends PersistantDjambiObject implements Mov
     return $this->getTriggeringMove()->getActingFaction();
   }
 
-  protected function checkCompleted() {
-    $this->setCompleted(TRUE);
-    return $this->getTriggeringMove()->checkCompleted();
-  }
-
   public function isCompleted() {
-    return $this->completed;
-  }
-
-  protected function setCompleted($bool) {
-    $this->completed = $bool ? TRUE : FALSE;
+    if (!empty($this->getChoice())) {
+      return TRUE;
+    }
+    else {
+      return FALSE;
+    }
   }
 
   public function getPossibleChoices() {
@@ -95,6 +94,21 @@ abstract class BaseMoveInteraction extends PersistantDjambiObject implements Mov
 
   protected function setPossibleChoices(array $choices) {
     $this->possibleChoices = $choices;
+    return $this;
+  }
+
+  public function getChoice() {
+    return $this->choice;
+  }
+
+  protected function setChoice(Cell $choice) {
+    $this->choice = $choice;
+    return $this;
+  }
+
+  public function executeChoice(Cell $cell) {
+    $this->setChoice($cell);
+    $this->getTriggeringMove()->checkCompleted();
     return $this;
   }
 

@@ -10,6 +10,7 @@ namespace Djambi\Tests;
 
 
 use Djambi\GameManagers\BasicGameManager;
+use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Piece;
 use Djambi\Persistance\ArrayableInterface;
@@ -53,12 +54,13 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
     $grid = $this->game->getBattlefield();
     $this->checkGameStatus(BasicGameManager::STATUS_FINISHED);
     $this->assertEquals(NULL, $grid->getPlayingFaction());
+    $this->assertEquals(NULL, $grid->getCurrentTurn());
     $this->assertEquals(Faction::STATUS_WINNER, $grid->findFactionById($winner)->getStatus());
   }
 
-  protected function doMove($piece, $destination, $expected_interactions = array()) {
+  protected function doMove($piece, $destination, $expected_interactions = array(), $is_completed = TRUE) {
     $grid = $this->game->getBattlefield();
-    $move = $grid->getCurrentMove();
+    $move = $grid->getCurrentTurn()->getMove();
     $move->selectPiece($piece);
     $move->executeChoice($grid->findCellByName($destination));
     $interactions = $move->getInteractions();
@@ -99,25 +101,29 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
         $interaction->executeChoice($grid->findCellByName($expected['choice']));
       }
     }
-    $this->assertTrue($move->isCompleted());
+    $this->assertEquals($is_completed, $move->isCompleted());
   }
 
   /**
    * @param ArrayableInterface $object
    * @param array $expected_properties
    * @param array $context
+   *
+   * @return \stdClass
    */
   protected function checkObjectTransformation($object, $expected_properties, $context = array()) {
     $converted_object = $object->toArray();
     $this->assertEquals(count($expected_properties), count($converted_object) - 1, "Array generated from object is not what it is expected");
     $new_object = $object::fromArray($converted_object, $context);
     $this->compareObjectsAfterTransformation($object, $new_object, $expected_properties, $converted_object);
+    return $new_object;
   }
 
   protected function checkObjectSerialization($object, $expected_properties, $context = array()) {
     $string = serialize($object);
     $new_object = unserialize($string);
     $this->compareObjectsAfterTransformation($object, $new_object, $expected_properties);
+    return $new_object;
   }
 
   /**
@@ -155,9 +161,21 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
         }
         continue;
       }
-      elseif (is_object($actual_value) && $actual_value instanceof ArrayableInterface && $expected_value instanceof ArrayableInterface) {
-        $expected_value = $expected_value->toArray();
-        $actual_value = $actual_value->toArray();
+      elseif (is_object($actual_value)) {
+        if ($actual_value instanceof ArrayableInterface && $expected_value instanceof ArrayableInterface) {
+          $expected_value = $expected_value->toArray();
+          $actual_value = $actual_value->toArray();
+        }
+        else {
+          $this->assertInstanceOf(get_class($expected_value), $actual_value);
+          if ($expected_value instanceof Cell) {
+            $expected_value = $expected_value->getName();
+            $actual_value = $actual_value->getName();
+          }
+          else {
+            $this->fail("Cannot compare object property \"" . $property .  "\" from class \"" . get_class($expected_value) . "\"");
+          }
+        }
       }
       $this->assertEquals($expected_value, $actual_value, "Property \"" . $property . "\" from class \"" . get_class($object) . "\" fails persisting");
     }

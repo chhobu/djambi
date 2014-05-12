@@ -31,7 +31,7 @@ class GameDispositionsTest extends \PHPUnit_Framework_TestCase {
 
   public function testGameDisposition4std() {
     // When I initiate a new 4 players game in a standard grid
-    $this->getGameFactory()->setDisposition(GameDispositionsFactory::loadDisposition('4std'));
+    $this->getGameFactory()->setDisposition(GameDispositionsFactory::useDisposition('4std'));
     $this->setGame($this->getGameFactory()->createGameManager());
     $this->getGame()->play();
     // Then I should have a 81 squares chessboard
@@ -58,7 +58,7 @@ class GameDispositionsTest extends \PHPUnit_Framework_TestCase {
   }
 
   public function testGameDisposition3hex() {
-    $this->getGameFactory()->setDisposition(GameDispositionsFactory::loadDisposition('3hex'));
+    $this->getGameFactory()->setDisposition(GameDispositionsFactory::useDisposition('3hex'));
     $this->setGame($this->getGameFactory()->createGameManager());
     $this->getGame()->play();
 
@@ -82,7 +82,7 @@ class GameDispositionsTest extends \PHPUnit_Framework_TestCase {
   }
 
   public function testGameDisposition2mini() {
-    $this->getGameFactory()->setDisposition(GameDispositionsFactory::loadDisposition('2mini'));
+    $this->getGameFactory()->setDisposition(GameDispositionsFactory::useDisposition('2mini'));
     $this->setGame($this->getGameFactory()->createGameManager());
     $this->getGame()->play();
 
@@ -103,7 +103,7 @@ class GameDispositionsTest extends \PHPUnit_Framework_TestCase {
   }
 
   public function testGameDisposition2std() {
-    $this->getGameFactory()->setDisposition(GameDispositionsFactory::loadDisposition('2std'));
+    $this->getGameFactory()->setDisposition(GameDispositionsFactory::useDisposition('2std'));
     $this->setGame($this->getGameFactory()->createGameManager());
     $this->getGame()->play();
 
