@@ -9,6 +9,6 @@ class Necromobile extends BasePieceDescription {
     $this->setHabilities(array(
       self::HABILITY_MOVE_DEAD_PEACES => TRUE,
     ));
-    $this->describePiece('necromobile', 'N', new GlossaryTerm(Glossary::NECROMOBILE), $num, $start_position, 5);
+    $this->describePiece('necromobile', 'N', new GlossaryTerm(Glossary::PIECE_NECROMOBILE), $num, $start_position, 5);
   }
 }

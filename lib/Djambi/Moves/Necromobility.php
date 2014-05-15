@@ -4,6 +4,7 @@ namespace Djambi\Moves;
 
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Event;
 use Djambi\Gameplay\Piece;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
@@ -34,9 +35,13 @@ class Necromobility extends BaseMoveInteraction implements MoveInteractionInterf
       throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_KILL_WRONG_GRAVE,
         array('%location' => $cell->getName())));
     }
-    $this->getTriggeringMove()->getSelectedPiece()->getFaction()
-      ->getBattlefield()->logMove($this->getSelectedPiece(), $cell, "necromobility", $this->getTriggeringMove()->getSelectedPiece());
     $this->getSelectedPiece()->setPosition($cell);
+    if ($cell->getType() == Cell::TYPE_THRONE) {
+      $event = new Event(new GlossaryTerm(Glossary::EVENT_THRONE_MAUSOLEUM, array(
+        '!piece_id' => $this->getSelectedPiece()->getId(),
+      )));
+      $this->getTriggeringMove()->triggerEvent($event);
+    }
     return parent::executeChoice($cell);
   }
 

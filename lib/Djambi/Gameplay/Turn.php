@@ -120,7 +120,7 @@ class Turn extends PersistantDjambiObject {
     return $this->events;
   }
 
-  public function addEvent(Event $event) {
+  public function logEvent(Event $event) {
     $this->events[] = $event;
     return $this;
   }

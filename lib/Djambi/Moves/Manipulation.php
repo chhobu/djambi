@@ -6,6 +6,7 @@ namespace Djambi\Moves;
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Event;
 use Djambi\Gameplay\Piece;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
@@ -19,11 +20,12 @@ class Manipulation extends BaseMoveInteraction implements MoveInteractionInterfa
         $move->triggerInteraction(new static($move, $target));
       }
       else {
-        $move->triggerEvent(array(
-          'type' => 'diplomate_golden_move',
-          'target' => $target,
-          'position' => $piece->getPosition(),
-        ));
+        $event = new Event(new GlossaryTerm(Glossary::EVENT_ASSASSIN_GOLDEN_MOVE, array(
+          '!piece_id' => $piece->getId(),
+          '!target_id' => $target->getId(),
+          '!position' => $piece->getPosition()->getName(),
+        )));
+        $move->triggerEvent($event);
       }
       return TRUE;
     }
@@ -69,6 +71,11 @@ class Manipulation extends BaseMoveInteraction implements MoveInteractionInterfa
         array('%piece_id' => $this->getSelectedPiece()->getId(), '%location' => $cell->getName())));
     }
     $this->getSelectedPiece()->setPosition($cell);
+    if ($cell->getType() == Cell::TYPE_THRONE) {
+      $this->getTriggeringMove()->triggerEvent(new Event(new GlossaryTerm(Glossary::EVENT_THRONE_MANIPULATION, array(
+          '!piece_id' => $this->getSelectedPiece()->getId(),
+      ))));
+    }
     return parent::executeChoice($cell);
   }
 

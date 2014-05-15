@@ -62,7 +62,7 @@ class Reportage extends BaseMoveInteraction implements MoveInteractionInterface 
       throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_REPORTAGE_BAD_VICTIM_CHOICE,
         array('%location' => $cell->getName())));
     }
-    $cell->getOccupant()->dieDieDie($cell);
+    $cell->getOccupant()->dieDieDie($cell, $this->getTriggeringMove());
     return parent::executeChoice($cell);
   }
 

@@ -6,6 +6,7 @@ use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\IllogicMoveException;
 use Djambi\Gameplay\BattlefieldInterface;
 use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Event;
 use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Piece;
 use Djambi\Persistance\PersistantDjambiObject;
@@ -32,7 +33,7 @@ class Move extends PersistantDjambiObject {
   protected $interactions = array();
   /** @var Piece[] */
   protected $kills = array();
-  /** @var array */
+  /** @var Event[] */
   protected $events = array();
 
   protected function prepareArrayConversion() {
@@ -49,9 +50,9 @@ class Move extends PersistantDjambiObject {
     $persist = array();
     if (!$this->isCompleted()) {
       $persist[] = 'phase';
-    }
-    if (!empty($this->events)) {
-      $persist[] = 'events';
+      if (!empty($this->events)) {
+        $persist[] = 'events';
+      }
     }
     if (!empty($this->interactions)) {
       $persist[] = 'interactions';
@@ -227,11 +228,6 @@ class Move extends PersistantDjambiObject {
     return NULL;
   }
 
-  protected function setInteractions(array $înteractions) {
-    $this->interactions = $înteractions;
-    return $this;
-  }
-
   public function isCompleted() {
     return $this->phase == static::PHASE_FINISHED;
   }
@@ -239,14 +235,22 @@ class Move extends PersistantDjambiObject {
   public function checkCompleted() {
     $interaction = $this->getFirstInteraction();
     if (is_null($interaction) && $this->getPhase() == self::PHASE_PIECE_INTERACTIONS) {
+      $battlefield = $this->getSelectedPiece()->getFaction()->getBattlefield();
+      $event = new Event(new GlossaryTerm(Glossary::EVENT_MOVE_COMPLETED, array(
+        '!faction_id' => $this->getActingFaction())), Event::LOG_LEVEL_MINOR);
+      array_unshift($this->events, $event);
+      foreach ($this->getEvents() as $event) {
+        $battlefield->getCurrentTurn()->logEvent($event);
+        if ($event->getDescription()->getString() == Glossary::EVENT_DIPLOMAT_GOLDEN_MOVE) {
+          $args = $event->getDescription()->getArgs();
+          Manipulation::triggerGoldenMove($this, $battlefield->findPieceById($args['!target_id']),
+            $battlefield->findCellByName($args['!position']));
+        }
+      }
       $this->setPhase(static::PHASE_FINISHED);
-      $this->endMove();
+      $this->getActingFaction()->getBattlefield()->changeTurn();
     }
     return $this->isCompleted();
-  }
-
-  protected function endMove() {
-    $this->getActingFaction()->getBattlefield()->changeTurn();
   }
 
   public function triggerKill(Piece $piece, Cell $location) {
@@ -258,12 +262,7 @@ class Move extends PersistantDjambiObject {
     return $this->kills;
   }
 
-  protected function setKills(array $kills) {
-    $this->kills = $kills;
-    return $this;
-  }
-
-  public function triggerEvent($event) {
+  public function triggerEvent(Event $event) {
     $this->events[] = $event;
     return $this;
   }
@@ -298,6 +297,18 @@ class Move extends PersistantDjambiObject {
     }
     if ($move_ok) {
       ThroneEvacuation::isTriggerable($this);
+      if ($this->getSelectedPiece()->getDescription()->hasHabilityAccessThrone()) {
+        if ($this->getDestination()->getType() == Cell::TYPE_THRONE) {
+          $this->triggerEvent(new Event(new GlossaryTerm(Glossary::EVENT_THRONE_ACCESS, array(
+            '!piece_id' => $this->getSelectedPiece()->getId(),
+          ))));
+        }
+        elseif ($this->getOrigin()->getType() == Cell::TYPE_THRONE) {
+          $this->triggerEvent(new Event(new GlossaryTerm(Glossary::EVENT_THRONE_RETREAT, array(
+            '!piece_id' => $this->getSelectedPiece()->getId(),
+          ))));
+        }
+      }
     }
     return $move_ok;
   }
@@ -306,16 +317,7 @@ class Move extends PersistantDjambiObject {
     $battlefield = $this->getSelectedPiece()->getFaction()->getBattlefield();
     $this->getSelectedPiece()->setPosition($this->getDestination());
     foreach ($this->getKills() as $location => $victim) {
-      $victim->dieDieDie($battlefield->findCellByName($location));
-    }
-    foreach ($this->getEvents() as $event) {
-      if ($event['type'] == 'diplomat_golden_move') {
-        Manipulation::triggerGoldenMove($this, $event['target'], $event['position']);
-        $battlefield->logEvent('event', 'DIPLOMAT_GOLDEN_MOVE', array('piece' => $this->getSelectedPiece()->getId()));
-      }
-      elseif ($event['type'] == 'assassin_golden_move') {
-        $battlefield->logEvent('event', 'ASSASSIN_GOLDEN_MOVE', array('piece' => $this->getSelectedPiece()->getId()));
-      }
+      $victim->dieDieDie($battlefield->findCellByName($location), $this);
     }
     return $this;
   }

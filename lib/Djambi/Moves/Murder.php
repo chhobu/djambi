@@ -5,6 +5,7 @@ namespace Djambi\Moves;
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Cell;
+use Djambi\Gameplay\Event;
 use Djambi\Gameplay\Piece;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
@@ -21,7 +22,10 @@ class Murder extends BaseMoveInteraction implements MoveInteractionInterface {
       else {
         $move->triggerKill($target, $piece->getPosition());
         if ($piece->getPosition()->getType() == Cell::TYPE_THRONE && !$piece->getDescription()->hasHabilityAccessThrone()) {
-          $move->triggerEvent(array('type' => 'assassin_golden_move'));
+          $event = new Event(new GlossaryTerm(Glossary::EVENT_ASSASSIN_GOLDEN_MOVE, array(
+            '!piece_id' => $piece->getId(),
+          )));
+          $move->triggerEvent($event);
         }
         return TRUE;
       }
@@ -72,7 +76,7 @@ class Murder extends BaseMoveInteraction implements MoveInteractionInterface {
       throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_KILL_WRONG_GRAVE,
         array('%location' => $cell->getName())));
     }
-    $this->getSelectedPiece()->dieDieDie($cell);
+    $this->getSelectedPiece()->dieDieDie($cell, $this->getTriggeringMove());
     return parent::executeChoice($cell);
   }
 

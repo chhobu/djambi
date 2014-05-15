@@ -9,6 +9,6 @@ class Diplomat extends BasePieceDescription {
     $this->setHabilities(array(
       self::HABILITITY_MOVE_LIVING_PIECES => TRUE,
     ));
-    $this->describePiece('diplomate', 'D', new GlossaryTerm(Glossary::DIPLOMATE), $num, $start_position, 2);
+    $this->describePiece('diplomate', 'D', new GlossaryTerm(Glossary::PIECE_DIPLOMATE), $num, $start_position, 2);
   }
 }

@@ -4,7 +4,6 @@ namespace Djambi\Gameplay;
 
 
 use Djambi\GameManagers\GameManagerInterface;
-use Djambi\Moves\Move;
 use Djambi\Players\PlayerInterface;
 
 interface BattlefieldInterface {

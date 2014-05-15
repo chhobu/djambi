@@ -8,10 +8,13 @@
 namespace Djambi\Gameplay;
 
 use Djambi\Moves\Manipulation;
+use Djambi\Moves\Move;
 use Djambi\Moves\Murder;
 use Djambi\Moves\Necromobility;
 use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\PieceDescriptions\BasePieceDescription;
+use Djambi\Strings\Glossary;
+use Djambi\Strings\GlossaryTerm;
 
 /**
  * Class DjambiPiece
@@ -240,17 +243,38 @@ class Piece extends PersistantDjambiObject {
     return count($this->allowableMoves);
   }
 
-  public function dieDieDie(Cell $destination) {
+  public function dieDieDie(Cell $destination, Move $move = NULL) {
     $this->setAlive(FALSE);
-    $this->faction->getBattlefield()->logMove($this, $destination, "murder", $this);
+    $old_position = $this->getPosition();
     $this->setPosition($destination);
+    $trigerred_events = array();
     if ($this->getDescription()->hasHabilityMustLive()) {
-      $this->getBattlefield()->logEvent('event', 'LEADER_KILLED', array(
-        'faction1' => $this->getFaction()->getId(),
-        'piece' => $this->getId(),
-      ));
-      $this->getFaction()->dieDieDie(Faction::STATUS_KILLED);
+      $trigerred_events[] = new Event(new GlossaryTerm(Glossary::EVENT_LEADER_KILLED, array(
+        '!faction_id' => $this->getFaction()->getId(),
+        '!piece_id' => $this->getId(),
+      )));
+      if ($old_position->getType() == Cell::TYPE_THRONE) {
+        $trigerred_events = new Event(new GlossaryTerm(Glossary::EVENT_THRONE_MURDER, array(
+          '!piece_id' => $this->getId(),
+        )));
+      }
+      if ($destination->getType() == Cell::TYPE_THRONE) {
+        $trigerred_events = new Event(new GlossaryTerm(Glossary::EVENT_THRONE_MAUSOLEUM, array(
+          '!piece_id' => $this->getId(),
+        )));
+      }
       $this->getFaction()->setControl($this->faction->getControl());
+      $this->getFaction()->dieDieDie(Faction::STATUS_KILLED);
+    }
+    if (!empty($trigerred_events)) {
+      foreach ($trigerred_events as $event) {
+        if (is_null($move)) {
+          $this->getBattlefield()->getCurrentTurn()->logEvent($event);
+        }
+        else {
+          $move->triggerEvent($event);
+        }
+      }
     }
   }
 

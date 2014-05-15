@@ -46,7 +46,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
   protected $pastTurns = array();
 
   /**
-   * Préparation à l'enregistrement en BdD : transformation en tableau.
+   * Préparation à l'enregistrement : transformation en tableau.
    *
    * @return array
    */
@@ -224,7 +224,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     }
     if (!empty($controls)) {
       foreach ($controls as $controlled => $controller) {
-        $battlefield->findFactionById($controlled)->setControl($battlefield->findFactionById($controller));
+        $battlefield->findFactionById($controlled)->setControl($battlefield->findFactionById($controller), FALSE);
       }
     }
     $game->setStatus($ready ? BasicGameManager::STATUS_PENDING : BasicGameManager::STATUS_RECRUITING);
@@ -448,107 +448,125 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
       $winner_id = current($living_factions);
       $winner = $this->findFactionById($winner_id);
       $winner->setStatus(Faction::STATUS_WINNER)->setRanking(1);
-      $this->logEvent('event', 'THE_WINNER_IS', array('faction1' => $winner->getId()));
+      $this->currentTurn->logEvent(new Event(new GlossaryTerm(Glossary::EVENT_WINNER,
+        array('!faction_id' => $winner->getId())), Event::LOG_LEVEL_MAJOR));
     }
     else {
-      $this->logEvent("event", "DRAW");
+      $this->currentTurn->logEvent(new Event(new GlossaryTerm(Glossary::EVENT_DRAW), Event::LOG_LEVEL_MAJOR));
       foreach ($living_factions as $faction_id) {
         $faction = $this->findFactionById($faction_id);
         $faction->setStatus(Faction::STATUS_DRAW)->setRanking($nb_living_factions);
       }
     }
     $this->getGameManager()->setStatus(BasicGameManager::STATUS_FINISHED);
-    $this->buildFinalRanking($nb_living_factions);
-    $this->logEvent("event", "END");
+    $this->currentTurn->logEvent(new Event(new GlossaryTerm(Glossary::EVENT_THIS_IS_THE_END)));
     $this->pastTurns[] = $this->getCurrentTurn()->endsTurn()->toArray();
+    $this->buildFinalRanking($nb_living_factions);
     $this->currentTurn = NULL;
     $this->playOrder = NULL;
     $this->getGameManager()->save();
     return $this;
   }
 
-  /**
-   * @return Battlefield
-   *   Grille de Djambi courante
-   */
   public function changeTurn() {
     // Vérification des conditions de victoire :
-    $living_factions = array();
-    foreach ($this->getFactions() as $faction) {
-      if ($faction->isAlive()) {
-        $control_leader = $faction->checkLeaderFreedom();
-        if (!$control_leader) {
-          $this->logEvent("event", "SURROUNDED", array('faction1' => $faction->getId()));
-          if ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'never'
-          && $this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control') {
-            foreach ($faction->getPieces() as $piece) {
-              if ($piece->isAlive() && $piece->getDescription()->hasHabilityMustLive() && $piece->getFaction()->getId() == $faction->getId()) {
-                $this->logMove($piece, $piece->getPosition(), 'elimination');
-                $piece->setAlive(FALSE);
-              }
-            }
-          }
-          $faction->dieDieDie(Faction::STATUS_SURROUNDED);
-        }
-        else {
-          $living_factions[] = $faction->getId();
-        }
-      }
-      elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'surrounded'
-      || ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'allowed' && empty($kings))) {
-        if ($faction->getStatus() == Faction::STATUS_SURROUNDED) {
-          $control_leader = $faction->checkLeaderFreedom();
-          if ($control_leader) {
-            $faction->setStatus(Faction::STATUS_READY);
-            $this->logEvent("event", "COMEBACK_AFTER_SURROUND", array('faction1' => $faction->getId()));
-          }
-        }
-      }
-    }
+    $this->findRuler();
+    $living_factions = $this->findLivingFactions();
     $total = count($living_factions);
     if ($total < 2) {
       $this->endGame($living_factions);
     }
     else {
       // Attribution des pièces vivantes à l'occupant du trône :
-      $this->findRuler();
-      if (!empty($this->getRuler())) {
-        foreach ($this->getFactions() as $faction) {
-          if (!$faction->getControl()->isAlive()) {
-            // Cas d'un abandon :
-            // lors de la prise de pouvoir, retrait de l'ancien chef.
-            $pieces = $faction->getPieces();
-            foreach ($pieces as $piece) {
-              if ($this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control'
-                && $piece->isAlive() && $piece->getDescription()->hasHabilityMustLive()) {
-                $piece->setAlive(FALSE);
-                $this->logMove($piece, $piece->getPosition(), 'elimination');
-              }
-            }
-            // Prise de contrôle
-            $faction->setControl($this->findFactionById($this->getRuler()));
-          }
-        }
-      }
-      elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) != 'full_control') {
-        foreach ($this->getFactions() as $faction) {
-          if (!$faction->isAlive()) {
-            $allowed_statuses = array(
-              Faction::STATUS_DEFECT,
-              Faction::STATUS_WITHDRAW,
-              Faction::STATUS_SURROUNDED,
-            );
-            if (in_array($faction->getStatus(), $allowed_statuses) && $faction->getControl()->getId() != $faction->getId()) {
-              $faction->setControl($faction);
-            }
-          }
-        }
-      }
+      $this->vassalizeFactions();
+      // Préparation du nouveau tour
       $this->pastTurns[] = $this->getCurrentTurn()->endsTurn()->toArray();
       $this->currentTurn = NULL;
       $this->playOrder = NULL;
       $this->getGameManager()->save();
       $this->prepareTurn();
+    }
+    return $this;
+  }
+
+  /**
+   * @return array
+   */
+  protected function findLivingFactions() {
+    $living_factions = array();
+    foreach ($this->getFactions() as $faction) {
+      if ($faction->isAlive()) {
+        $control_leader = $faction->checkLeaderFreedom();
+        if (!$control_leader) {
+          $event = NULL;
+          foreach ($faction->getPieces() as $piece) {
+            if ($piece->isAlive() && $piece->getDescription()->hasHabilityMustLive() && $piece->getFaction()->getId() == $faction->getId()) {
+              $event = new Event(new GlossaryTerm(Glossary::EVENT_SURROUNDED, array('!piece_id' => $piece->getId())), Event::LOG_LEVEL_MAJOR);
+              if ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'never'
+                && $this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control') {
+                $event->executeChange(new PieceChange($piece, 'alive', TRUE, FALSE));
+              }
+              $this->getCurrentTurn()->logEvent($event);
+            }
+          }
+          if (!empty($event)) {
+            $faction->dieDieDie(Faction::STATUS_SURROUNDED);
+          }
+        }
+        else {
+          $living_factions[] = $faction->getId();
+        }
+      }
+      elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'surrounded'
+        || ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'allowed' && empty($this->getRuler()))) {
+        if ($faction->getStatus() == Faction::STATUS_SURROUNDED) {
+          $control_leader = $faction->checkLeaderFreedom();
+          if ($control_leader) {
+            $change = new FactionChange($faction, 'status', Faction::STATUS_SURROUNDED, Faction::STATUS_READY);
+            $event = new Event(new GlossaryTerm(Glossary::EVENT_COMEBACK_AFTER_SURROUND,
+              array('!faction_id' => $faction->getId())), Event::LOG_LEVEL_MAJOR);
+            $event->executeChange($change);
+            $this->getCurrentTurn()->logEvent($event);
+          }
+        }
+      }
+    }
+    return $living_factions;
+  }
+
+  protected function vassalizeFactions() {
+    if (!empty($this->getRuler())) {
+      foreach ($this->getFactions() as $faction) {
+        if (!$faction->getControl()->isAlive()) {
+          // Cas d'un abandon :
+          // lors de la prise de pouvoir, retrait de l'ancien chef.
+          $pieces = $faction->getPieces();
+          foreach ($pieces as $piece) {
+            if ($this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control'
+              && $piece->isAlive() && $piece->getDescription()->hasHabilityMustLive()) {
+              $event = new Event(new GlossaryTerm(Glossary::EVENT_ELIMINATION, array('!piece_id' => $piece)));
+              $event->executeChange(new PieceChange($piece, 'alive', TRUE, FALSE));
+              $this->getCurrentTurn()->logEvent($event);
+            }
+          }
+          // Prise de contrôle
+          $faction->setControl($this->findFactionById($this->getRuler()));
+        }
+      }
+    }
+    elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) != 'full_control') {
+      foreach ($this->getFactions() as $faction) {
+        if (!$faction->isAlive()) {
+          $allowed_statuses = array(
+            Faction::STATUS_DEFECT,
+            Faction::STATUS_WITHDRAW,
+            Faction::STATUS_SURROUNDED,
+          );
+          if (in_array($faction->getStatus(), $allowed_statuses) && $faction->getControl()->getId() != $faction->getId()) {
+            $faction->setControl($faction);
+          }
+        }
+      }
     }
     return $this;
   }
@@ -607,10 +625,6 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     return $this;
   }
 
-  /**
-   * @return bool
-   */
-
   protected function definePlayOrder() {
     // Réinitialisation
     $this->playOrder = array();
@@ -619,6 +633,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     $nb_factions = 0;
     $scheme_size = count($this->factions) * 2;
     $turn_scheme = array();
+    $events = array();
     foreach ($this->factions as $faction) {
       if ($faction->isAlive() && $faction->getControl()->getId() == $faction->getId()) {
         $nb_factions++;
@@ -742,8 +757,16 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     if ($turn_scheme[$new_play_order_key]['new_round']) {
       $current_round++;
       $new_play_order_key = $new_play_order_key - $scheme_size;
+      $events[] = new Event(new GlossaryTerm(Glossary::EVENT_NEW_ROUND, array(
+        '!round' => $current_round,
+      )), Event::LOG_LEVEL_MINOR);
     }
     $this->setCurrentTurn(Turn::begin($this, $current_round, $new_play_order_key));
+    if (!empty($events)) {
+      foreach ($events as $event) {
+        $this->getCurrentTurn()->logEvent($event);
+      }
+    }
     return $this;
   }
 
@@ -863,112 +886,38 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     return $freecells;
   }
 
-  // FIXME reconstruire cette fonction !
   protected function buildFinalRanking($begin) {
-    return $this;
-  }
-
-  /**
-   * Enregistre un événement d'une partie.
-   *
-   * @param string $type
-   *   Différents types possibles : event, info, notice
-   * @param string $event_txt
-   *   Description de l'événement
-   * @param array $event_args
-   *   Arguments inclus dans la description de l'événement
-   * @param int $time
-   *   Timestamp auquel a eu lieu l'événement
-   *
-   * @return Battlefield
-   *   Grille de Djambi courante
-   *
-   * @deprecated
-   */
-  // FIXME retirer cette fonction
-  public function logEvent($type, $event_txt, $event_args = NULL, $time = NULL) {
-    $event = array(
-      //"turn" => $this->getCurrentTurnId(),
-      "time" => is_null($time) ? time() : $time,
-      "type" => $type,
-      "event" => $event_txt,
-      "args" => $event_args,
-    );
-    //$this->events[] = $event;
-    return $this;
-  }
-
-  /**
-   * Enregistre un mouvemement dans un tableau récapitulatif.
-   * Entrées du tableau :
-   * - turn : identifiant du tour de jeu courant
-   * - time : timestamp du mouvement
-   * - target_faction : identifiant du camp concerné par le mouvement
-   * - target : indentifiant de la pièce concernée par le mouvement
-   * - from : identifiant de la cellule de départ du mouvement
-   * - to : identifiant de la cellule de fin du mouvement
-   * - type : type de mouvement (move, necromove, murder, manipulation,
-   * elimination ou evacuation)
-   * - acting (optionnel) : identifiant de la pièce ayant provoqué le mouvement
-   * - acting_faction (optionnel) : identifiant de la faction ayant provoqué
-   * le mouvement
-   * - special_event (optionnel) : événement déclenché par le mouvement
-   *
-   * @param Piece $target_piece
-   *   Pièce concernée par le mouvement
-   * @param Cell $destination_cell
-   *   Destination du mouvement (move, necromove, murder, manipulation,
-   *   elimination ou evacuation)
-   * @param string $type
-   *   Type du mouvement
-   * @param Piece $acting_piece
-   *   Pièce ayant provoqué le mouvement
-   *
-   * @return Battlefield
-   *   Grille de Djambi courante
-   *
-   * @deprecated
-   */
-  public function logMove(Piece $target_piece, Cell $destination_cell, $type = "move", Piece $acting_piece = NULL) {
-    $origin_cell_object = $target_piece->getPosition();
-    if ($destination_cell->getType() == Cell::TYPE_THRONE && $target_piece->getDescription()->hasHabilityAccessThrone() && $target_piece->isAlive()) {
-      $special_event = 'THRONE_ACCESS';
+    $past_turns = array_reverse($this->getPastTurns());
+    $eliminations = array();
+    foreach ($past_turns as $turn) {
+      if (!empty($turn['events'])) {
+        foreach ($turn['events'] as $event) {
+          if (!empty($event['changes'])) {
+            foreach ($event['changes'] as $change) {
+              if ($change['className'] == 'Djambi\\Gameplay\\FactionChange' && $change['change'] == 'alive'
+                  && $change['newValue'] === FALSE && !isset($eliminations[$change['object']])) {
+                $eliminations[$change['object']] = $turn['id'];
+              }
+            }
+          }
+        }
+      }
     }
-    elseif ($destination_cell->getType() == Cell::TYPE_THRONE && $target_piece->getDescription()->hasHabilityAccessThrone() && !$target_piece->isAlive()) {
-      $special_event = 'THRONE_MAUSOLEUM';
-    }
-    elseif ($origin_cell_object->getType() == Cell::TYPE_THRONE && $target_piece->getDescription()->hasHabilityAccessThrone() && $target_piece->isAlive()) {
-      $special_event = 'THRONE_RETREAT';
-    }
-    elseif ($origin_cell_object->getType() == Cell::TYPE_THRONE && $target_piece->getDescription()->hasHabilityAccessThrone() && !$target_piece->isAlive()) {
-      if ($acting_piece->getDescription()->hasHabilityKillThroneLeader()) {
-        $special_event = 'THRONE_MURDER';
+    $last_ranking = 2;
+    $last_turn_id = NULL;
+    $same_rank = 1;
+    foreach ($eliminations as $faction_id => $turn_id) {
+      if ($turn_id == $last_turn_id) {
+        $ranking = $last_ranking - ($same_rank++);
       }
       else {
-        $special_event = 'THRONE_EVACUATION';
+        $ranking = $last_ranking;
+        $same_rank = 1;
       }
+      $last_ranking++;
+      $last_turn_id = $turn_id;
+      $this->findFactionById($faction_id)->setRanking($ranking);
     }
-    else {
-      $special_event = NULL;
-    }
-    $move = array(
-      //'turn' => $this->getCurrentTurnId(),
-      'time' => time(),
-      'target_faction' => $target_piece->getFaction()->getControl()->getId(),
-      'target' => $target_piece->getId(),
-      'from' => $origin_cell_object->getName(),
-      'to' => $destination_cell->getName(),
-      'type' => $type,
-    );
-    if (!is_null($acting_piece)) {
-      $move['acting'] = $acting_piece->getId();
-      $move['acting_faction'] = $acting_piece->getFaction()->getControl()->getId();
-    }
-    if (!is_null($special_event)) {
-      $this->logEvent('event', $special_event, array('piece' => $move['target']));
-      $move['special_event'] = $special_event;
-    }
-    //$this->moves[] = $move;
     return $this;
   }
 

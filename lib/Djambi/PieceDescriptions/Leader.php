@@ -12,6 +12,6 @@ class Leader extends BasePieceDescription {
       self::HABILITY_KILL_THRONE_LEADER => TRUE,
       self::HABILITY_ACCESS_THRONE => TRUE,
     ));
-    $this->describePiece('leader', 'L', new GlossaryTerm(Glossary::LEADER), $num, $start_position, 10);
+    $this->describePiece('leader', 'L', new GlossaryTerm(Glossary::PIECE_LEADER), $num, $start_position, 10);
   }
 }

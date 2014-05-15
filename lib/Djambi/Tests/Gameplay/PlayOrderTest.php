@@ -123,6 +123,10 @@ class PlayOrderTest extends BaseDjambiTest {
     $this->checkGameFinished('t4');
     $last_turn = array_pop($grid->getPastTurns());
     $this->assertEquals(4, $last_turn['round']);
+    $this->assertEquals(1, $grid->findFactionById('t4')->getRanking());
+    $this->assertEquals(2, $grid->findFactionById('t2')->getRanking());
+    $this->assertEquals(3, $grid->findFactionById('t1')->getRanking());
+    $this->assertEquals(4, $grid->findFactionById('t3')->getRanking());
   }
 
   public function testPlayOrderAfterThroneAccessScenario2() {
@@ -151,6 +155,10 @@ class PlayOrderTest extends BaseDjambiTest {
     $grid->getPlayingFaction()->withdraw();
 
     $this->checkGameFinished('t4');
+    $this->assertEquals(1, $grid->findFactionById('t4')->getRanking());
+    $this->assertEquals(2, $grid->findFactionById('t1')->getRanking());
+    $this->assertEquals(3, $grid->findFactionById('t3')->getRanking());
+    $this->assertEquals(4, $grid->findFactionById('t2')->getRanking());
   }
 
   public function testPlayOrderAfterLeaderKillScenario1() {
@@ -218,6 +226,10 @@ class PlayOrderTest extends BaseDjambiTest {
     $grid->getPlayingFaction()->withdraw();
 
     $this->checkGameFinished('t4');
+    $this->assertEquals(1, $grid->findFactionById('t4')->getRanking());
+    $this->assertEquals(2, $grid->findFactionById('t3')->getRanking());
+    $this->assertEquals(3, $grid->findFactionById('t2')->getRanking());
+    $this->assertEquals(4, $grid->findFactionById('t1')->getRanking());
   }
 
   public function testPlayOrderAfterLeaderKillScenario2() {
@@ -270,6 +282,10 @@ class PlayOrderTest extends BaseDjambiTest {
     $this->doMove($grid->findPieceById('t1-L'), 'E5', array('murder' => array('choice' => 'A3')));
 
     $this->checkGameFinished('t1');
+    $this->assertEquals(1, $grid->findFactionById('t1')->getRanking());
+    $this->assertEquals(2, $grid->findFactionById('t2')->getRanking());
+    $this->assertEquals(3, $grid->findFactionById('t3')->getRanking());
+    $this->assertEquals(4, $grid->findFactionById('t4')->getRanking());
 
   }
 

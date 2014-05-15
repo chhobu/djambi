@@ -10,6 +10,6 @@ class Militant extends BasePieceDescription {
       self::HABILITY_LIMITED_MOVE => 2,
       self::HABILITY_KILL_BY_ATTACK => TRUE,
     ));
-    $this->describePiece('militant', 'M', new GlossaryTerm(Glossary::MILITANT), $num, $start_position, 1);
+    $this->describePiece('militant', 'M', new GlossaryTerm(Glossary::PIECE_MILITANT), $num, $start_position, 1);
   }
 }

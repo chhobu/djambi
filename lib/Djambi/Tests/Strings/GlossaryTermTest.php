@@ -38,10 +38,10 @@ class GlossaryTermTest extends BaseDjambiTest {
   public function provideTerms() {
     return array(
       array(
-        Glossary::BLUE,
+        Glossary::SIDE_BLUE,
         NULL,
-        Glossary::BLUE,
-        $this->translaterTestHandler(Glossary::BLUE, NULL),
+        Glossary::SIDE_BLUE,
+        $this->translaterTestHandler(Glossary::SIDE_BLUE, NULL),
       ),
       array(
         'Test n°!num',
@@ -51,9 +51,9 @@ class GlossaryTermTest extends BaseDjambiTest {
       ),
       array(
         'Test n°!num is %color',
-        array('!num' => 3, '%color' => new GlossaryTerm(Glossary::BLUE)),
-        'Test n°3 is ' . Glossary::BLUE,
-        'Tast n°3 is ' . $this->translaterTestHandler(Glossary::BLUE, NULL),
+        array('!num' => 3, '%color' => new GlossaryTerm(Glossary::SIDE_BLUE)),
+        'Test n°3 is ' . Glossary::SIDE_BLUE,
+        'Tast n°3 is ' . $this->translaterTestHandler(Glossary::SIDE_BLUE, NULL),
       ),
     );
   }
@@ -64,8 +64,8 @@ class GlossaryTermTest extends BaseDjambiTest {
 
   public function testListGlossaryTerms() {
     $terms = Glossary::getInstance()->getGlossaryTerms();
-    $this->assertArrayHasKey('ASSASSIN', $terms);
-    $this->assertEquals($terms['ASSASSIN'], Glossary::ASSASSIN);
+    $this->assertArrayHasKey('PIECE_ASSASSIN', $terms);
+    $this->assertEquals($terms['PIECE_ASSASSIN'], Glossary::PIECE_ASSASSIN);
   }
 
   /**
@@ -83,9 +83,9 @@ class GlossaryTermTest extends BaseDjambiTest {
   }
 
   public function provideTermsForPersistance() {
-    $term1 = new GlossaryTerm(Glossary::BLUE);
+    $term1 = new GlossaryTerm(Glossary::SIDE_BLUE);
     $values[] = array($term1, array(
-      'string' => Glossary::BLUE,
+      'string' => Glossary::SIDE_BLUE,
       ));
     $term2 = new GlossaryTerm("Test n°!num %check is ?color", array(
       '!num' => 2,

@@ -408,8 +408,7 @@ class BasicGameManager extends PersistantDjambiObject implements GameManagerInte
         $this->delete();
       }
       else {
-        $grid->logEvent('info', 'TEAM_EXIT', array('!player' => $player->displayName()));
-        $this->save(__CLASS__);
+        $this->save();
       }
     }
     else {
@@ -443,10 +442,6 @@ class BasicGameManager extends PersistantDjambiObject implements GameManagerInte
     if ($nb_empty_factions == 0) {
       $this->setStatus(self::STATUS_PENDING)->play();
     }
-    $grid->logEvent('info', 'NEW_TEAM', array(
-      'faction1' => $target->getId(),
-      '!player' => $player->displayName(),
-    ));
     $this->save();
     return $this;
   }

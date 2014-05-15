@@ -11,6 +11,6 @@ class Assassin extends BasePieceDescription {
       self::HABILITY_KILL_THRONE_LEADER => TRUE,
       self::HABILITY_SIGNATURE => TRUE,
     ));
-    $this->describePiece('assassin', 'A', new GlossaryTerm(Glossary::ASSASSIN), $num, $start_position, 2);
+    $this->describePiece('assassin', 'A', new GlossaryTerm(Glossary::PIECE_ASSASSIN), $num, $start_position, 2);
   }
 }

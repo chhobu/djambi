@@ -10,6 +10,6 @@ class Reporter extends BasePieceDescription {
       self::HABILITY_KILL_BY_PROXIMITY => TRUE,
       self::HABILITY_KILL_THRONE_LEADER => TRUE,
     ));
-    $this->describePiece('reporter', 'R', new GlossaryTerm(Glossary::REPORTER), $num, $start_position, 3);
+    $this->describePiece('reporter', 'R', new GlossaryTerm(Glossary::PIECE_REPORTER), $num, $start_position, 3);
   }
 }
