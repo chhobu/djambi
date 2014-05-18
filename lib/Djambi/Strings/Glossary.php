@@ -31,19 +31,22 @@ class Glossary {
   const EXCEPTION_REPORTAGE_BAD_VICTIM_CHOICE = "Attempt to make a reportage in %location without required authorizations.";
   const EXCEPTION_PIECE_NOT_FOUND = "Piece with id @piece not found.";
   const EXCEPTION_CELL_NOT_FOUND = "Cell with name @name not found.";
+  const EXCEPTION_MAX_SKIPPED_TURNS = "You are not allowed anymore to skip turns.";
+  const EXCEPTION_WITHDRAW = "This faction cannot be withdrawn from the game.";
+  const EXCEPTION_ASK_DRAW_DISALLOWED = "You are not allowed to ask for a draw now.";
+  const EXCEPTION_DRAW_ANSWER_DISALLOWED = "You cannot enter peace negociation now.";
 
   const EVENT_WINNER = "Faction !faction_id wins !";
   const EVENT_DRAW = "No winner, this is a boring and disappointing draw.";
   const EVENT_THIS_IS_THE_END = "Game over...";
   const EVENT_SURROUNDED = "The piece !piece_id is surrounded by dead pieces and cannot access to power anymore.";
-  const EVENT_COMEBACK_AFTER_SURROUND = "Faction !faction_id can come back and play again this game, as their leader is not surrounded by dead pieces anymore.";
+  const EVENT_COMEBACK_AFTER_SURROUND = "The !faction_id side got some new hope and can come back in this game, as their leader is not surrounded by dead pieces anymore.";
   const EVENT_ELIMINATION = "The piece !piece_id is now totally useless and has nothing to do anymore in this game.";
   const EVENT_CHANGING_SIDE = "The remaining partisans of faction !faction_id1 are now supporting faction !faction_id2 leader.";
   const EVENT_INDEPENDANT_SIDE = "The remaining partisans of faction !faction_id1 have decided to stop their support to the disapointing faction !faction_id2 leader.";
   const EVENT_FACTION_GAME_OVER = "Game over for faction !faction_id.";
   const EVENT_SKIPPED_TURN = "The faction !faction_id skipped his turn (!nb skipped turn(s) since game beginning).";
   const EVENT_WITHDRAWAL = "The faction !faction_id are too desperate to continue, they have decided to withdraw from the game. Cowards !";
-  const EVENT_COMEBACK_AFTER_WITHDRAW = "The !faction_id side got some new hope and is back in the game.";
   const EVENT_DRAW_PROPOSAL = "The !faction_id side has called for a draw.";
   const EVENT_DRAW_ACCEPTED = "The !faction_id side accepted the draw proposal.";
   const EVENT_DRAW_REJECTED = "The !faction_id side rejected the draw proposal.";

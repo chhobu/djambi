@@ -423,12 +423,13 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
    *   Grille de Djambi courante
    */
   public function cancelLastTurn() {
+    $this->getCurrentTurn()->resetMove();
     $last_turn_array = array_pop($this->pastTurns);
     $context['battlefield'] = $this;
     unset($last_turn_array['end']);
     /** @var Turn $last_turn */
     $last_turn = call_user_func($last_turn_array['className'] . '::fromArray', $last_turn_array, $context);
-    $last_turn->cancelCompletedMove();
+    $last_turn->cancelCompletedTurn();
     $this->currentTurn = NULL;
     $this->playOrder = NULL;
     $this->getGameManager()->save();
@@ -617,8 +618,8 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     return $this->playOrder;
   }
 
-  public function prepareTurn() {
-    if (is_null($this->getPlayOrder())) {
+  public function prepareTurn($reset = FALSE) {
+    if ($reset || is_null($this->getPlayOrder())) {
       $this->definePlayOrder();
       $this->defineMovablePieces();
     }
@@ -634,6 +635,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     $scheme_size = count($this->factions) * 2;
     $turn_scheme = array();
     $events = array();
+    $peace_negociation = $this->getGameManager()->getStatus() == BasicGameManager::STATUS_DRAW_PROPOSAL;
     foreach ($this->factions as $faction) {
       if ($faction->isAlive() && $faction->getControl()->getId() == $faction->getId()) {
         $nb_factions++;
@@ -642,7 +644,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
         "side" => $faction->getId(),
         "type" => Cell::TYPE_STANDARD,
         "played" => FALSE,
-        "playable" => $faction->getControl()->getId() == $faction->getId(),
+        "playable" => $faction->getControl()->getId() == $faction->getId() && (!$peace_negociation || $peace_negociation && $faction->getDrawStatus() == Faction::DRAW_STATUS_UNDECIDED),
         "alive" => $faction->isAlive(),
         "new_round" => FALSE,
       );
@@ -674,45 +676,34 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
       $current_round = 1;
     }
     // Gestion des tours de jeu liés à l'occupation de la case centrale
-    if ($this->getGameManager()->getStatus() == BasicGameManager::STATUS_PENDING) {
-      $this->findRuler();
-      if (!empty($this->ruler)) {
-        if ($nb_factions > 2) {
-          $ruler_key = $this->findFactionById($this->ruler)->getStartOrder() * 2 - 2;
-          while (isset($turn_scheme[$ruler_key])) {
-            if ($turn_scheme[$ruler_key]['alive']) {
-              $turn_scheme[$ruler_key]['exclude'][] = $this->ruler;
-              break;
-            }
-            $ruler_key = $ruler_key - 2;
+    $this->findRuler();
+    if (!empty($this->ruler)) {
+      if ($nb_factions > 2) {
+        $ruler_key = $this->findFactionById($this->ruler)->getStartOrder() * 2 - 2;
+        while (isset($turn_scheme[$ruler_key])) {
+          if ($turn_scheme[$ruler_key]['alive']) {
+            $turn_scheme[$ruler_key]['exclude'][] = $this->ruler;
+            break;
           }
-          $ruler_key = $this->findFactionById($this->ruler)->getStartOrder() * 2 - 2 + $scheme_size;
-          while (isset($turn_scheme[$ruler_key])) {
-            if ($turn_scheme[$ruler_key]['alive'] && $turn_scheme[$ruler_key]['side'] != $this->ruler) {
-              $turn_scheme[$ruler_key]['exclude'][] = $this->ruler;
-              break;
-            }
-            $ruler_key = $ruler_key - 2;
-          }
+          $ruler_key = $ruler_key - 2;
         }
-        foreach ($turn_scheme as $key => $scheme) {
-          if ($scheme['type'] == Cell::TYPE_THRONE) {
-            $turn_scheme[$key]['side'] = $this->ruler;
-            if (in_array($this->ruler, $scheme['exclude'])) {
-              $turn_scheme[$key]['playable'] = FALSE;
-            }
+        $ruler_key = $this->findFactionById($this->ruler)->getStartOrder() * 2 - 2 + $scheme_size;
+        while (isset($turn_scheme[$ruler_key])) {
+          if ($turn_scheme[$ruler_key]['alive'] && $turn_scheme[$ruler_key]['side'] != $this->ruler) {
+            $turn_scheme[$ruler_key]['exclude'][] = $this->ruler;
+            break;
           }
+          $ruler_key = $ruler_key - 2;
         }
       }
-    }
-    // Ne pas répéter les tours de jeu de la faction au pouvoir
-    // dans le cas d'une négociation de paix
-    elseif ($this->getGameManager()->getStatus() == BasicGameManager::STATUS_DRAW_PROPOSAL) {
       foreach ($turn_scheme as $key => $scheme) {
-        if (!empty($scheme['side']) && $scheme['playable']) {
-          $side = $this->findFactionById($scheme['side']);
-          if (!is_null($side->getDrawStatus())) {
+        if ($scheme['type'] == Cell::TYPE_THRONE) {
+          $turn_scheme[$key]['side'] = $this->ruler;
+          if (in_array($this->ruler, $scheme['exclude'])) {
             $turn_scheme[$key]['playable'] = FALSE;
+          }
+          elseif ($peace_negociation) {
+            break;
           }
         }
       }
@@ -903,7 +894,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
         }
       }
     }
-    $last_ranking = 2;
+    $last_ranking = $begin + 1;
     $last_turn_id = NULL;
     $same_rank = 1;
     foreach ($eliminations as $faction_id => $turn_id) {

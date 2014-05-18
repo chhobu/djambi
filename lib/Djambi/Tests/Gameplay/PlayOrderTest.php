@@ -289,9 +289,4 @@ class PlayOrderTest extends BaseDjambiTest {
 
   }
 
-  protected function checkPlayOrder($expected) {
-    $play_order = $this->game->getBattlefield()->getPlayOrder();
-    $this->assertEquals($expected, array_values($play_order), "Play order (" . implode(", ", $play_order) . ") was not what was expected");
-  }
-
 }

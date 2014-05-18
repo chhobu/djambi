@@ -7,6 +7,7 @@
 
 namespace Djambi\Gameplay;
 
+use Djambi\Exceptions\DisallowedActionException;
 use Djambi\GameManagers\BasicGameManager;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Persistance\PersistantDjambiObject;
@@ -127,10 +128,10 @@ class Faction extends PersistantDjambiObject {
     // Récupération du contrôle
     foreach ($battlefield->getFactions() as $referenced_faction) {
       if ($referenced_faction->getId() == $array['control']) {
-        $faction->setControl($referenced_faction);
+        $faction->setControl($referenced_faction, FALSE);
       }
       elseif ($faction->getId() == $referenced_faction->getId()) {
-        $referenced_faction->setControl($faction);
+        $referenced_faction->setControl($faction, FALSE);
       }
     }
     return $faction;
@@ -414,7 +415,18 @@ class Faction extends PersistantDjambiObject {
     return $this;
   }
 
+  public function canSkipTurn() {
+    $max_skipped_turns = $this->getBattlefield()->getGameManager()->getOption(StandardRuleset::GAMEPLAY_ELEMENT_SKIPPED_TURNS);
+    if ($this->getSkippedTurns() < $max_skipped_turns || $max_skipped_turns == -1) {
+      return TRUE;
+    }
+    return FALSE;
+  }
+
   public function skipTurn() {
+    if (!$this->canSkipTurn()) {
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MAX_SKIPPED_TURNS));
+    }
     $this->addSkippedTurn();
     $event = new Event(new GlossaryTerm(Glossary::EVENT_SKIPPED_TURN, array(
       '!faction_id' => $this->getId(),
@@ -427,6 +439,9 @@ class Faction extends PersistantDjambiObject {
   }
 
   public function withdraw() {
+    if (!$this->isAlive() || !$this->isSelfControlled()) {
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_WITHDRAW));
+    }
     $event = new Event(new GlossaryTerm(Glossary::EVENT_WITHDRAWAL, array(
       '!faction_id1' => $this->getId(),
     )), Event::LOG_LEVEL_MAJOR);
@@ -436,33 +451,20 @@ class Faction extends PersistantDjambiObject {
     return $this;
   }
 
-  public function canComeBackAfterWithdraw() {
-    if ($this->getStatus() == self::STATUS_WITHDRAW
-        && $this->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'allowed'
-        && $this->isSelfControlled()
-        && $this->checkLeaderFreedom()) {
+  public function canCallForADraw() {
+    $draw_proposal_rule = $this->getBattlefield()->getGameManager()->getOption(StandardRuleset::GAMEPLAY_ELEMENT_DRAW_DELAY);
+    if ($draw_proposal_rule == -1 || $this->getBattlefield()->getCurrentTurn()->getRound() >= $this->getLastDrawProposal() + $draw_proposal_rule) {
       return TRUE;
     }
-    else {
-      return FALSE;
-    }
-  }
-
-  public function comeBackAfterWithdraw() {
-    if ($this->canComeBackAfterWithdraw()) {
-      $this->setStatus(self::STATUS_READY);
-      $event = new Event(new GlossaryTerm(Glossary::EVENT_COMEBACK_AFTER_WITHDRAW, array(
-        '!faction_id' => $this->getId(),
-      )), Event::LOG_LEVEL_MAJOR);
-      $event->logChange(new FactionChange($this, 'status', self::STATUS_WITHDRAW, self::STATUS_READY));
-      $this->getBattlefield()->getCurrentTurn()->logEvent($event);
-    }
-    return $this;
+    return FALSE;
   }
 
   public function callForADraw() {
+    if ($this->getBattlefield()->getGameManager()->getStatus() != BasicGameManager::STATUS_PENDING || !$this->canCallForADraw()) {
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_ASK_DRAW_DISALLOWED));
+    }
     $old_draw_value = $this->getLastDrawProposal();
-    $this->setLastDrawProposal($this->getBattlefield()->getCurrentTurn()->getId());
+    $this->setLastDrawProposal($this->getBattlefield()->getCurrentTurn()->getRound());
     $event = new Event(new GlossaryTerm(Glossary::EVENT_DRAW_PROPOSAL, array(
       '!faction_id' => $this->getId(),
     )));
@@ -481,6 +483,10 @@ class Faction extends PersistantDjambiObject {
   }
 
   public function acceptDraw() {
+    if ($this->getBattlefield()->getGameManager()->getStatus() != BasicGameManager::STATUS_DRAW_PROPOSAL &&
+      $this->getDrawStatus() != static::DRAW_STATUS_UNDECIDED) {
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_DRAW_ANSWER_DISALLOWED));
+    }
     $event = new Event(new GlossaryTerm(Glossary::EVENT_DRAW_ACCEPTED, array(
       '!faction_id' => $this->getId(),
     )));
@@ -508,6 +514,10 @@ class Faction extends PersistantDjambiObject {
   }
 
   public function rejectDraw() {
+    if ($this->getBattlefield()->getGameManager()->getStatus() != BasicGameManager::STATUS_DRAW_PROPOSAL &&
+      $this->getDrawStatus() != static::DRAW_STATUS_UNDECIDED) {
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_DRAW_ANSWER_DISALLOWED));
+    }
     $event = new Event(new GlossaryTerm(Glossary::EVENT_DRAW_REJECTED, array(
       '!faction_id' => $this->getId(),
     )));
@@ -517,7 +527,7 @@ class Faction extends PersistantDjambiObject {
       $event->logChange(new FactionChange($faction, 'drawStatus', static::DRAW_STATUS_UNDECIDED, NULL));
     }
     $this->getBattlefield()->getCurrentTurn()->logEvent($event);
-    $this->getBattlefield()->getGameManager()->save();
+    $this->getBattlefield()->prepareTurn(TRUE);
     return $this;
   }
 

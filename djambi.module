@@ -39,8 +39,16 @@ function djambi_theme() {
       'file' => 'djambi.theme.inc',
     ),
     'djambi_piece_full_name' => array(
-      'variables' => array('piece' => NULL, 'html' => TRUE),
+      'variables' => array(
+        'piece' => NULL,
+        'html' => TRUE,
+        'display_dead_name' => FALSE,
+      ),
       'template' => 'djambi-piece-full-name',
+    ),
+    'djambi_faction_full_name' => array(
+      'variables' => array('faction' => NULL),
+      'template' => 'djambi-faction-full-name',
     ),
   );
 }

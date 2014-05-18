@@ -14,7 +14,7 @@ class PieceChange extends BaseChange {
   public static function objectLoad($array, $context) {
     /** @var Battlefield $battlefield */
     $battlefield = $context['battlefield'];
-    return $battlefield->findPieceById($array['id']);
+    return $battlefield->findPieceById($array);
   }
 
   /**

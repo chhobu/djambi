@@ -35,6 +35,11 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
     $this->assertEquals($faction_id, $playing_faction_id, "Current playing faction is " . $playing_faction_id);
   }
 
+  protected function checkPlayOrder($expected) {
+    $play_order = $this->game->getBattlefield()->getPlayOrder();
+    $this->assertEquals($expected, array_values($play_order), "Play order (" . implode(", ", $play_order) . ") was not what was expected");
+  }
+
   protected function checkPosition(Piece $piece, $position) {
     $this->assertEquals($position, $piece->getPosition()->getName());
     $occupant = $this->game->getBattlefield()->findCellByName($position)->getOccupant();
@@ -55,7 +60,14 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
     $this->checkGameStatus(BasicGameManager::STATUS_FINISHED);
     $this->assertEquals(NULL, $grid->getPlayingFaction());
     $this->assertEquals(NULL, $grid->getCurrentTurn());
-    $this->assertEquals(Faction::STATUS_WINNER, $grid->findFactionById($winner)->getStatus());
+    if (!is_array($winner)) {
+      $this->assertEquals(Faction::STATUS_WINNER, $grid->findFactionById($winner)->getStatus());
+    }
+    else {
+      foreach ($winner as $faction_id) {
+        $this->assertEquals(Faction::STATUS_DRAW, $grid->findFactionById($faction_id)->getStatus());
+      }
+    }
   }
 
   protected function doMove($piece, $destination, $expected_interactions = array(), $is_completed = TRUE) {

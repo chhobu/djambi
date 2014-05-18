@@ -1,7 +1,7 @@
 {% if html %}
 <span class="piece-name piece-type-{{ piece.description.type }} faction-origine-{{ piece.faction.class }} faction-{{ piece.faction.control.class }}">
 {% endif %}
-{% if piece.isAlive() != true %}
+{% if display_dead_name != true and piece.isAlive() != true %}
   {{ 'a dead piece'|t }}
 {% elseif piece.description.num is empty %}
   {{ '@side @piece'|t({ '@side': piece.faction.name, '@piece': piece.description.genericName }) }}

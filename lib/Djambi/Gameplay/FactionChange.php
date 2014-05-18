@@ -14,7 +14,7 @@ class FactionChange extends BaseChange {
   public static function objectLoad($array, $context) {
     /** @var Battlefield $battlefield */
     $battlefield = $context['battlefield'];
-    return $battlefield->findFactionById($array['id']);
+    return $battlefield->findFactionById($array);
   }
 
   /**

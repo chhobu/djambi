@@ -150,8 +150,15 @@ class Turn extends PersistantDjambiObject {
     return $this;
   }
 
-  public function cancelCompletedMove() {
-    $this->move->revert(FALSE);
+  public function cancelCompletedTurn() {
+    if (!empty($this->move)) {
+      $this->move->revert(FALSE);
+    }
+    if (!empty($this->events)) {
+      foreach ($this->events as $event) {
+        $event->revertChanges();
+      }
+    }
     $this->move = new Move($this->actingFaction);
     return $this;
   }

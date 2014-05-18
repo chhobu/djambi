@@ -27,9 +27,11 @@ interface BattlefieldInterface {
   public function changeTurn();
 
   /**
+   * @param bool $reset
+   *
    * @return BattlefieldInterface
    */
-  public function prepareTurn();
+  public function prepareTurn($reset = FALSE);
 
   /**
    * @return Faction[]
@@ -64,6 +66,16 @@ interface BattlefieldInterface {
    * @return Turn
    */
   public function getCurrentTurn();
+
+  /**
+   * @return $this
+   */
+  public function cancelLastTurn();
+
+  /**
+   * @return array
+   */
+  public function getPastTurns();
 
   /**
    * @param string $name

@@ -36,6 +36,9 @@ abstract class BaseChange extends PersistantDjambiObject {
 
   public static function fromArray(array $array, array $context = array()) {
     $object = static::objectLoad($array['object'], $context);
+    if (!isset($array['oldValue'])) {
+      $array['oldValue'] = NULL;
+    }
     return new static($object, $array['change'], $array['oldValue'], $array['newValue']);
   }
 

@@ -11,6 +11,7 @@ namespace Drupal\djambi\Form;
 
 use Composer\Autoload\ClassLoader;
 use Djambi\GameManagers\GameManagerInterface;
+use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Piece;
 use Djambi\Strings\Glossary;
 use Drupal\Core\Form\FormBase;
@@ -44,6 +45,14 @@ abstract class DjambiFormBase extends FormBase {
       '#theme' => 'djambi_piece_full_name',
       '#piece' => $piece,
       '#html' => $html,
+    );
+    return drupal_render($elements);
+  }
+
+  public static function printFactionFullName(Faction $faction) {
+    $elements = array(
+      '#theme' => 'djambi_faction_full_name',
+      '#faction' => $faction,
     );
     return drupal_render($elements);
   }

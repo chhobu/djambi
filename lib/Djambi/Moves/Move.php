@@ -333,16 +333,18 @@ class Move extends PersistantDjambiObject {
         $victim->setPosition($this->getDestination());
       }
     }
-    $this->getSelectedPiece()->setPosition($this->getOrigin());
-    if ($full_clean) {
-      $this->getSelectedPiece()->buildAllowableMoves();
-      $this->setPhase(static::PHASE_PIECE_SELECTION);
-      $this->selectedPiece = NULL;
-      $this->destination = NULL;
-      $this->origin = NULL;
-      $this->interactions = array();
-      $this->kills = array();
-      $this->events = array();
+    if (!is_null($this->getSelectedPiece())) {
+      $this->getSelectedPiece()->setPosition($this->getOrigin());
+      if ($full_clean) {
+        $this->getSelectedPiece()->buildAllowableMoves();
+        $this->setPhase(static::PHASE_PIECE_SELECTION);
+        $this->selectedPiece = NULL;
+        $this->destination = NULL;
+        $this->origin = NULL;
+        $this->interactions = array();
+        $this->kills = array();
+        $this->events = array();
+      }
     }
   }
 

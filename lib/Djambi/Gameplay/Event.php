@@ -88,8 +88,10 @@ class Event extends PersistantDjambiObject {
 
   public function revertChanges() {
     /** @var BaseChange $change */
-    foreach (array_reverse($this->getChanges()) as $change) {
-      $change->revert();
+    if (!empty($this->getChanges())) {
+      foreach (array_reverse($this->getChanges()) as $change) {
+        $change->revert();
+      }
     }
     return $this;
   }
