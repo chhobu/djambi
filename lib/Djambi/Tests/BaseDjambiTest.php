@@ -7,7 +7,7 @@
  */
 
 namespace Djambi\Tests;
-
+require_once 'bootstrap.php';
 
 use Djambi\GameManagers\BasicGameManager;
 use Djambi\Gameplay\Cell;

@@ -121,7 +121,8 @@ class PlayOrderTest extends BaseDjambiTest {
     ));
 
     $this->checkGameFinished('t4');
-    $last_turn = array_pop($grid->getPastTurns());
+    $turns = $grid->getPastTurns();
+    $last_turn = array_pop($turns);
     $this->assertEquals(4, $last_turn['round']);
     $this->assertEquals(1, $grid->findFactionById('t4')->getRanking());
     $this->assertEquals(2, $grid->findFactionById('t2')->getRanking());

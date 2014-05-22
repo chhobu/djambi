@@ -6,7 +6,6 @@ use Djambi\Exceptions\Exception;
 use Djambi\GameFactories\GameFactory;
 use Djambi\GameManagers\BasicGameManager;
 use Djambi\GameManagers\GameManagerInterface;
-use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Faction;
 use Djambi\Moves\Manipulation;
 use Djambi\Moves\Move;
@@ -16,6 +15,14 @@ use Djambi\Moves\Necromobility;
 use Djambi\Moves\Reportage;
 use Djambi\Moves\ThroneEvacuation;
 use Drupal\Component\Utility\Crypt;
+use Drupal\djambi\Form\Actions\DjambiGridActionCancelLastTurn;
+use Drupal\djambi\Form\Actions\DjambiGridActionCancelPieceSelection;
+use Drupal\djambi\Form\Actions\DjambiGridActionDrawAccept;
+use Drupal\djambi\Form\Actions\DjambiGridActionDrawProposal;
+use Drupal\djambi\Form\Actions\DjambiGridActionDrawReject;
+use Drupal\djambi\Form\Actions\DjambiGridActionRestart;
+use Drupal\djambi\Form\Actions\DjambiGridActionSkipTurn;
+use Drupal\djambi\Form\Actions\DjambiGridActionWithdraw;
 use Drupal\djambi\Players\Drupal8Player;
 use Drupal\djambi\Services\ShortTempStore;
 use Drupal\djambi\Services\ShortTempStoreFactory;
@@ -144,13 +151,34 @@ class DjambiGridForm extends DjambiFormBase {
       '#djambi_game_manager' => $this->getGameManager(),
     );
 
-    if ($this->getGameManager()->getStatus() == BasicGameManager::STATUS_PENDING) {
-      $this->buildFormGrid($form['grid']);
-    }
-    elseif ($this->getGameManager()->getStatus() == BasicGameManager::STATUS_DRAW_PROPOSAL) {
-      $this->buildFormDrawProposal($form['grid']);
+    $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
+    $form['turn_id'] = array(
+      '#type' => 'hidden',
+      '#value' => !empty($current_turn) ? $current_turn->getId() : NULL,
+    );
+
+    switch ($this->getGameManager()->getStatus()) {
+      case(BasicGameManager::STATUS_PENDING):
+        $this->buildFormGrid($form['grid']);
+        break;
+
+      case(BasicGameManager::STATUS_DRAW_PROPOSAL):
+        $this->buildFormDrawProposal($form['grid']);
+        break;
+
+      case(BasicGameManager::STATUS_FINISHED):
+        $this->buildFormFinished($form['grid']);
     }
     return $form;
+  }
+
+  public function validateForm(array &$form, array &$form_state) {
+    $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
+    $current_turn_id = !empty($current_turn) ? $current_turn->getId() : NULL;
+    $transmitted_turn_id = $form_state['input']['turn_id'];
+    if ($current_turn_id != $transmitted_turn_id) {
+      $this->setFormError('turn_id', $form_state, $this->t("You are using an outdated version of this game. It has been now refreshed, you can now select an other action."));
+    }
   }
 
   public function submitForm(array &$form, array &$form_state) {
@@ -167,72 +195,28 @@ class DjambiGridForm extends DjambiFormBase {
     $grid_form['actions']['validation'] = array(
       '#type' => 'submit',
       '#value' => $this->t('Validate'),
+      '#validate' => array(array($this, 'validateForm')),
       '#submit' => array(array($this, 'submitForm')),
       '#attributes' => array('class' => array('button-primary')),
-    );
-    $rule_skip_turn = $this->getGameManager()->getOption(StandardRuleset::GAMEPLAY_ELEMENT_SKIPPED_TURNS);
-    if ($rule_skip_turn != 0) {
-      if (!$grid->getPlayingFaction()->canSkipTurn()) {
-        $label = $this->t('You cannot skip turns anymore');
-      }
-      elseif ($rule_skip_turn == -1) {
-        $label = $this->t('Skip turn');
-      }
-      else {
-        $label = $this->formatPlural($rule_skip_turn - $grid->getPlayingFaction()->getSkippedTurns(),
-          'Skip turn (only 1 allowed)', 'Skip turn (still @count allowed)');
-      }
-      $grid_form['actions']['skipTurn'] = array(
-        '#type' => 'submit',
-        '#value' => $label,
-        '#validate' => array(array($this, 'validateSkipTurn')),
-        '#submit' => array(array($this, 'submitForm')),
-        '#limit_validation_errors' => array(),
-        '#attributes' => array('class' => array('button-warning', 'button-skip-turn')),
-        '#disabled' => !$grid->getPlayingFaction()->canSkipTurn(),
-      );
-    }
-    $rule_draw_delay = $this->getGameManager()->getOption(StandardRuleset::GAMEPLAY_ELEMENT_DRAW_DELAY);
-    if ($rule_draw_delay != -1) {
-      $grid_form['actions']['draw'] = array(
-        '#type' => 'submit',
-        '#value' => $grid->getPlayingFaction()->canSkipTurn() ? $this->t('Ask for a draw') : $this->formatPlural($rule_skip_turn + $grid->getPlayingFaction()->getLastDrawProposal() - $grid->getCurrentTurn()->getRound(),
-          'You cannot ask for a draw until next round', 'You cannot ask for a draw until @count rounds'),
-        '#validate' => array(array($this, 'validateAskDraw')),
-        '#submit' => array(array($this, 'submitForm')),
-        '#limit_validation_errors' => array(),
-        '#attributes' => array('class' => array('button-secondary', 'button-ask-draw')),
-        '#disabled' => !$grid->getPlayingFaction()->canCallForADraw(),
-      );
-    }
-    $grid_form['actions']['withdraw'] = array(
-      '#type' => 'submit',
-      '#value' => $this->t('Withdraw'),
-      '#validate' => array(array($this, 'validateWithdraw')),
-      '#submit' => array(array($this, 'submitForm')),
-      '#limit_validation_errors' => array(),
-      '#attributes' => array('class' => array('button-danger', 'button-withdraw')),
-    );
-    $grid_form['actions']['cancelLastTurn'] = array(
-      '#type' => 'submit',
-      '#value' => $this->t('Cancel last turn'),
-      '#validate' => array(array($this, 'validateCancelLastTurn')),
-      '#submit' => array(array($this, 'submitForm')),
-      '#limit_validation_errors' => array(),
-      '#attributes' => array('class' => array('button-cancel')),
-      '#disabled' => count($grid->getPastTurns()) == 0,
     );
 
     switch ($current_phase) {
       case(Move::PHASE_PIECE_SELECTION):
+        DjambiGridActionSkipTurn::addButton($this, $grid_form['actions']);
+        DjambiGridActionDrawProposal::addButton($this, $grid_form['actions']);
+        DjambiGridActionWithdraw::addButton($this, $grid_form['actions']);
+        DjambiGridActionCancelLastTurn::addButton($this, $grid_form['actions']);
+        DjambiGridActionRestart::addButton($this, $grid_form['actions']);
         $this->buildFormGridPieceSelection($grid_form);
         break;
 
       case(Move::PHASE_PIECE_DESTINATION):
+        DjambiGridActionCancelPieceSelection::addButton($this, $grid_form['actions']);
         $this->buildFormGridPieceDestination($grid_form);
         break;
 
       case(Move::PHASE_PIECE_INTERACTIONS):
+        DjambiGridActionCancelPieceSelection::addButton($this, $grid_form['actions']);
         $interaction = $grid->getCurrentTurn()->getMove()->getFirstInteraction();
         $args = array();
         if ($interaction->getSelectedPiece()->isAlive()) {
@@ -283,14 +267,13 @@ class DjambiGridForm extends DjambiFormBase {
       '#options' => $cell_choices,
       '#title' => $this->t('Select a movable piece...'),
     );
-    $grid_form['actions']['validation']['#validate'] = array(array($this, 'validatePieceSelection'));
+    $grid_form['actions']['validation']['#validate'][] = array($this, 'validatePieceSelection');
   }
 
   public function validatePieceSelection(array &$form, array &$form_state) {
     $grid = $this->getGameManager()->getBattlefield();
     try {
-      $piece = $grid->findCellByName($form_state['values']['cells'])
-        ->getOccupant();
+      $piece = $grid->findCellByName($form_state['values']['cells'])->getOccupant();
       $old_selected_piece = $grid->getCurrentTurn()->getMove()->getSelectedPiece();
       if (!is_null($old_selected_piece) && $old_selected_piece->getId() != $piece->getId()) {
         $grid->getCurrentTurn()->resetMove();
@@ -321,19 +304,7 @@ class DjambiGridForm extends DjambiFormBase {
         '!piece' => static::printPieceFullName($selected_piece),
       )),
     );
-    $grid_form['actions']['validation']['#validate'] = array(array($this, 'validatePieceDestination'));
-    $this->addCancelPieceSelectionButton($grid_form['actions']);
-  }
-
-  protected function addCancelPieceSelectionButton(&$form_part) {
-    $form_part['cancel_selection'] = array(
-      '#type' => 'submit',
-      '#value' => $this->t('Cancel piece selection'),
-      '#validate' => array(array($this, 'validatePieceSelectionCancel')),
-      '#submit' => array(array($this, 'submitForm')),
-      '#limit_validation_errors' => array(),
-      '#attributes' => array('class' => array('button-cancel')),
-    );
+    $grid_form['actions']['validation']['#validate'][] = array($this, 'validatePieceDestination');
   }
 
   public function validatePieceDestination(array &$form, array &$form_state) {
@@ -350,11 +321,6 @@ class DjambiGridForm extends DjambiFormBase {
     }
   }
 
-  public function validatePieceSelectionCancel(array &$form, array &$form_state) {
-    $grid = $this->getGameManager()->getBattlefield();
-    $grid->getCurrentTurn()->resetMove();
-  }
-
   protected function buildFormGridFreeCellSelection(&$grid_form, MoveInteractionInterface $interaction, $message) {
     $cell_choices = array();
     foreach ($interaction->getPossibleChoices() as $free_cell) {
@@ -368,10 +334,7 @@ class DjambiGridForm extends DjambiFormBase {
       '#options' => $cell_choices,
       '#title' => $message,
     );
-    $grid_form['actions']['validation']['#validate'] = array(
-      array($this, 'validateInteractionChoice'),
-    );
-    $this->addCancelPieceSelectionButton($grid_form['actions']);
+    $grid_form['actions']['validation']['#validate'][] = array($this, 'validateInteractionChoice');
   }
 
   protected function buildFormGridVictimChoice(&$grid_form, Reportage $interaction, $message) {
@@ -388,10 +351,7 @@ class DjambiGridForm extends DjambiFormBase {
       '#options' => $cell_choices,
       '#title' => $message,
     );
-    $grid_form['actions']['validation']['#validate'] = array(
-      array($this, 'validateInteractionChoice'),
-    );
-    $this->addCancelPieceSelectionButton($grid_form['actions']);
+    $grid_form['actions']['validation']['#validate'][] = array($this, 'validateInteractionChoice');
   }
 
   public function validateInteractionChoice(&$form, &$form_state) {
@@ -407,49 +367,9 @@ class DjambiGridForm extends DjambiFormBase {
       }
     }
     else {
-      $this->validatePieceSelectionCancel($form, $form_state);
+      $grid->getCurrentTurn()->resetMove();
       $this->setFormError('cells', $form_state, $this->t('Invalid move data. Please start again your actions.'));
     }
-  }
-
-  public function validateSkipTurn(&$form, &$form_state) {
-    $grid = $this->getGameManager()->getBattlefield();
-    try {
-      $grid->getPlayingFaction()->skipTurn();
-    }
-    catch (DisallowedActionException $exception) {
-      $this->setFormError('actions', $form_state, $this->t('Invalid action fired : @exception.', array(
-        '@exception' => $exception->getMessage(),
-      )));
-    }
-  }
-
-  public function validateWithdraw(&$form, &$form_state) {
-    $grid = $this->getGameManager()->getBattlefield();
-    try {
-      $grid->getPlayingFaction()->withdraw();
-    }
-    catch (DisallowedActionException $exception) {
-      $this->setFormError('actions', $form_state, $this->t('Invalid action fired : @exception', array(
-        '@exception' => $exception->getMessage(),
-      )));
-    }
-  }
-
-  public function validateAskDraw(&$form, &$form_state) {
-    $grid = $this->getGameManager()->getBattlefield();
-    try {
-      $grid->getPlayingFaction()->callForADraw();
-    }
-    catch (DisallowedActionException $exception) {
-      $this->setFormError('actions', $form_state, $this->t('Invalid action fired : @exception', array(
-        '@exception' => $exception->getMessage(),
-      )));
-    }
-  }
-
-  public function validateCancelLastTurn(&$form, &$form_state) {
-    $this->getGameManager()->getBattlefield()->cancelLastTurn();
   }
 
   public function buildFormDrawProposal(array &$grid_form) {
@@ -485,47 +405,14 @@ class DjambiGridForm extends DjambiFormBase {
           "The following sides have to announce their decisions : !factions.", array('!factions' => implode(', ', $undecided_factions))),
       );
     }
-    $grid_form['actions'] = array(
-      '#type' => 'actions',
-    );
-    $grid_form['actions']['rejectDraw'] = array(
-      '#type' => 'submit',
-      '#value' => $this->t("No, I'm sure to win this one !"),
-      '#submit' => array(array($this, 'submitForm')),
-      '#validate' => array(array($this, 'validateRejectDraw')),
-      '#limit_validation_errors' => array(),
-      '#attributes' => array('class' => array('button-primary', 'button-no')),
-    );
-    $grid_form['actions']['acceptDraw'] = array(
-      '#type' => 'submit',
-      '#value' => $this->t("Yes, let's end this mess and stay good friends."),
-      '#submit' => array(array($this, 'submitForm')),
-      '#validate' => array(array($this, 'validateAcceptDraw')),
-      '#limit_validation_errors' => array(),
-      '#attributes' => array('class' => array('button-danger', 'button-yes')),
-    );
+    $grid_form['actions'] = array('#type' => 'actions');
+    DjambiGridActionDrawReject::addButton($this, $grid_form['actions']);
+    DjambiGridActionDrawAccept::addButton($this, $grid_form['actions']);
   }
 
-  public function validateRejectDraw() {
-    try {
-      $this->getGameManager()->getBattlefield()->getPlayingFaction()->rejectDraw();
-    }
-    catch (DisallowedActionException $exception) {
-      $this->setFormError('actions', $form_state, $this->t('Invalid action fired : @exception', array(
-        '@exception' => $exception->getMessage(),
-      )));
-    }
-  }
-
-  public function validateAcceptDraw() {
-    try {
-      $this->getGameManager()->getBattlefield()->getPlayingFaction()->acceptDraw();
-    }
-    catch (DisallowedActionException $exception) {
-      $this->setFormError('actions', $form_state, $this->t('Invalid action fired : @exception', array(
-        '@exception' => $exception->getMessage(),
-      )));
-    }
+  public function buildFormFinished(array &$grid_form) {
+    $grid_form['actions'] = array('#type' => 'actions');
+    DjambiGridActionRestart::addButton($this, $grid_form['actions']);
   }
 
 }

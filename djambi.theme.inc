@@ -75,8 +75,8 @@ function template_preprocess_djambi_piece(&$variables) {
   /** @var \Djambi\Gameplay\Piece $piece */
   $piece = $variables['piece'];
   $extra_classes = array();
-  if (!empty($piece)) {
-    $move = $piece->getFaction()->getBattlefield()->getCurrentTurn()->getMove();
+  if (!empty($piece) && !is_null($current_turn = $piece->getFaction()->getBattlefield()->getCurrentTurn())) {
+    $move = $current_turn->getMove();
     if (!empty($move) && !empty($move->getSelectedPiece()) && $move->getSelectedPiece()->getId() == $piece->getId()) {
       $extra_classes[] = 'selected';
     }

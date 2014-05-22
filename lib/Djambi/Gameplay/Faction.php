@@ -200,6 +200,11 @@ class Faction extends PersistantDjambiObject {
     return $this->skippedTurns;
   }
 
+  public function setSkippedTurns($nb_turns) {
+    $this->skippedTurns = $nb_turns;
+    return $this;
+  }
+
   public function addSkippedTurn() {
     $this->skippedTurns++;
     return $this;

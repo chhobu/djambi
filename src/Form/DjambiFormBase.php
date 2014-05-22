@@ -79,7 +79,7 @@ abstract class DjambiFormBase extends FormBase {
   /**
    * @return GameManagerInterface
    */
-  protected function getGameManager() {
+  public function getGameManager() {
     return $this->gameManager;
   }
 
@@ -93,8 +93,14 @@ abstract class DjambiFormBase extends FormBase {
     return $this;
   }
 
-  public function validateForm(array &$form, array &$form_state) {}
+  public function resetGameManager() {
+    $this->gameManager = NULL;
+    return $this;
+  }
 
-  public function submitForm(array &$form, array &$form_state) {}
+  public function addFormError($name, &$form_state, $message) {
+    $this->setFormError($name, $form_state, $message);
+    return $this;
+  }
 
 }

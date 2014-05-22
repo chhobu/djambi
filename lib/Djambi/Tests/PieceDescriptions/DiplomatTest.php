@@ -220,7 +220,8 @@ class DiplomatTest extends BaseDjambiTest {
       'manipulation' => array('choice' => $manipulation),
       'evacuation' => array('choice' => 'D5'),
     ));
-    $saved_turn_array = end($grid->getPastTurns());
+    $turns = $grid->getPastTurns();
+    $saved_turn_array = end($turns);
     $saved_move = Turn::fromArray($saved_turn_array, $context)->getMove();
     $this->assertEquals(NULL, $saved_move->getFirstInteraction());
     $interactions = $saved_move->getInteractions();
