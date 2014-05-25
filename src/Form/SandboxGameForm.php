@@ -5,7 +5,6 @@ use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\Exception;
 use Djambi\GameFactories\GameFactory;
 use Djambi\GameManagers\BasicGameManager;
-use Djambi\GameManagers\GameManagerInterface;
 use Djambi\Gameplay\Faction;
 use Djambi\Moves\Manipulation;
 use Djambi\Moves\Move;
@@ -14,111 +13,38 @@ use Djambi\Moves\Murder;
 use Djambi\Moves\Necromobility;
 use Djambi\Moves\Reportage;
 use Djambi\Moves\ThroneEvacuation;
-use Drupal\Component\Utility\Crypt;
-use Drupal\djambi\Form\Actions\DjambiGridActionCancelLastTurn;
-use Drupal\djambi\Form\Actions\DjambiGridActionCancelPieceSelection;
-use Drupal\djambi\Form\Actions\DjambiGridActionDrawAccept;
-use Drupal\djambi\Form\Actions\DjambiGridActionDrawProposal;
-use Drupal\djambi\Form\Actions\DjambiGridActionDrawReject;
-use Drupal\djambi\Form\Actions\DjambiGridActionRestart;
-use Drupal\djambi\Form\Actions\DjambiGridActionSkipTurn;
-use Drupal\djambi\Form\Actions\DjambiGridActionWithdraw;
-use Drupal\djambi\Players\Drupal8Player;
-use Drupal\djambi\Services\ShortTempStore;
-use Drupal\djambi\Services\ShortTempStoreFactory;
-use Symfony\Component\DependencyInjection\ContainerInterface;
+use Djambi\Strings\GlossaryTerm;
+use Drupal\djambi\Form\Actions\CancelLastTurn;
+use Drupal\djambi\Form\Actions\CancelPieceSelection;
+use Drupal\djambi\Form\Actions\DrawAccept;
+use Drupal\djambi\Form\Actions\DrawProposal;
+use Drupal\djambi\Form\Actions\DrawReject;
+use Drupal\djambi\Form\Actions\Restart;
+use Drupal\djambi\Form\Actions\SkipTurn;
+use Drupal\djambi\Form\Actions\Withdraw;
+use Drupal\djambi\Utils\GameUI;
 
-class DjambiGridForm extends DjambiFormBase {
+class SandboxGameForm extends BaseGameForm {
 
-  const COOKIE_NAME = 'djambiplayerid';
-
-  /** @var ShortTempStore */
-  protected $tmpStore;
-
-  /** @var string */
-  protected $gameId;
+  const GAME_ID_PREFIX = 'sandbox-';
 
   /**
-   * @param ContainerInterface $container
-   *
-   * @return static
+   * @return $this
    */
-  public static function create(ContainerInterface $container) {
-    /** @var DjambiGridForm $form */
-    $form = parent::create($container);
-    /** @var ShortTempStoreFactory $tmp_store_factory */
-    $tmp_store_factory = $container->get('djambi.shorttempstore');
-    $user = $form->currentUser();
-    $full_cookie_name = 'Drupal_visitor_' . static::COOKIE_NAME;
-    $game_id_prefix = 'sandbox-';
-    if ($user->isAuthenticated()) {
-      $owner = $user->id();
-      $user_prefix = 'uid-';
-    }
-    else {
-      $player_cookie = $form->getRequest()->cookies->get($full_cookie_name);
-      if (is_null($player_cookie)) {
-        $owner = Crypt::hashBase64(REQUEST_TIME . session_id());
-        user_cookie_save(array(static::COOKIE_NAME => $owner));
-      }
-      else {
-        $owner = $player_cookie;
-      }
-      $user_prefix = 'cookie-';
-    }
-    $form->setTmpStore($tmp_store_factory->get('djambi', $owner));
-    $form->gameId = $game_id_prefix . $user_prefix . $owner;
-    return $form;
-  }
-
-  public function getGameId() {
-    return $this->gameId;
-  }
-
-  /**
-   * @return ShortTempStore
-   */
-  protected function getTmpStore() {
-    return $this->tmpStore;
-  }
-
-  protected function setTmpStore(ShortTempStore $tmp_store) {
-    $this->tmpStore = $tmp_store;
-    return $this;
-  }
-
-  /**
-   * @throws \Djambi\Exceptions\Exception
-   * @return GameManagerInterface
-   */
-  protected function createGameManager() {
-    $user = $this->currentUser();
-    $player = Drupal8Player::createEmptyHumanPlayer();
-    $player->useSeat();
-    $player->setAccount($user);
+  public function createGameManager() {
     $game_factory = new GameFactory();
     $game_factory->setMode(BasicGameManager::MODE_SANDBOX);
     $game_factory->setId($this->getGameId());
-    $game_factory->addPlayer($player);
+    $game_factory->addPlayer($this->getCurrentPlayer());
+    $this->getCurrentPlayer()->useSeat();
     $this->setGameManager($game_factory->createGameManager());
     $this->gameManager->play();
     $this->updateStoredGameManager();
     return $this;
   }
 
-  protected function updateStoredGameManager() {
-    $this->getTmpStore()->setIfOwner($this->getGameId(), $this->getGameManager());
-  }
-
-  protected function loadStoredGameManager() {
-    $stored_game_manager = $this->getTmpStore()->getIfOwner($this->getGameId());
-    if (empty($stored_game_manager)) {
-      $this->createGameManager();
-    }
-    else {
-      $this->setGameManager($stored_game_manager);
-    }
-    return $this;
+  public function getGameId() {
+    return static::GAME_ID_PREFIX . $this->getCurrentPlayer()->getId();
   }
 
   /**
@@ -144,10 +70,12 @@ class DjambiGridForm extends DjambiFormBase {
 
     $form['grid'] = array(
       '#type' => 'fieldset',
-      '#title' => $this->t('Sandbox Djambi grid #!id', array(
-        '!id' => $this->getGameManager()->getId(),
-      )),
       '#theme' => 'djambi_grid',
+      '#title' => $this->t('Game status : %status, started at %created, last change at %updated', array(
+        '%status' => new GlossaryTerm($this->getGameManager()->getStatus()),
+        '%created' => \Drupal::service('date')->format($this->getGameManager()->getBegin(), 'short'),
+        '%updated' => \Drupal::service('date')->format($this->getGameManager()->getChanged(), 'short'),
+      )),
       '#djambi_game_manager' => $this->getGameManager(),
     );
 
@@ -168,6 +96,7 @@ class DjambiGridForm extends DjambiFormBase {
 
       case(BasicGameManager::STATUS_FINISHED):
         $this->buildFormFinished($form['grid']);
+        break;
     }
     return $form;
   }
@@ -179,10 +108,6 @@ class DjambiGridForm extends DjambiFormBase {
     if ($current_turn_id != $transmitted_turn_id) {
       $this->setFormError('turn_id', $form_state, $this->t("You are using an outdated version of this game. It has been now refreshed, you can now select an other action."));
     }
-  }
-
-  public function submitForm(array &$form, array &$form_state) {
-    $this->updateStoredGameManager();
   }
 
   protected function buildFormGrid(array &$grid_form) {
@@ -202,28 +127,29 @@ class DjambiGridForm extends DjambiFormBase {
 
     switch ($current_phase) {
       case(Move::PHASE_PIECE_SELECTION):
-        DjambiGridActionSkipTurn::addButton($this, $grid_form['actions']);
-        DjambiGridActionDrawProposal::addButton($this, $grid_form['actions']);
-        DjambiGridActionWithdraw::addButton($this, $grid_form['actions']);
-        DjambiGridActionCancelLastTurn::addButton($this, $grid_form['actions']);
-        DjambiGridActionRestart::addButton($this, $grid_form['actions']);
+        SkipTurn::addButton($this, $grid_form['actions']);
+        DrawProposal::addButton($this, $grid_form['actions']);
+        Withdraw::addButton($this, $grid_form['actions']);
+        CancelLastTurn::addButton($this, $grid_form['actions']);
+        Restart::addButton($this, $grid_form['actions']);
         $this->buildFormGridPieceSelection($grid_form);
         break;
 
       case(Move::PHASE_PIECE_DESTINATION):
-        DjambiGridActionCancelPieceSelection::addButton($this, $grid_form['actions']);
+        CancelPieceSelection::addButton($this, $grid_form['actions']);
         $this->buildFormGridPieceDestination($grid_form);
         break;
 
       case(Move::PHASE_PIECE_INTERACTIONS):
-        DjambiGridActionCancelPieceSelection::addButton($this, $grid_form['actions']);
+        CancelPieceSelection::addButton($this, $grid_form['actions']);
         $interaction = $grid->getCurrentTurn()->getMove()->getFirstInteraction();
         $args = array();
         if ($interaction->getSelectedPiece()->isAlive()) {
-          $args['!target'] = static::printPieceFullName($interaction->getSelectedPiece());
+          $args['!target'] = GameUI::printPieceFullName($interaction->getSelectedPiece());
         }
         if ($interaction->getSelectedPiece()->getId() != $interaction->getTriggeringMove()->getSelectedPiece()) {
-          $args['!piece'] = static::printPieceFullName($interaction->getTriggeringMove()->getSelectedPiece());
+          $args['!piece'] = GameUI::printPieceFullName($interaction->getTriggeringMove()
+              ->getSelectedPiece());
         }
         if ($interaction instanceof Murder) {
           $this->buildFormGridFreeCellSelection($grid_form, $interaction,
@@ -256,7 +182,7 @@ class DjambiGridForm extends DjambiFormBase {
     $cell_choices = array();
     foreach ($grid->getPlayingFaction()->getPieces() as $piece) {
       if ($piece->isMovable()) {
-        $cell_choices[$piece->getPosition()->getName()] = static::printPieceFullName($piece) . ' (' . $piece->getPosition()->getName() . ')';
+        $cell_choices[$piece->getPosition()->getName()] = GameUI::printPieceFullName($piece) . ' (' . $piece->getPosition()->getName() . ')';
         $piece->setSelectable(TRUE);
       }
     }
@@ -292,7 +218,7 @@ class DjambiGridForm extends DjambiFormBase {
     $selected_piece = $grid->getCurrentTurn()->getMove()->getSelectedPiece();
     foreach ($selected_piece->getAllowableMoves() as $free_cell) {
       $cell_choices[$free_cell->getName()] = $free_cell->getName()
-      . (!empty($free_cell->getOccupant()) ? ' ' . t("(occupied by !piece)", array('!piece' => static::printPieceFullName($free_cell->getOccupant()))) : "");
+      . (!empty($free_cell->getOccupant()) ? ' ' . t("(occupied by !piece)", array('!piece' => GameUI::printPieceFullName($free_cell->getOccupant()))) : "");
       $free_cell->setSelectable(TRUE);
     }
     ksort($cell_choices);
@@ -301,7 +227,7 @@ class DjambiGridForm extends DjambiFormBase {
       '#required' => TRUE,
       '#options' => $cell_choices,
       '#title' => t('!piece is selected. Now select its destination...', array(
-        '!piece' => static::printPieceFullName($selected_piece),
+        '!piece' => GameUI::printPieceFullName($selected_piece),
       )),
     );
     $grid_form['actions']['validation']['#validate'][] = array($this, 'validatePieceDestination');
@@ -340,7 +266,7 @@ class DjambiGridForm extends DjambiFormBase {
   protected function buildFormGridVictimChoice(&$grid_form, Reportage $interaction, $message) {
     $cell_choices = array();
     foreach ($interaction->getPossibleChoices() as $cell) {
-      $cell_choices[$cell->getName()] = static::printPieceFullName($cell->getOccupant())
+      $cell_choices[$cell->getName()] = GameUI::printPieceFullName($cell->getOccupant())
         . ' (' . $cell->getName() . ')';
       $cell->getOccupant()->setSelectable(TRUE);
     }
@@ -378,14 +304,14 @@ class DjambiGridForm extends DjambiFormBase {
     $undecided_factions = array();
     foreach ($this->getGameManager()->getBattlefield()->getFactions() as $faction) {
       if ($faction->getDrawStatus() == Faction::DRAW_STATUS_PROPOSED) {
-        $peacemonger_faction = $this->printFactionFullName($faction);
+        $peacemonger_faction = GameUI::printFactionFullName($faction);
       }
       elseif ($faction->getDrawStatus() == Faction::DRAW_STATUS_ACCEPTED) {
-        $accepted_factions[] = $this->printFactionFullName($faction);
+        $accepted_factions[] = GameUI::printFactionFullName($faction);
       }
       elseif ($faction->getDrawStatus() == Faction::DRAW_STATUS_UNDECIDED
         && $faction->getControl()->getId() != $this->getGameManager()->getBattlefield()->getPlayingFaction()->getId()) {
-        $undecided_factions[] = $this->printFactionFullName($faction);
+        $undecided_factions[] = GameUI::printFactionFullName($faction);
       }
     }
     $grid_form['draw_explanation'] = array(
@@ -406,13 +332,13 @@ class DjambiGridForm extends DjambiFormBase {
       );
     }
     $grid_form['actions'] = array('#type' => 'actions');
-    DjambiGridActionDrawReject::addButton($this, $grid_form['actions']);
-    DjambiGridActionDrawAccept::addButton($this, $grid_form['actions']);
+    DrawReject::addButton($this, $grid_form['actions']);
+    DrawAccept::addButton($this, $grid_form['actions']);
   }
 
   public function buildFormFinished(array &$grid_form) {
     $grid_form['actions'] = array('#type' => 'actions');
-    DjambiGridActionRestart::addButton($this, $grid_form['actions']);
+    Restart::addButton($this, $grid_form['actions']);
   }
 
 }

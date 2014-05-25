@@ -103,12 +103,9 @@ abstract class BasePlayer extends PersistantDjambiObject implements PlayerInterf
   }
 
   public function isPlayingFaction(Faction $faction) {
-    if (!is_null($faction->getPlayer())) {
-      if ($faction->getPlayer()->getClassName() == $this->getClassName()
-        && $faction->getPlayer()->getId() == $this->getId()
-      ) {
-        return TRUE;
-      }
+    if (!is_null($faction->getPlayer()) && $faction->getPlayer()->getClassName() == $this->getClassName()
+    && $faction->getPlayer()->getId() == $this->getId()) {
+      return TRUE;
     }
     return FALSE;
   }

@@ -9,13 +9,13 @@
 namespace Drupal\djambi\Form\Actions;
 
 
-use Drupal\djambi\Form\DjambiFormBase;
+use Drupal\djambi\Form\BaseGameForm;
 
-class DjambiGridActionCancelLastTurn extends DjambiGridActionBase {
+class CancelLastTurn extends BaseAction {
 
   const ACTION_NAME = 'cancel-last-turn';
 
-  protected function __construct(DjambiFormBase $form) {
+  protected function __construct(BaseGameForm $form) {
     $this->setTitle($this->t('Cancel last turn'));
     $this->addClass('button-cancel');
     parent::__construct($form);

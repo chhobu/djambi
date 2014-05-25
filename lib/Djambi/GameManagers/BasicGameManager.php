@@ -388,10 +388,6 @@ class BasicGameManager extends PersistantDjambiObject implements GameManagerInte
     return $this;
   }
 
-  public function listenSignal(Signal $signal) {
-    return $this;
-  }
-
   public function ejectPlayer(PlayerInterface $player) {
     $grid = $this->getBattlefield();
     if ($this->getStatus() == self::STATUS_RECRUITING) {

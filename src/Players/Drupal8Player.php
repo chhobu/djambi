@@ -1,13 +1,17 @@
 <?php
 namespace Drupal\djambi\Players;
 
+use Djambi\Exceptions\PlayerInvalidException;
 use Djambi\Players\HumanPlayer;
 use Drupal\Core\Session\AccountInterface;
-use Drupal\user\UserInterface;
+use Drupal\user\Entity\User;
+use Symfony\Component\HttpFoundation\Request;
 
-class Drupal8Player extends HumanPlayer {
-  /** @var UserInterface */
-  private $account;
+abstract class Drupal8Player extends HumanPlayer {
+  const COOKIE_NAME = 'djambiplayerid';
+
+  /** @var AccountInterface */
+  protected $account;
 
   public function setAccount(AccountInterface $user) {
     $this->account = $user;
@@ -24,20 +28,41 @@ class Drupal8Player extends HumanPlayer {
   }
 
   public function displayName() {
-    // FIXME utiliser plutôt une fonction de thème
-    return $this->getAccount()->getUsername();
+    $theme_username = array(
+      '#theme' => 'username',
+      '#account' => $this->getAccount(),
+    );
+    return drupal_render($theme_username);
   }
 
   public static function fromArray(array $data, array $context = array()) {
     /** @var Drupal8Player $player */
     $player = parent::fromArray($data);
-    if (isset($context['account']) && $context['account'] instanceof AccountInterface) {
-      $player->setAccount($context['account']);
+    if (isset($context['account'])) {
+      $account = $context['account'];
     }
     else {
-      $account = user_load($data['account']);
+      $account = User::load($data['account']);
+    }
+    if ($account instanceof AccountInterface) {
       $player->setAccount($account);
+    }
+    else {
+      throw new PlayerInvalidException("Unable loading player object.");
     }
     return $player;
   }
+
+  public static function fromCurrentUser(AccountInterface $account, Request $request) {
+    if ($account->isAuthenticated()) {
+      $player = new AuthenticatedDrupal8Player(AuthenticatedDrupal8Player::CLASS_NICKNAME . $account->id());
+    }
+    else {
+      $anonymous_id = $request->cookies->get('Drupal_visitor_' . static::COOKIE_NAME);
+      $player = new AnonymousDrupal8Player($anonymous_id);
+    }
+    $player->setAccount($account);
+    return $player;
+  }
+
 }

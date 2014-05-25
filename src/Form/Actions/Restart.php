@@ -10,13 +10,13 @@ namespace Drupal\djambi\Form\Actions;
 
 
 use Djambi\GameManagers\BasicGameManager;
-use Drupal\djambi\Form\DjambiFormBase;
+use Drupal\djambi\Form\BaseGameForm;
 
-class DjambiGridActionRestart extends DjambiGridActionBase {
+class Restart extends BaseAction {
 
   const ACTION_NAME = 'restart';
 
-  protected function __construct(DjambiFormBase $form) {
+  protected function __construct(BaseGameForm $form) {
     $this->setTitle($this->t('Restart'));
     $this->addClass('button-danger');
     parent::__construct($form);

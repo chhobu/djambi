@@ -10,12 +10,12 @@ namespace Drupal\djambi\Form\Actions;
 
 
 use Djambi\Exceptions\DisallowedActionException;
-use Drupal\djambi\Form\DjambiFormBase;
+use Drupal\djambi\Form\BaseGameForm;
 
-class DjambiGridActionDrawReject extends DjambiGridActionBase {
+class DrawReject extends BaseAction {
   const ACTION_NAME = 'reject-draw';
 
-  protected function __construct(DjambiFormBase $form) {
+  protected function __construct(BaseGameForm $form) {
     $this->addClass('button-primary');
     $this->addClass('button-no');
     $this->setTitle($this->t("No, I'm sure to win this one !"));

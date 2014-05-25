@@ -1,1 +1,1 @@
-<span class="faction-name faction-origine-{{ faction.class }} faction-{{ faction.control.class }} faction-alive-{{ faction.isAlive() ? 'yes' : 'no' }}">faction.name</span>
+{% if html %}<span class="faction-name faction-origine-{{ faction.class }} faction-{{ faction.control.class }} faction-alive-{{ faction.isAlive() ? 'yes' : 'no' }}">{% endif %}{{ faction.name }}{% if html %}</span>{% endif %}

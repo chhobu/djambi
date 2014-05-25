@@ -19,6 +19,7 @@ function djambi_theme() {
     'djambi_grid' => array(
       'render element' => 'form',
       'file' => 'djambi.theme.inc',
+      'template' => 'djambi-grid',
     ),
     'djambi_cardinal_grid' => array(
       'variables' => array('game' => NULL, 'cells' => NULL, 'caption' => NULL),
@@ -47,7 +48,7 @@ function djambi_theme() {
       'template' => 'djambi-piece-full-name',
     ),
     'djambi_faction_full_name' => array(
-      'variables' => array('faction' => NULL),
+      'variables' => array('faction' => NULL, 'html' => TRUE),
       'template' => 'djambi-faction-full-name',
     ),
   );

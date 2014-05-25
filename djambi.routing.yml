@@ -1,7 +1,7 @@
 djambi.sandbox:
   path: '/djambi/sandbox'
   defaults:
-    _form: 'Drupal\djambi\Form\DjambiGridForm'
+    _form: 'Drupal\djambi\Form\SandboxGameForm'
     _title: Djambi sandbox game
   requirements:
     _permission: 'play djambi sandbox game'

@@ -12,13 +12,13 @@ namespace Drupal\djambi\Form\Actions;
 use Djambi\Exceptions\Exception;
 use Djambi\GameManagers\BasicGameManager;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
-use Drupal\djambi\Form\DjambiFormBase;
+use Drupal\djambi\Form\BaseGameForm;
 
-abstract class DjambiGridActionBase implements DjambiGridActionInterface  {
+abstract class BaseAction implements ActionInterface  {
   use StringTranslationTrait;
   const ACTION_NAME = 'undefined';
 
-  /** @var DjambiFormBase */
+  /** @var BaseGameForm */
   protected $form;
   /** @var array */
   protected $classes = array();
@@ -29,7 +29,7 @@ abstract class DjambiGridActionBase implements DjambiGridActionInterface  {
   /** @var string */
   protected $title;
 
-  protected function __construct(DjambiFormBase $form) {
+  protected function __construct(BaseGameForm $form) {
     $this->form = $form;
     if (static::ACTION_NAME != 'undefined') {
       $this->addClass('button-' . static::ACTION_NAME);
@@ -49,7 +49,7 @@ abstract class DjambiGridActionBase implements DjambiGridActionInterface  {
     return TRUE;
   }
 
-  public static function addButton(DjambiFormBase $form_object, array &$form_array, $weight = 0) {
+  public static function addButton(BaseGameForm $form_object, array &$form_array, $weight = 0) {
     $action = new static($form_object);
     if (!$action->isPrinted()) {
       return $action;
@@ -79,42 +79,42 @@ abstract class DjambiGridActionBase implements DjambiGridActionInterface  {
   /**
    * @return mixed
    */
-  public function getValidate() {
+  protected function getValidate() {
     return $this->validate;
   }
 
   /**
    * @return array
    */
-  public function getSubmit() {
+  protected function getSubmit() {
     return $this->submit;
   }
 
   /**
-   * @return DjambiFormBase
+   * @return BaseGameForm
    */
-  public function getForm() {
+  protected function getForm() {
     return $this->form;
   }
 
   /**
    * @return mixed
    */
-  public function getTitle() {
+  protected function getTitle() {
     return $this->title;
   }
 
   /**
    * @return array
    */
-  public function getClasses() {
+  protected function getClasses() {
     return $this->classes;
   }
 
   /**
    * @param string $title
    */
-  public function setTitle($title) {
+  protected function setTitle($title) {
     $this->title = $title;
   }
 

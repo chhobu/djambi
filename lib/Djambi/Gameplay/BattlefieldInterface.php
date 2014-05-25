@@ -78,6 +78,11 @@ interface BattlefieldInterface {
   public function getPastTurns();
 
   /**
+   * @return array
+   */
+  public function getPlayOrder();
+
+  /**
    * @param string $name
    *
    * @return Cell

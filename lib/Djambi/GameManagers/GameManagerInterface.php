@@ -88,15 +88,6 @@ interface GameManagerInterface extends ArrayableInterface {
   public function getBegin();
 
   /**
-   * Récupère et gère la persistance des signaux envoyés par les utilisateurs.
-   *
-   * @param Signal $signal
-   *
-   * @return GameManagerInterface
-   */
-  public function listenSignal(Signal $signal);
-
-  /**
    * Exclut un joueur d'une partie.
    *
    * @param PlayerInterface $player
@@ -184,4 +175,5 @@ interface GameManagerInterface extends ArrayableInterface {
    * @return GameManagerInterface
    */
   public function setOption($option_key, $value);
+
 }

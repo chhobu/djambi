@@ -11,13 +11,13 @@ namespace Drupal\djambi\Form\Actions;
 
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\GameOptions\StandardRuleset;
-use Drupal\djambi\Form\DjambiFormBase;
+use Drupal\djambi\Form\BaseGameForm;
 
-class DjambiGridActionDrawProposal extends DjambiGridActionBase {
+class DrawProposal extends BaseAction {
 
   const ACTION_NAME = 'ask-draw';
 
-  protected function __construct(DjambiFormBase $form) {
+  protected function __construct(BaseGameForm $form) {
     $this->addClass('button-secondary');
 
     parent::__construct($form);

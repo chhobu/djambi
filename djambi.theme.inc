@@ -3,16 +3,45 @@ use Djambi\GameManagers\GameManagerInterface;
 use Djambi\Gameplay\Cell;
 use Djambi\Grids\BaseGrid;
 use Drupal\Component\Utility\Unicode;
-use Drupal\Core\Render\Element;
-use Drupal\djambi\Form\DjambiFormBase;
+use Drupal\djambi\Players\Drupal8Player;
+use Drupal\djambi\Utils\GameUI;
 
-function theme_djambi_grid($variables) {
-  $structure = array();
-  $form = $variables['form'];
+function template_preprocess_djambi_grid(&$variables) {
   /** @var GameManagerInterface $game */
-  $game = $form['#djambi_game_manager'];
+  $game = $variables['form']['#djambi_game_manager'];
+  $variables['game'] = $game;
+  if ($game->isPending()) {
+    $playing_next = array();
+    $play_order = $game->getBattlefield()->getPlayOrder();
+    while (next($play_order)) {
+      $playing_next[] = GameUI::printFactionFullName($game->getBattlefield()->findFactionById(current($play_order)));
+    }
+    reset($play_order);
+    $variables['current_round'] = $game->getBattlefield()->getCurrentTurn()->getRound();
+    $variables['current_player_name'] = $game->getBattlefield()->getPlayingFaction()->getPlayer()->displayName();
+    $variables['current_faction_name'] = GameUI::printFactionFullName($game->getBattlefield()->getPlayingFaction());
+    $variables['playing_next_faction_names'] = $playing_next;
+    $caption = t('Displaying current turn (round %round - move %move).', array(
+      '%round' => $variables['current_round'],
+      '%move' => $game->getBattlefield()->getCurrentTurn()->getId(),
+    ));
+    $current_player = Drupal8Player::fromCurrentUser(\Drupal::currentUser(), \Drupal::request());
+    if ($current_player->isPlayingFaction($game->getBattlefield()->getPlayingFaction()->getControl())) {
+      $caption .= ' ' . t("It's your turn !");
+    }
+    else {
+      $caption .= ' ' . t("Waiting for !player decisions...", array('!player' => $variables['current_player_name']));
+    }
+  }
+  else {
+    $last_move = end($game->getBattlefield()->getPastTurns());
+    $variables['current_round'] = $last_move['round'];
+    $caption = t('Displaying final positions (round %round - move %move).', array(
+      '%round' => $variables['current_round'],
+      '%move' => $last_move['id'],
+    ));
+  }
   $cells = array();
-  $caption = '';
   foreach ($game->getBattlefield()->getCells() as $cell) {
     $cells[$cell->getY()]['data'][$cell->getColumnName()] = array(
       'data' => array(
@@ -28,16 +57,12 @@ function theme_djambi_grid($variables) {
   else {
     $grid_theme_function = 'djambi_cardinal_grid';
   }
-  $structure['grid'] = array(
+  $variables['grid'] = array(
     '#theme' => $grid_theme_function,
     '#cells' => $cells,
     '#caption' => $caption,
     '#game' => $game,
   );
-  foreach (Element::children($form) as $child) {
-    $structure[$child] = $form[$child];
-  }
-  return drupal_render($structure);
 }
 
 function theme_djambi_cardinal_grid($variables) {
@@ -83,7 +108,7 @@ function template_preprocess_djambi_piece(&$variables) {
     if ($piece->isSelectable()) {
       $variables['piece_form_label'] = 'edit-cells-' . Unicode::strtolower($piece->getPosition()->getName());
     }
-    $variables['piece_full_name'] = DjambiFormBase::printPieceFullName($piece, FALSE);
+    $variables['piece_full_name'] = GameUI::printPieceFullName($piece, FALSE);
   }
   $variables['extra_classes'] = implode(' ', $extra_classes);
 }

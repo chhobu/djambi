@@ -11,13 +11,13 @@ namespace Drupal\djambi\Form\Actions;
 
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\GameOptions\StandardRuleset;
-use Drupal\djambi\Form\DjambiFormBase;
+use Drupal\djambi\Form\BaseGameForm;
 
-class DjambiGridActionSkipTurn extends DjambiGridActionBase {
+class SkipTurn extends BaseAction {
 
   const ACTION_NAME = 'skip-turn';
 
-  protected function __construct(DjambiFormBase $form) {
+  protected function __construct(BaseGameForm $form) {
     $this->addClass('button-warning');
     parent::__construct($form);
   }

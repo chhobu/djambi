@@ -1,0 +1,11 @@
+{% if game.isPending() %}
+<ul class="'djambi-game-infos">
+  <li class="djambi-game-infos-current-round">{{ "Current round : round %round"|t({ '%round': current_round }) }}</li>
+  <li class="djambi-game-infos-playing-now">{{ "Playing now : !faction"|t({ '!faction': current_faction_name }) }}</li>
+  {% if playing_next_faction_names is not empty %}
+    <li class="djambi-game-infos-playing-next">{{ "Playing next : !factions"|t({ '!factions': playing_next_faction_names|join(', ') }) }}</li>
+  {% endif %}
+</ul>
+{% endif %}
+{{ grid }}
+{{ form }}

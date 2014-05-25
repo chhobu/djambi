@@ -10,13 +10,13 @@ namespace Drupal\djambi\Form\Actions;
 
 
 use Djambi\Exceptions\DisallowedActionException;
-use Drupal\djambi\Form\DjambiFormBase;
+use Drupal\djambi\Form\BaseGameForm;
 
-class DjambiGridActionWithdraw extends DjambiGridActionBase {
+class Withdraw extends BaseAction {
 
   const ACTION_NAME = 'withdraw';
 
-  protected function __construct(DjambiFormBase $form) {
+  protected function __construct(BaseGameForm $form) {
     $this->setTitle($this->t('Withdraw'));
     $this->addClass('button-danger');
     parent::__construct($form);
