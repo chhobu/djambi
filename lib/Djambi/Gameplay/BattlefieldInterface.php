@@ -83,6 +83,11 @@ interface BattlefieldInterface {
   public function getPlayOrder();
 
   /**
+   * @return String
+   */
+  public function getRuler();
+
+  /**
    * @param string $name
    *
    * @return Cell

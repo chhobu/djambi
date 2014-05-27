@@ -5,6 +5,7 @@ use Djambi\Grids\BaseGrid;
 use Drupal\Component\Utility\Unicode;
 use Drupal\djambi\Players\Drupal8Player;
 use Drupal\djambi\Utils\GameUI;
+use Drupal\djambi\Widgets\PlayersTable;
 
 function template_preprocess_djambi_grid(&$variables) {
   /** @var GameManagerInterface $game */
@@ -32,6 +33,14 @@ function template_preprocess_djambi_grid(&$variables) {
     else {
       $caption .= ' ' . t("Waiting for !player decisions...", array('!player' => $variables['current_player_name']));
     }
+    $players_table = PlayersTable::build(array('game' => $game, 'current_player' => $current_player));
+    $variables['players_table'] = array(
+      '#theme' => 'table',
+      '#rows' => $players_table->getRows(),
+      '#header' => $players_table->getHeader(),
+      '#attributes' => array('class' => array('djambi-grid-players-table')),
+      '#caption' => t("Current sides statuses"),
+    );
   }
   else {
     $last_move = end($game->getBattlefield()->getPastTurns());

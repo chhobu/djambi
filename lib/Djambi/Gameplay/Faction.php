@@ -267,7 +267,9 @@ class Faction extends PersistantDjambiObject {
     foreach ($this->battlefield->getFactions() as $faction) {
       if ($faction->getControl()->getId() == $this->getId()) {
         foreach ($faction->getPieces() as $piece) {
-          $pieces[$piece->getId()] = $piece;
+          if ($piece->isAlive()) {
+            $pieces[$piece->getId()] = $piece;
+          }
         }
       }
     }
