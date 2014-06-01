@@ -1,0 +1,235 @@
+.djambi-grid {
+  margin: 1em auto;
+  border: 2px solid #000;
+  border-top: 0;
+}
+.djambi-grid td {
+  height: 100%;
+  padding: 0;
+  border: 2px solid #999;
+}
+.djambi-grid th {
+  background-color: #fff;
+  color: #666;
+  border: 2px solid #999;
+}
+.djambi-grid--size-adaptative .djambi-cell {
+  width: 7vmin;
+  height: 7vmin;
+  line-height: 7vmin;
+  padding: 1vmin;
+}
+.djambi-grid--size-adaptative .djambi-piece {
+  width: 5.5vmin;
+  height: 5.5vmin;
+  border-width: 0.75vmin;
+  line-height: 3.5vmin;
+}
+.djambi-grid--size-adaptative .djambi-piece:before {
+  font-size: 5.5vmin;
+  padding: 1vmin 0;
+}
+.djambi-grid--size-adaptative .djambi-piece,
+.djambi-grid--size-adaptative .djambi-cell {
+  min-height: 20px;
+  min-width: 20px;
+}
+.djambi-grid--size-standard .djambi-cell {
+  width: 45px;
+  height: 45px;
+  line-height: 45px;
+  padding: 5px;
+}
+.djambi-grid--size-standard .djambi-piece {
+  width: 35px;
+  height: 35px;
+  border-width: 5px;
+  line-height: 25px;
+}
+.djambi-grid--size-standard .djambi-piece:before {
+  font-size: 35px;
+  padding: 5px 0;
+}
+.djambi-grid--size-small .djambi-cell {
+  width: 30px;
+  height: 30px;
+  line-height: 30px;
+  padding: 2px;
+}
+.djambi-grid--size-small .djambi-piece {
+  width: 24px;
+  height: 24px;
+  border-width: 3px;
+  line-height: 20px;
+}
+.djambi-grid--size-small .djambi-piece:before {
+  font-size: 24px;
+  padding: 2px 0;
+}
+.djambi-grid--size-big .djambi-cell {
+  width: 70px;
+  height: 70px;
+  line-height: 70px;
+  padding: 10px;
+}
+.djambi-grid--size-big .djambi-piece {
+  width: 50px;
+  height: 50px;
+  border-width: 10px;
+  line-height: 30px;
+}
+.djambi-grid--size-big .djambi-piece:before {
+  font-size: 50px;
+  padding: 10px 0;
+}
+.djambi-cell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #eee;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+}
+.djambi-cell__name {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 2;
+  background-color: #999;
+  color: #fff;
+  border-radius: 0 0 25% 0;
+  font-size: 90%;
+  font-weight: bold;
+  padding: 0.1em 0.25em 0.1em 0.1em;
+  line-height: 1em;
+}
+.djambi-cell__name:hover {
+  z-index: 20;
+}
+.djambi-grid--no-cell-names .djambi-cell__name {
+  display: none;
+}
+.djambi-cell__type-name {
+  font-size: 90%;
+  font-style: italic;
+}
+.djambi-grid.is-with-highlighted-cells .djambi-cell.is-reachable {
+  background-color: #ddd;
+}
+.djambi-grid.is-with-highlighted-cells .djambi-cell.is-selected {
+  background-color: #000;
+}
+.djambi-grid.is-with-highlighted-cells .djambi-cell.is-selectable,
+.djambi-grid.is-with-selected-piece.is-with-highlighted-cells .djambi-cell.is-with-movable-piece {
+  background-color: #bbb;
+}
+.djambi-grid.is-red-turn.is-with-highlighted-cells .djambi-cell.is-selectable {
+  background-color: rgba(238, 51, 51, 0.5);
+}
+.djambi-grid.is-green-turn.is-with-highlighted-cells .djambi-cell.is-selectable {
+  background-color: rgba(153, 221, 0, 0.5);
+}
+.djambi-grid.is-yellow-turn.is-with-highlighted-cells .djambi-cell.is-selectable {
+  background-color: rgba(255, 204, 0, 0.5);
+}
+.djambi-grid.is-blue-turn.is-with-highlighted-cells .djambi-cell.is-selectable {
+  background-color: rgba(153, 204, 255, 0.5);
+}
+.djambi-piece {
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  background-color: #999999;
+  border-radius: 50%;
+  border: solid #999999;
+  top: -2px;
+  left: -1px;
+  box-shadow: 3px 3px 2px #333;
+}
+.djambi-piece.is-dead {
+  background-color: #333;
+  border-color: #333;
+}
+.djambi-piece:before {
+  content: attr(data-piece-type);
+  display: block;
+  height: 100%;
+  width: 100%;
+  font-weight: bold;
+  text-shadow: 2px 2px 2px #999999;
+}
+.djambi-faction-name.is-blue-side,
+.djambi-piece.is-blue-side,
+.datatable th.is-blue-side {
+  background-color: #99ccff;
+}
+.djambi-faction-name.is-blue-origin,
+.djambi-piece.is-blue-origin,
+.datatable th.is-blue-origin {
+  border-color: #99ccff;
+}
+.djambi-faction-name.is-red-side,
+.djambi-piece.is-red-side,
+.datatable th.is-red-side {
+  background-color: #ee3333;
+}
+.djambi-faction-name.is-red-origin,
+.djambi-piece.is-red-origin,
+.datatable th.is-red-origin {
+  border-color: #ee3333;
+}
+.djambi-faction-name.is-green-side,
+.djambi-piece.is-green-side,
+.datatable th.is-green-side {
+  background-color: #99dd00;
+}
+.djambi-faction-name.is-green-origin,
+.djambi-piece.is-green-origin,
+.datatable th.is-green-origin {
+  border-color: #99dd00;
+}
+.djambi-faction-name.is-yellow-side,
+.djambi-piece.is-yellow-side,
+.datatable th.is-yellow-side {
+  background-color: #ffcc00;
+}
+.djambi-faction-name.is-yellow-origin,
+.djambi-piece.is-yellow-origin,
+.datatable th.is-yellow-origin {
+  border-color: #ffcc00;
+}
+.djambi-faction-name,
+.djambi-piece-name {
+  display: inline-block;
+  padding: 0 0.25em;
+}
+.djambi-infos {
+  text-align: center;
+}
+.djambi-infos dt {
+  font-variant: small-caps;
+}
+.djambi-infos dd {
+  border: 2px solid #999;
+  background-color: #eee;
+  border-radius: 0.5em;
+  margin: 0;
+  padding: 0.25em;
+}
+.djambi-infos dd.last-description-item,
+.djambi-infos dd.single-description-item {
+  margin-bottom: 1em;
+}
+.djambi-infos .djambi-infos__current-round em {
+  font-size: 400%;
+}
+.djambi-infos .djambi-infos__playing-next ol {
+  text-align: left;
+  padding: 0;
+  list-style-position: inside;
+}
