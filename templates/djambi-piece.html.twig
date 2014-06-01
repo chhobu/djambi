@@ -1,11 +1,5 @@
-{% if piece.isAlive() %}
-  <div
-    class="piece piece-type-{{ piece.description.type }} piece-status-alive piece-movable-{{ piece.isMovable() ? 'yes' : 'no' }} faction-{{ piece.faction.class }} faction-origin-{{ piece.faction.control.class }} {{ extra_classes }}"
-    data-piece-id="{{ piece.id }}" title="{{ piece_full_name|trim }}">
-    {% if piece.isSelectable() %}<label for="{{ piece_form_label }}">{% endif %}
-      {{ piece.id }}
-      {% if piece.isSelectable() %}</label>{% endif %}
-  </div>
-{% else %}
-  <div class="piece piece-status-dead {{ extra_classes }}" title="{{ piece_full_name|trim }}">{{ "R.I.P."|t }}</div>
-{% endif %}
+{% spaceless %}
+  <{{ piece_tag }} class="{{ attributes.class }}"{{ attributes }}>
+    {{- piece_short_name -}}
+  </{{ piece_tag }}>
+{% endspaceless %}

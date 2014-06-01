@@ -14,6 +14,8 @@ abstract class BasePieceDescription extends PersistantDjambiObject {
   protected $num;
   /** @var GlossaryTerm */
   protected $genericName;
+  /** @var String */
+  protected $genericSymbol;
   /** @var array : position de départ (par rapport au chef, coordonnées x, y) */
   protected $startPosition;
   /** @var int : valeur de la pièce */
@@ -25,6 +27,7 @@ abstract class BasePieceDescription extends PersistantDjambiObject {
     $this->type = $type;
     $this->num = $num;
     $this->shortname = empty($num) ? $generic_shortname : $generic_shortname . $num;
+    $this->genericSymbol = $generic_shortname;
     $this->genericName = $generic_name;
     if (!is_array($start_position)) {
       $this->setStartCellName($start_position);
@@ -57,6 +60,10 @@ abstract class BasePieceDescription extends PersistantDjambiObject {
 
   public function getGenericName() {
     return $this->genericName;
+  }
+
+  public function getGenericSymbol() {
+    return $this->genericSymbol;
   }
 
   public function getNum() {

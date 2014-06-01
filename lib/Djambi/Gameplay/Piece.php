@@ -303,6 +303,13 @@ class Piece extends PersistantDjambiObject {
     return $this->selectable;
   }
 
+  public function isSelected() {
+    if (!empty($this->getBattlefield()->getCurrentTurn()) && !empty($this->getBattlefield()->getCurrentTurn()->getMove()->getSelectedPiece())) {
+      return $this->getBattlefield()->getCurrentTurn()->getMove()->getSelectedPiece()->getId() == $this->getId();
+    }
+    return FALSE;
+  }
+
   protected function prepareSerialization() {
     $this->addUnserializableProperties(array('selectable'));
     return parent::prepareSerialization();

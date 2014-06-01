@@ -59,14 +59,18 @@ class PlayersTable extends BaseTable {
   public function generateRows() {
     foreach ($this->getGame()->getBattlefield()->getFactions() as $faction) {
       $row = $this->generateSingleRow($faction);
-      $row['class'][] = $this->isCurrentPlayer($faction) ? 'row--me' : 'row--not-me';
+      $row['class'][] = $this->isCurrentPlayer($faction) ? 'is-me' : 'is-not-me';
       $this->rows[] = $row;
     }
     return $this;
   }
 
   protected function buildFactionsRowData(Faction $faction) {
-    return GameUI::printFactionFullName($faction);
+    return array(
+      'data' => GameUI::printFactionFullName($faction, FALSE),
+      'class' => array('is-' . $faction->getClass() . '-side'),
+      'header' => TRUE,
+    );
   }
 
   protected function buildPlayersRowData(Faction $faction) {
@@ -127,7 +131,7 @@ class PlayersTable extends BaseTable {
     $ruler = $this->getGame()->getBattlefield()->getRuler() == $faction->getId();
     return array(
       'data' => $ruler ? t('Yes') : t('No'),
-      'class' => array($ruler ? 'col--yes' : 'col--no'),
+      'class' => array('is-boolean', $ruler ? 'is-boolean--true' : 'is-boolean--false'),
     );
   }
 
@@ -136,7 +140,7 @@ class PlayersTable extends BaseTable {
       return $this->returnEmptyValue();
     }
     return array(
-      'class' => array('col--numeric'),
+      'class' => array('is-numeric'),
       'data' => count($faction->getControlledPieces()),
     );
   }
@@ -162,7 +166,7 @@ class PlayersTable extends BaseTable {
       'playTime' => $total_play_time,
     );
     return array(
-      'class' => array('col--numeric'),
+      'class' => array('is-numeric'),
       'data' => $moves,
     );
   }
@@ -172,7 +176,7 @@ class PlayersTable extends BaseTable {
       return $this->returnEmptyValue();
     }
     return array(
-      'class' => array('col--numeric'),
+      'class' => array('is-numeric'),
       'data' => \Drupal::service('date')->formatInterval($this->factionStats[$faction->getId()]['playTime']),
     );
   }
@@ -182,7 +186,7 @@ class PlayersTable extends BaseTable {
       return $this->returnEmptyValue();
     }
     return array(
-      'class' => array('col--numeric'),
+      'class' => array('is-numeric'),
       'data' => \Drupal::service('date')->formatInterval($this->factionStats[$faction->getId()]['playTime'] / $this->factionStats[$faction->getId()]['turns']),
     );
   }

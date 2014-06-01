@@ -17,7 +17,7 @@ class CancelLastTurn extends BaseAction {
 
   protected function __construct(BaseGameForm $form) {
     $this->setTitle($this->t('Cancel last turn'));
-    $this->addClass('button-cancel');
+    $this->addClass('button--cancel');
     parent::__construct($form);
   }
 

@@ -1,21 +1,15 @@
-{% if cell.isEnabled() %}
-  <div
-    class="cell cell-type-{{ cell.type }} cell-reachable-{{ cell.isReachable() ? 'yes' : 'no' }} cell-occupation-{{ cell.occupant is null ? 'empty' : 'full' }}"
-    title="{{ 'Cell @name'|t({ '@name': cell.name }) }}"
-    data-cell-name="{{ cell.name }}">
-    {% if cell.isSelectable() %}
-      <label class="cell-name"
-             for="{{ cell_form_label }}">{{ cell.name }}</label>
-    {% else %}
-      <span class="cell-name">{{ cell.name }}</span>
-    {% endif %}
-    {% if throne %}
-      <span class="cell-type">({{ "Throne"|t }})</span>
-    {% endif %}
-    {% if cell.occupant is not null %}
-      {{ piece }}
-    {% endif %}
-  </div>
-{% else %}
-  <div class="cell cell-type-disabled"></div>"
-{% endif %}
+{% spaceless %}
+  {% if cell.isEnabled() == true %}
+    <{{ cell_tag }} class="{{ attributes.class }}"{{ attributes }}>
+      <span class="djambi-cell__name">{{ cell.name }}</span>
+      {%- if throne -%}
+        <span class="djambi-cell__type-name">({{ "Throne"|t }})</span>
+      {%- endif -%}
+      {%- if cell.occupant is not null -%}
+        {{- piece -}}
+      {%- endif -%}
+    </{{ cell_tag }}>
+  {% else %}
+    <div class="{{ attributes.class }}"></div>"
+  {% endif %}
+{% endspaceless %}

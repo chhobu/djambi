@@ -70,7 +70,7 @@ abstract class BaseTable implements TableInterface {
 
   protected function returnEmptyValue() {
     return array(
-      'class' => array('col--disabled'),
+      'class' => array('is-disabled'),
       'data' => '-',
     );
   }

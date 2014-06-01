@@ -61,6 +61,8 @@ class SandboxGameForm extends BaseGameForm {
   public function buildForm(array $form, array &$form_state) {
     $this->loadStoredGameManager();
 
+    $form['#attached']['css'][] = drupal_get_path('module', 'djambi') . '/css/djambi.theme.css';
+
     $form['intro'] = array(
       '#markup' => '<p>' . $this->t("Welcome to Djambi training area. You can play here"
       . " a Djambi game where you control successively all sides : this way, "
@@ -77,6 +79,7 @@ class SandboxGameForm extends BaseGameForm {
         '%updated' => \Drupal::service('date')->format($this->getGameManager()->getChanged(), 'short'),
       )),
       '#djambi_game_manager' => $this->getGameManager(),
+      '#current_player' => $this->getCurrentPlayer(),
     );
 
     $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
@@ -98,6 +101,9 @@ class SandboxGameForm extends BaseGameForm {
         $this->buildFormFinished($form['grid']);
         break;
     }
+
+    $this->buildFormDisplaySettings($form, $form_state);
+
     return $form;
   }
 
@@ -122,7 +128,7 @@ class SandboxGameForm extends BaseGameForm {
       '#value' => $this->t('Validate'),
       '#validate' => array(array($this, 'validateForm')),
       '#submit' => array(array($this, 'submitForm')),
-      '#attributes' => array('class' => array('button-primary')),
+      '#attributes' => array('class' => array('button--primary')),
     );
 
     switch ($current_phase) {

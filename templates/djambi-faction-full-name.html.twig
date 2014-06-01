@@ -1,1 +1,9 @@
-{% if html %}<span class="faction-name faction-origine-{{ faction.class }} faction-{{ faction.control.class }} faction-alive-{{ faction.isAlive() ? 'yes' : 'no' }}">{% endif %}{{ faction.name }}{% if html %}</span>{% endif %}
+{% spaceless %}
+  {% if html -%}
+    <span class="djambi-faction-name is-{{ faction.class }}-origin is-{{ faction.control.class }}-side">
+  {%- endif -%}
+    {{- faction.name -}}
+  {% if html -%}
+    </span>
+  {%- endif%}
+{% endspaceless %}

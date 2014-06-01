@@ -16,8 +16,8 @@ class DrawAccept extends BaseAction {
   const ACTION_NAME = 'accept-draw';
 
   protected function __construct(BaseGameForm $form) {
-    $this->addClass('button-warning');
-    $this->addClass('button-yes');
+    $this->addClass('button--warning');
+    $this->addClass('button--yes');
     $this->setTitle($this->t("Yes, let's end this mess and stay good friends."));
     parent::__construct($form);
   }

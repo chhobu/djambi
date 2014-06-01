@@ -21,7 +21,7 @@ class CancelPieceSelection extends BaseAction {
 
   protected function __construct(BaseGameForm $form) {
     $this->setTitle($this->t('Cancel piece selection'));
-    $this->addClass('button-cancel');
+    $this->addClass('button--cancel');
     parent::__construct($form);
   }
 

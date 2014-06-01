@@ -1,0 +1,198 @@
+@faction-red: #e33;
+@faction-blue: #9cf;
+@faction-yellow: #fc0;
+@faction-green: #9d0;
+@faction-purple: #80f;
+@faction-pink: #b09;
+@no-faction: #999;
+
+.djambi-grid {
+  margin: 1em auto;
+  border: 2px solid #000;
+  border-top: 0;
+  & td {
+    height: 100%;
+    padding: 0;
+    border: 2px solid #999;
+  }
+  & th {
+    background-color: #fff;
+    color: #666;
+    border: 2px solid #999;
+  }
+}
+
+.grid-size(@cell-size, @cell-padding, @piece-border) {
+  .djambi-cell {
+    width: @cell-size;
+    height: @cell-size;
+    line-height: @cell-size;
+    padding: @cell-padding;
+  }
+  .djambi-piece {
+    width: @cell-size - @piece-border * 2;
+    height: @cell-size - @piece-border * 2;
+    border-width: @piece-border;
+    line-height: @cell-size - @piece-border * 2 - @cell-padding * 2;
+    &:before {
+      font-size: @cell-size - @piece-border * 2;
+      padding: @cell-padding 0;
+    }
+  }
+}
+
+.djambi-grid--size-adaptative {
+  .grid-size(7vmin, 1vmin, 0.75vmin);
+  .djambi-piece, .djambi-cell {
+    min-height: 20px;
+    min-width: 20px;
+  }
+}
+.djambi-grid--size-standard {
+  .grid-size(45px, 5px, 5px);
+}
+.djambi-grid--size-small {
+  .grid-size(30px, 2px, 3px);
+}
+.djambi-grid--size-big {
+  .grid-size(70px, 10px, 10px)
+}
+
+.djambi-cell {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background-color: #eee;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  &__name {
+    position: absolute;
+    top: 0;
+    left: 0;
+    z-index: 2;
+    background-color: #999;
+    color: #fff;
+    border-radius: 0 0 25% 0;
+    font-size: 90%;
+    font-weight: bold;
+    padding: 0.1em 0.25em 0.1em 0.1em;
+    line-height: 1em;
+    &:hover {
+      z-index: 20;
+    }
+    .djambi-grid--no-cell-names & {
+      display: none;
+    }
+  }
+  &__type-name {
+    font-size: 90%;
+    font-style: italic;
+  }
+  .djambi-grid.is-with-highlighted-cells &.is-reachable {
+    background-color: #ddd;
+  }
+  .djambi-grid.is-with-highlighted-cells &.is-selected {
+    background-color: #000;
+  }
+  .djambi-grid.is-with-highlighted-cells &.is-selectable, .djambi-grid.is-with-selected-piece.is-with-highlighted-cells &.is-with-movable-piece {
+    background-color: #bbb;
+  }
+  .djambi-grid.is-red-turn.is-with-highlighted-cells &.is-selectable {
+    background-color: fade(@faction-red, 50%);
+  }
+  .djambi-grid.is-green-turn.is-with-highlighted-cells &.is-selectable {
+    background-color: fade(@faction-green, 50%);
+  }
+  .djambi-grid.is-yellow-turn.is-with-highlighted-cells &.is-selectable {
+    background-color: fade(@faction-yellow, 50%);
+  }
+  .djambi-grid.is-blue-turn.is-with-highlighted-cells &.is-selectable {
+    background-color: fade(@faction-blue, 50%);
+  }
+}
+
+.djambi-piece {
+  position: relative;
+  z-index: 10;
+  overflow: hidden;
+  display: inline-block;
+  vertical-align: middle;
+  text-align: center;
+  background-color: @no-faction;
+  border-radius: 50%;
+  border: solid @no-faction;
+  top: -2px;
+  left: -1px;
+  box-shadow: 3px 3px 2px #333;
+  &.is-dead {
+    background-color: #333;
+    border-color: #333;
+  }
+  &:before {
+    content: attr(data-piece-type);
+    display: block;
+    height: 100%;
+    width: 100%;
+    font-weight: bold;
+    text-shadow: 2px 2px 2px #999999;
+  }
+}
+
+.djambi-faction-name, .djambi-piece, .datatable th {
+  &.is-blue-side {
+    background-color: @faction-blue;
+  }
+  &.is-blue-origin {
+    border-color: @faction-blue;
+  }
+  &.is-red-side {
+    background-color: @faction-red;
+  }
+  &.is-red-origin {
+    border-color: @faction-red;
+  }
+  &.is-green-side {
+    background-color: @faction-green;
+  }
+  &.is-green-origin {
+    border-color: @faction-green;
+  }
+  &.is-yellow-side {
+    background-color: @faction-yellow;
+  }
+  &.is-yellow-origin {
+    border-color: @faction-yellow;
+  }
+}
+
+.djambi-faction-name, .djambi-piece-name {
+  display: inline-block;
+  padding: 0 0.25em;
+}
+
+.djambi-infos {
+  text-align: center;
+  dt {
+    font-variant: small-caps;
+  }
+  dd {
+    border: 2px solid #999;
+    background-color: #eee;
+    border-radius: 0.5em;
+    margin: 0;
+    padding: 0.25em;
+  }
+  dd.last-description-item, dd.single-description-item {
+    margin-bottom: 1em;
+  }
+  .djambi-infos__current-round em {
+    font-size: 400%;
+  }
+  .djambi-infos__playing-next ol {
+    text-align: left;
+    padding: 0;
+    list-style-position: inside;
+  }
+}

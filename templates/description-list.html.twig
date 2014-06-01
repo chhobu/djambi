@@ -1,0 +1,34 @@
+{#
+/**
+ * @file
+ * Default theme implementation for a description list.
+ *
+ * Available variables:
+ * - groups: A list of items.
+ * - attributes: HTML attributes to be applied to the list.
+ *
+ * @see template_preprocess_description_list()
+ *
+ * @ingroup themeable
+ */
+#}
+{% if groups -%}
+  <dl class="{{ attributes.class }}"{{ attributes }}>
+    {% for group in groups -%}
+      {% if group.terms -%}
+        {% for term in group.terms -%}
+          <dt{{ term.attributes }}>
+            {% if term.definition %}<dfn>{% endif %}
+            {{- term.value -}}
+            {% if term.definition %}</dfn>{% endif %}
+          </dt>
+        {% endfor %}
+      {% endif %}
+      {% if group.descriptions -%}
+        {% for description in group.descriptions -%}
+          <dd{{ description.attributes }}>{{ description.value }}</dd>
+        {% endfor %}
+      {% endif %}
+    {% endfor %}
+  </dl>
+{% endif %}

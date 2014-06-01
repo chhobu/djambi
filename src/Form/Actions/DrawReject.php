@@ -16,8 +16,8 @@ class DrawReject extends BaseAction {
   const ACTION_NAME = 'reject-draw';
 
   protected function __construct(BaseGameForm $form) {
-    $this->addClass('button-primary');
-    $this->addClass('button-no');
+    $this->addClass('button--primary');
+    $this->addClass('button--no');
     $this->setTitle($this->t("No, I'm sure to win this one !"));
     parent::__construct($form);
   }

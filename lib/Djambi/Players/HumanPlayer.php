@@ -56,6 +56,7 @@ class HumanPlayer extends BasePlayer implements HumanPlayerInterface {
       $this->setJoined(time());
       $this->setEmptySeat(FALSE);
     }
+    return $this;
   }
 
   protected function prepareArrayConversion() {

@@ -13,6 +13,25 @@ use Djambi\Gameplay\Piece;
 
 class GameUI {
 
+  const SETTING_GRID_SIZE = 'grid-size';
+  const SETTING_HIGHLIGHT_CELLS = 'highlight-cells';
+  const SETTING_DISPLAY_CELL_NAME_CARDINAL = 'display-cell-names-cardinal';
+  const SETTING_DISPLAY_CELL_NAME_HEXAGONAL = 'display-cell-names-hexagonal';
+
+  const GRID_SIZE_SMALL = 'small';
+  const GRID_SIZE_BIG = 'big';
+  const GRID_SIZE_STANDARD = 'standard';
+  const GRID_SIZE_ADAPTATIVE = 'adaptative';
+
+  public static function getDefaultDisplaySettings() {
+    return array(
+      static::SETTING_GRID_SIZE => static::GRID_SIZE_ADAPTATIVE,
+      static::SETTING_HIGHLIGHT_CELLS => TRUE,
+      static::SETTING_DISPLAY_CELL_NAME_CARDINAL => FALSE,
+      static::SETTING_DISPLAY_CELL_NAME_HEXAGONAL => TRUE,
+    );
+  }
+
   public static function printPieceFullName(Piece $piece, $html = TRUE) {
     $elements = array(
       '#theme' => 'djambi_piece_full_name',

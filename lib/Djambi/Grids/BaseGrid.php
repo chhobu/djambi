@@ -305,25 +305,25 @@ abstract class BaseGrid extends PersistantDjambiObject implements GridInterface 
     $factions['t1'] = array(
       'id' => 't1',
       'name' => new GlossaryTerm(Glossary::SIDE_RED),
-      'class' => 'rouge',
+      'class' => 'red',
       'start_order' => 1,
     );
     $factions['t2'] = array(
       'id' => 't2',
       'name' => new GlossaryTerm(Glossary::SIDE_BLUE),
-      'class' => 'bleu',
+      'class' => 'blue',
       'start_order' => 2,
     );
     $factions['t3'] = array(
       'id' => 't3',
       'name' => new GlossaryTerm(Glossary::SIDE_YELLOW),
-      'class' => 'jaune',
+      'class' => 'yellow',
       'start_order' => 3,
     );
     $factions['t4'] = array(
       'id' => 't4',
       'name' => new GlossaryTerm(Glossary::SIDE_GREEN),
-      'class' => 'vert',
+      'class' => 'green',
       'start_order' => 4,
     );
     if (!is_null($order)) {

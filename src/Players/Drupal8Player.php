@@ -4,6 +4,8 @@ namespace Drupal\djambi\Players;
 use Djambi\Exceptions\PlayerInvalidException;
 use Djambi\Players\HumanPlayer;
 use Drupal\Core\Session\AccountInterface;
+use Drupal\djambi\Services\ShortTempStore;
+use Drupal\djambi\Utils\GameUI;
 use Drupal\user\Entity\User;
 use Symfony\Component\HttpFoundation\Request;
 
@@ -13,6 +15,9 @@ abstract class Drupal8Player extends HumanPlayer {
   /** @var AccountInterface */
   protected $account;
 
+  /** @var array */
+  protected $displaySettings;
+
   public function setAccount(AccountInterface $user) {
     $this->account = $user;
     return $this;
@@ -20,6 +25,39 @@ abstract class Drupal8Player extends HumanPlayer {
 
   public function getAccount() {
     return $this->account;
+  }
+
+  public function getDisplaySetting($setting) {
+    if (!isset($this->displaySettings[$setting])) {
+      throw new PlayerInvalidException("Unknown setting : " . $setting);
+    }
+    return $this->displaySettings[$setting];
+  }
+
+  public function getDisplaySettings() {
+    return $this->displaySettings;
+  }
+
+  public function loadDisplaySettings(ShortTempStore $store) {
+    $user_settings = $store->getIfOwner('settings-' . $this->getId());
+    if (empty($user_settings)) {
+      $user_settings = array();
+    }
+    $this->displaySettings = array_merge(GameUI::getDefaultDisplaySettings(), $user_settings);
+    return $this;
+  }
+
+  public function saveDisplaySettings($settings, ShortTempStore $store) {
+    $store->setExpire(60 * 60 * 24 * 100);
+    $store->setIfOwner('settings-' . $this->getId(), $settings);
+    $this->displaySettings = $settings;
+    return $this;
+  }
+
+  public function clearDisplaySettings(ShortTempStore $store) {
+    $store->deleteIfOwner('settings-' . $this->getId());
+    $this->displaySettings = GameUI::getDefaultDisplaySettings();
+    return $this;
   }
 
   protected function prepareArrayConversion() {

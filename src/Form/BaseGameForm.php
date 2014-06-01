@@ -11,6 +11,7 @@ namespace Drupal\djambi\Form;
 
 use Composer\Autoload\ClassLoader;
 use Djambi\GameManagers\GameManagerInterface;
+use Djambi\Grids\BaseGrid;
 use Djambi\Strings\Glossary;
 use Drupal\Core\Form\FormBase;
 use Drupal\djambi\Players\Drupal8Player;
@@ -146,6 +147,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
   }
 
   protected function updateStoredGameManager() {
+    $this->getTmpStore()->setExpire(60 * 60);
     $this->getTmpStore()->setIfOwner($this->getGameId(), $this->getGameManager());
   }
 
@@ -162,6 +164,90 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
 
   public function submitForm(array &$form, array &$form_state) {
     $this->updateStoredGameManager();
+  }
+
+  protected function buildFormDisplaySettings(&$form, &$form_state) {
+    $settings = $this->getCurrentPlayer()->loadDisplaySettings($this->getTmpStore())->getDisplaySettings();
+    if (!empty($_SESSION['djambi']['extend_display_fieldset'])) {
+      $open = TRUE;
+      unset($_SESSION['djambi']['extend_display_fieldset']);
+    }
+    else {
+      $open = FALSE;
+    }
+    $form['display'] = array(
+      '#type' => 'details',
+      '#title' => t('Display settings'),
+      '#open' => $open,
+      '#tree' => TRUE,
+    );
+    $setting = GameUI::SETTING_HIGHLIGHT_CELLS;
+    $form['display'][$setting] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Change cell background colors to highlight possible selections or allowable moves'),
+      '#default_value' => $settings[$setting],
+    );
+    if ($this->getGameManager()->getDisposition()->getGrid()->getShape() == BaseGrid::SHAPE_HEXAGONAL) {
+      $setting = GameUI::SETTING_DISPLAY_CELL_NAME_HEXAGONAL;
+    }
+    else {
+      $setting = GameUI::SETTING_DISPLAY_CELL_NAME_CARDINAL;
+    }
+    $form['display'][$setting] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Display cell names'),
+      '#default_value' => $settings[$setting],
+    );
+    $setting = GameUI::SETTING_GRID_SIZE;
+    $form['display'][$setting] = array(
+      '#type' => 'radios',
+      '#title' => t('Grid size'),
+      '#options' => array(
+        GameUI::GRID_SIZE_SMALL => t('small'),
+        GameUI::GRID_SIZE_STANDARD => t('standard'),
+        GameUI::GRID_SIZE_BIG => t('big'),
+        GameUI::GRID_SIZE_ADAPTATIVE => t('adjusted to screen dimensions'),
+      ),
+      '#default_value' => $settings[$setting],
+    );
+    $form['display']['actions'] = array('#type' => 'actions');
+    $form['display']['actions']['display-submit'] = array(
+      '#type' => 'submit',
+      '#value' => t('Save display settings'),
+      '#submit' => array(array($this, 'submitDisplaySettings')),
+      '#limit_validation_errors' => array(array('display')),
+    );
+    if ($settings != GameUI::getDefaultDisplaySettings()) {
+      $form['display']['actions']['display-reset'] = array(
+        '#type' => 'submit',
+        '#value' => t('Reset to default settings'),
+        '#submit' => array(array($this, 'submitResetDisplaySettings')),
+        '#limit_validation_errors' => array(),
+        '#attributes' => array('class' => array('button--cancel')),
+      );
+    }
+  }
+
+  public function submitDisplaySettings($form, &$form_state) {
+    $settings = array_merge($this->getCurrentPlayer()->getDisplaySettings(), $form_state['values']['display']);
+    $default_settings = GameUI::getDefaultDisplaySettings();
+    foreach ($settings as $key => $value) {
+      if (!isset($default_settings[$key]) || $default_settings[$key] == $value) {
+        unset($settings[$key]);
+      }
+    }
+    if (empty($settings)) {
+      $this->getCurrentPlayer()->clearDisplaySettings($this->getTmpStore());
+    }
+    else {
+      $this->getCurrentPlayer()->saveDisplaySettings($settings, $this->getTmpStore());
+    }
+    $_SESSION['djambi']['extend_display_fieldset'] = TRUE;
+  }
+
+  public function submitResetDisplaySettings($form, &$form_state) {
+    $this->getCurrentPlayer()->clearDisplaySettings($this->getTmpStore());
+    $_SESSION['djambi']['extend_display_fieldset'] = TRUE;
   }
 
 }

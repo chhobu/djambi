@@ -18,7 +18,7 @@ class SkipTurn extends BaseAction {
   const ACTION_NAME = 'skip-turn';
 
   protected function __construct(BaseGameForm $form) {
-    $this->addClass('button-warning');
+    $this->addClass('button--warning');
     parent::__construct($form);
   }
 

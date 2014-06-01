@@ -18,7 +18,7 @@ class Restart extends BaseAction {
 
   protected function __construct(BaseGameForm $form) {
     $this->setTitle($this->t('Restart'));
-    $this->addClass('button-danger');
+    $this->addClass('button--danger');
     parent::__construct($form);
   }
 

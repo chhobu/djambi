@@ -18,7 +18,7 @@ class DrawProposal extends BaseAction {
   const ACTION_NAME = 'ask-draw';
 
   protected function __construct(BaseGameForm $form) {
-    $this->addClass('button-secondary');
+    $this->addClass('button--secondary');
 
     parent::__construct($form);
   }
