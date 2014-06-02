@@ -218,7 +218,10 @@ class DiplomatTest extends BaseDjambiTest {
     $grid->getCurrentTurn()->resetMove();
     $this->doMove($piece, $destination, array(
       'manipulation' => array('choice' => $manipulation),
-      'evacuation' => array('choice' => 'D5'),
+      'evacuation' => array(
+        'expected_choices' => explode(', ', 'D5, D3, E4, C4, E3, E5, C5, C3, D2, D1, F4, G4, D6, D7, B4, A4, F6, G7, B2, A1'),
+        'choice' => 'D5',
+      ),
     ));
     $turns = $grid->getPastTurns();
     $saved_turn_array = end($turns);

@@ -16,6 +16,9 @@ class CancelPieceSelection extends BaseAction {
   const ACTION_NAME = 'cancel-selection';
 
   public function validate(&$form, &$form_state) {
+    if ($this->getForm()->getErrorHandler()->getAnyErrors()) {
+      return;
+    }
     $this->getForm()->getGameManager()->getBattlefield()->getCurrentTurn()->resetMove();
   }
 

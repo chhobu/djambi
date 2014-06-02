@@ -38,7 +38,7 @@ class Murder extends BaseMoveInteraction implements MoveInteractionInterface {
     if ($occupant->isAlive() && $piece->getDescription()->hasHabilityKillByAttack()) {
       if (!$allow_interactions) {
         $extra_interactions = static::allowExtraInteractions($piece);
-        if (!$extra_interactions && !$occupant->getDescription()->hasHabilityAccessThrone()) {
+        if (!$extra_interactions || !$occupant->getDescription()->hasHabilityAccessThrone()) {
           return FALSE;
         }
       }

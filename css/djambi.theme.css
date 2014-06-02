@@ -112,6 +112,10 @@
   display: none;
 }
 .djambi-cell__type-name {
+  position: absolute;
+  left: 0;
+  z-index: 3;
+  width: 100%;
   font-size: 90%;
   font-style: italic;
 }
@@ -165,41 +169,49 @@
 }
 .djambi-faction-name.is-blue-side,
 .djambi-piece.is-blue-side,
+.djambi-piece-name.is-blue-side,
 .datatable th.is-blue-side {
   background-color: #99ccff;
 }
 .djambi-faction-name.is-blue-origin,
 .djambi-piece.is-blue-origin,
+.djambi-piece-name.is-blue-origin,
 .datatable th.is-blue-origin {
   border-color: #99ccff;
 }
 .djambi-faction-name.is-red-side,
 .djambi-piece.is-red-side,
+.djambi-piece-name.is-red-side,
 .datatable th.is-red-side {
   background-color: #ee3333;
 }
 .djambi-faction-name.is-red-origin,
 .djambi-piece.is-red-origin,
+.djambi-piece-name.is-red-origin,
 .datatable th.is-red-origin {
   border-color: #ee3333;
 }
 .djambi-faction-name.is-green-side,
 .djambi-piece.is-green-side,
+.djambi-piece-name.is-green-side,
 .datatable th.is-green-side {
   background-color: #99dd00;
 }
 .djambi-faction-name.is-green-origin,
 .djambi-piece.is-green-origin,
+.djambi-piece-name.is-green-origin,
 .datatable th.is-green-origin {
   border-color: #99dd00;
 }
 .djambi-faction-name.is-yellow-side,
 .djambi-piece.is-yellow-side,
+.djambi-piece-name.is-yellow-side,
 .datatable th.is-yellow-side {
   background-color: #ffcc00;
 }
 .djambi-faction-name.is-yellow-origin,
 .djambi-piece.is-yellow-origin,
+.djambi-piece-name.is-yellow-origin,
 .datatable th.is-yellow-origin {
   border-color: #ffcc00;
 }
@@ -232,4 +244,12 @@
   text-align: left;
   padding: 0;
   list-style-position: inside;
+}
+.djambi-grid__actions {
+  background-color: #EEEEEE;
+  border: 2px solid #999999;
+  padding: 0.25em 1em;
+}
+.djambi-grid__actions .form-item {
+  margin-top: 0;
 }

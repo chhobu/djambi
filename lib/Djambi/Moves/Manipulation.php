@@ -41,11 +41,9 @@ class Manipulation extends BaseMoveInteraction implements MoveInteractionInterfa
   public static function checkManipulatingPossibility(Piece $piece, Piece $occupant, $allow_interactions) {
     $can_manipulate = FALSE;
     if ($occupant->isAlive() && $piece->getDescription()->hasHabilityMoveLivingPieces()) {
-      if (!$allow_interactions) {
-        if (!static::allowExtraInteractions($piece) && $piece->getPosition()->getType() == Cell::TYPE_THRONE
-        && $occupant->getDescription()->hasHabilityAccessThrone()) {
-          return FALSE;
-        }
+      if (!$allow_interactions && (!static::allowExtraInteractions($piece) || $piece->getPosition()->getType() != Cell::TYPE_THRONE
+        || !$occupant->getDescription()->hasHabilityAccessThrone())) {
+        return FALSE;
       }
       $manipulation_rule = $piece->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_DIPLOMACY);
       if ($manipulation_rule == 'vassal') {

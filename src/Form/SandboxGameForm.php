@@ -23,6 +23,7 @@ use Drupal\djambi\Form\Actions\Restart;
 use Drupal\djambi\Form\Actions\SkipTurn;
 use Drupal\djambi\Form\Actions\Withdraw;
 use Drupal\djambi\Utils\GameUI;
+use Drupal\djambi\Widgets\PlayersTable;
 
 class SandboxGameForm extends BaseGameForm {
 
@@ -61,7 +62,10 @@ class SandboxGameForm extends BaseGameForm {
   public function buildForm(array $form, array &$form_state) {
     $this->loadStoredGameManager();
 
+    $form['#theme'] = 'djambi_grid';
     $form['#attached']['css'][] = drupal_get_path('module', 'djambi') . '/css/djambi.theme.css';
+    $form['#djambi_game_manager'] = $this->getGameManager();
+    $form['#djambi_current_player'] = $this->getCurrentPlayer();
 
     $form['intro'] = array(
       '#markup' => '<p>' . $this->t("Welcome to Djambi training area. You can play here"
@@ -70,41 +74,93 @@ class SandboxGameForm extends BaseGameForm {
       . " or play with (future ex-)friends in a hot chair mode.") . '</p>',
     );
 
-    $form['grid'] = array(
-      '#type' => 'fieldset',
-      '#theme' => 'djambi_grid',
-      '#title' => $this->t('Game status : %status, started at %created, last change at %updated', array(
-        '%status' => new GlossaryTerm($this->getGameManager()->getStatus()),
-        '%created' => \Drupal::service('date')->format($this->getGameManager()->getBegin(), 'short'),
-        '%updated' => \Drupal::service('date')->format($this->getGameManager()->getChanged(), 'short'),
-      )),
-      '#djambi_game_manager' => $this->getGameManager(),
-      '#current_player' => $this->getCurrentPlayer(),
-    );
-
     $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
     $form['turn_id'] = array(
       '#type' => 'hidden',
       '#value' => !empty($current_turn) ? $current_turn->getId() : NULL,
     );
 
+    $this->buildGameStatusPanel($form);
+
     switch ($this->getGameManager()->getStatus()) {
       case(BasicGameManager::STATUS_PENDING):
-        $this->buildFormGrid($form['grid']);
+        $this->buildPendingGameInfosPanel($form);
+        $this->buildFormGrid($form);
         break;
 
       case(BasicGameManager::STATUS_DRAW_PROPOSAL):
-        $this->buildFormDrawProposal($form['grid']);
+        $this->buildPendingGameInfosPanel($form);
+        $this->buildFormDrawProposal($form);
         break;
 
       case(BasicGameManager::STATUS_FINISHED):
-        $this->buildFormFinished($form['grid']);
+        $this->buildFormFinished($form);
         break;
     }
 
     $this->buildFormDisplaySettings($form, $form_state);
 
     return $form;
+  }
+
+  protected function buildGameStatusPanel(array &$form) {
+    $players_table = PlayersTable::build(array('game' => $this->getGameManager(), 'current_player' => $this->getCurrentPlayer()));
+    $form['game_status_panel'] = array(
+      '#type' => 'details',
+      '#open' => TRUE,
+      '#title' => $this->t('Game status : %status, started at %created, last change at %updated', array(
+        '%status' => new GlossaryTerm($this->getGameManager()->getStatus()),
+        '%created' => \Drupal::service('date')->format($this->getGameManager()->getBegin(), 'short'),
+        '%updated' => \Drupal::service('date')->format($this->getGameManager()->getChanged(), 'short'),
+      )),
+      'players_table' => array(
+        '#theme' => 'table',
+        '#rows' => $players_table->getRows(),
+        '#header' => $players_table->getHeader(),
+        '#attributes' => array(
+          'class' => array('datatable', 'is-centered', 'djambi-players-table'),
+        ),
+        '#caption' => t("Current sides statuses"),
+      ),
+    );
+  }
+
+  protected function buildPendingGameInfosPanel(array &$form) {
+    $descriptions = array();
+    $game = $this->getGameManager();
+    $playing_next = array();
+    $play_order = $game->getBattlefield()->getPlayOrder();
+    while (next($play_order)) {
+      $playing_next[] = GameUI::printFactionFullName($game->getBattlefield()->findFactionById(current($play_order)));
+    }
+    reset($play_order);
+    $descriptions[] = array(
+      'term' => t('Current round :'),
+      'description' => t('Round %round', array(
+        '%round' => $game->getBattlefield()->getCurrentTurn()->getRound(),
+      )),
+      'attributes' => array('class' => array('djambi-infos__current-round')),
+    );
+    $descriptions[] = array(
+      'term' => t('Playing now :'),
+      'description' => GameUI::printFactionFullName($game->getBattlefield()->getPlayingFaction()),
+      'attributes' => array('class' => array('djambi-infos__playing-now')),
+    );
+    $playing_next_markup = array(
+      '#theme' => 'item_list',
+      '#items' => $playing_next,
+      '#list_type' => 'ol',
+    );
+    $descriptions[] = array(
+      'term' => t('Playing next :'),
+      'description' => $playing_next_markup,
+      'attributes' => array('class' => array('djambi-infos__playing-next')),
+    );
+    $form['game_infos_panel'] = array(
+      '#theme' => 'description_list',
+      '#groups' => $descriptions,
+      '#attributes' => array('class' => array('djambi-infos')),
+    );
   }
 
   public function validateForm(array &$form, array &$form_state) {
@@ -198,6 +254,7 @@ class SandboxGameForm extends BaseGameForm {
       '#required' => TRUE,
       '#options' => $cell_choices,
       '#title' => $this->t('Select a movable piece...'),
+      '#attributes' => array('class' => array('is-inline')),
     );
     $grid_form['actions']['validation']['#validate'][] = array($this, 'validatePieceSelection');
   }
@@ -235,6 +292,7 @@ class SandboxGameForm extends BaseGameForm {
       '#title' => t('!piece is selected. Now select its destination...', array(
         '!piece' => GameUI::printPieceFullName($selected_piece),
       )),
+      '#attributes' => array('class' => array('is-inline')),
     );
     $grid_form['actions']['validation']['#validate'][] = array($this, 'validatePieceDestination');
   }
@@ -265,6 +323,7 @@ class SandboxGameForm extends BaseGameForm {
       '#required' => TRUE,
       '#options' => $cell_choices,
       '#title' => $message,
+      '#attributes' => array('class' => array('is-inline')),
     );
     $grid_form['actions']['validation']['#validate'][] = array($this, 'validateInteractionChoice');
   }
@@ -282,6 +341,7 @@ class SandboxGameForm extends BaseGameForm {
       '#required' => TRUE,
       '#options' => $cell_choices,
       '#title' => $message,
+      '#attributes' => array('class' => array('is-inline')),
     );
     $grid_form['actions']['validation']['#validate'][] = array($this, 'validateInteractionChoice');
   }

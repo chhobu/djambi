@@ -87,7 +87,19 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
           $nb_cells++;
         }
       }
+      $allowed_keys = array(
+        'choice',
+        'type',
+        'expected_choices',
+        'forbidden_choices',
+      );
       foreach ($expected_interactions as $expected) {
+        foreach (array_keys($expected) as $key) {
+          if (!in_array($key, $allowed_keys)) {
+            $this->fail("Unexpected expected move result asertion : "
+              . $key . " (must be one of this values : " . implode(", ", $allowed_keys) . ")");
+          }
+        }
         $interaction = $move->getFirstInteraction();
         $this->assertNotEmpty($interaction, "The move did not trigger all expected interactions");
         if (!empty($expected['type'])) {
@@ -106,8 +118,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
         if (!empty($expected['forbidden_choices'])) {
           $expected['forbidden_choices'] = array_unique($expected['forbidden_choices']);
           $intersect = array_intersect($possible_choices, $expected['forbidden_choices']);
-          $this->assertEmpty($intersect, "Some possible choices were not forbidden : " . implode(', ', $intersect));
-
+          $this->assertEmpty($intersect, "Some possible choices are not forbidden : " . implode(', ', $intersect));
           $this->assertEquals($nb_cells, count($possible_choices) + count($expected['forbidden_choices']), "Some forbidden choices were forgotten.");
         }
         $interaction->executeChoice($grid->findCellByName($expected['choice']));

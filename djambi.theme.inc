@@ -6,45 +6,13 @@ use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Template\Attribute;
 use Drupal\djambi\Players\Drupal8Player;
 use Drupal\djambi\Utils\GameUI;
-use Drupal\djambi\Widgets\PlayersTable;
 
 function template_preprocess_djambi_grid(&$variables) {
   /** @var Drupal8Player $current_player */
-  $current_player = $variables['form']['#current_player'];
+  $current_player = $variables['form']['#djambi_current_player'];
   /** @var GameManagerInterface $game */
   $game = $variables['form']['#djambi_game_manager'];
   if ($game->isPending()) {
-    $playing_next = array();
-    $play_order = $game->getBattlefield()->getPlayOrder();
-    while (next($play_order)) {
-      $playing_next[] = GameUI::printFactionFullName($game->getBattlefield()->findFactionById(current($play_order)));
-    }
-    reset($play_order);
-    $descriptions[] = array(
-      'term' => t('Current round :'),
-      'description' => t('Round %round', array('%round' => $game->getBattlefield()->getCurrentTurn()->getRound())),
-      'attributes' => array('class' => array('djambi-infos__current-round')),
-    );
-    $descriptions[] = array(
-      'term' => t('Playing now :'),
-      'description' => GameUI::printFactionFullName($game->getBattlefield()->getPlayingFaction()),
-      'attributes' => array('class' => array('djambi-infos__playing-now')),
-    );
-    $playing_next_markup = array(
-      '#theme' => 'item_list',
-      '#items' => $playing_next,
-      '#list_type' => 'ol',
-    );
-    $descriptions[] = array(
-      'term' => t('Playing next :'),
-      'description' => $playing_next_markup,
-      'attributes' => array('class' => array('djambi-infos__playing-next')),
-    );
-    $variables['game_infos'] = array(
-      '#theme' => 'description_list',
-      '#groups' => $descriptions,
-      '#attributes' => array('class' => array('djambi-infos')),
-    );
     $caption = t('Displaying current turn (round %round - move %move).', array(
       '%round' => $game->getBattlefield()->getCurrentTurn()->getRound(),
       '%move' => $game->getBattlefield()->getCurrentTurn()->getId(),
@@ -56,22 +24,11 @@ function template_preprocess_djambi_grid(&$variables) {
       $caption .= ' ' . t("Waiting for !player decisions...",
         array('!player' => $game->getBattlefield()->getPlayingFaction()->getPlayer()->displayName()));
     }
-    $players_table = PlayersTable::build(array('game' => $game, 'current_player' => $current_player));
-    $variables['players_table'] = array(
-      '#theme' => 'table',
-      '#rows' => $players_table->getRows(),
-      '#header' => $players_table->getHeader(),
-      '#attributes' => array(
-        'class' => array('datatable', 'is-centered', 'djambi-players-table'),
-      ),
-      '#caption' => t("Current sides statuses"),
-    );
   }
   else {
     $last_move = end($game->getBattlefield()->getPastTurns());
-    $variables['current_round'] = $last_move['round'];
     $caption = t('Displaying final positions (round %round - move %move).', array(
-      '%round' => $variables['current_round'],
+      '%round' => $last_move['round'],
       '%move' => $last_move['id'],
     ));
   }

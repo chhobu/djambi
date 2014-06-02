@@ -1,12 +1,18 @@
-{{ players_table }}
+{{ form.intro }}
+{{ form.game_status_panel }}
 <div class='table is-centered'>
   <div class='table__row'>
     <div class='table__cell is-right-aligned'>
-      {{ game_infos }}
+      {{ form.game_infos_panel }}
     </div>
     <div class='table__cell'>
       {{ grid }}
     </div>
   </div>
 </div>
-{{ form }}
+<div class="djambi-grid__actions">
+  {{ form.cells }}
+  {{ form.actions }}
+</div>
+{{ form.display }}
+{{ form|without('intro', 'game_status_panel', 'game_infos_panel', 'cells', 'actions', 'display') }}

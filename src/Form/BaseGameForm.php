@@ -141,9 +141,8 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     return $this->getTmpStoreFactory()->get('djambi', $this->getCurrentPlayer()->getId());
   }
 
-  public function addFormError($name, &$form_state, $message) {
-    $this->setFormError($name, $form_state, $message);
-    return $this;
+  public function getErrorHandler() {
+    return $this->errorHandler();
   }
 
   protected function updateStoredGameManager() {

@@ -126,9 +126,13 @@ abstract class BaseAction implements ActionInterface  {
   }
 
   protected function raiseError(Exception $exception) {
-    $this->getForm()->addFormError(static::ACTION_NAME, $form_state, $this->t('Invalid action fired : @exception.', array(
+    $this->getForm()->getErrorHandler()->setErrorByName(static::ACTION_NAME, $form_state, $this->t('Invalid action fired : @exception.', array(
       '@exception' => $exception->getMessage(),
     )));
   }
+
+  public function validate(&$form, &$form_state) {
+  }
+
 
 }

@@ -26,6 +26,9 @@ class CancelLastTurn extends BaseAction {
   }
 
   public function validate(&$form, &$form_state) {
+    if ($this->getForm()->getErrorHandler()->getAnyErrors()) {
+      return;
+    }
     $this->getForm()->getGameManager()->getBattlefield()->cancelLastTurn();
   }
 

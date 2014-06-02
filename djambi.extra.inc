@@ -62,7 +62,7 @@ function template_preprocess_description_list(&$variables) {
         }
         $nb_items = count($group[$type]);
         $i = 0;
-        foreach ($group[$type] as $key => $item) {
+        foreach ($group[$type] as $item) {
           $item_attributes = !empty($item['#wrapper_attributes']) ? $item['#wrapper_attributes'] : array();
           if ($i == 0 && $i + 1 == $nb_items) {
             $item_attributes['class'][] = $type == 'terms' ? 'single-term-item' : 'single-description-item';
