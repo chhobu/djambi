@@ -1,4 +1,7 @@
 <?php
+$classloader = drupal_classloader();
+$classloader->add('Djambi', __DIR__ . '/lib');
+
 /**
  * Implements hook_permission().
  */
@@ -62,7 +65,7 @@ function djambi_theme() {
     'description_list' => array(
       'variables' => array('groups' => array(), 'attributes' => array()),
       'template' => 'description-list',
-      'file' => 'djambi.extra.inc',
+      'file' => 'djambi.html.inc',
     ),
   );
 }

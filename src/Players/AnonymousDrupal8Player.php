@@ -10,8 +10,6 @@ namespace Drupal\djambi\Players;
 
 
 use Drupal\Component\Utility\Crypt;
-use Drupal\djambi\Services\ShortTempStore;
-use Drupal\djambi\Utils\GameUI;
 
 class AnonymousDrupal8Player extends Drupal8Player {
   const CLASS_NICKNAME = 'anon-';
@@ -23,7 +21,7 @@ class AnonymousDrupal8Player extends Drupal8Player {
     return parent::useSeat();
   }
 
-  public function loadDisplaySettings(ShortTempStore $store) {
+  public function loadDisplaySettings() {
     $user_settings = \Drupal::request()->cookies->get('Drupal_visitor_' . static::COOKIE_SETTINGS_NAME);
     if (!empty($user_settings)) {
       $user_settings = unserialize($user_settings);
@@ -31,19 +29,18 @@ class AnonymousDrupal8Player extends Drupal8Player {
     else {
       $user_settings = array();
     }
-    $this->displaySettings = array_merge(GameUI::getDefaultDisplaySettings(), $user_settings);
-    return $this;
+    $this->displaySettings = $user_settings;
+    return parent::loadDisplaySettings();
   }
 
-  public function saveDisplaySettings($settings, ShortTempStore $store) {
+  public function saveDisplaySettings($settings) {
     user_cookie_save(array(static::COOKIE_SETTINGS_NAME => serialize($settings)));
-    $this->displaySettings = $settings;
+    return parent::saveDisplaySettings($settings);
   }
 
-  public function clearDisplaySettings(ShortTempStore $store) {
+  public function clearDisplaySettings() {
     user_cookie_delete(static::COOKIE_SETTINGS_NAME);
-    $this->displaySettings = GameUI::getDefaultDisplaySettings();
-    return $this;
+    return parent::clearDisplaySettings();
   }
 
 }

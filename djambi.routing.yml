@@ -5,3 +5,12 @@ djambi.sandbox:
     _title: Djambi sandbox game
   requirements:
     _permission: 'play djambi sandbox game'
+
+djambi.ajax:
+  path: '/djambi/ajax'
+  defaults:
+    _content: '\Drupal\djambi\Controller\DjambiAjaxController::content'
+  options:
+    _theme: ajax_base_page
+  requirements:
+    _access: 'TRUE'

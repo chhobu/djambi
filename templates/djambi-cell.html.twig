@@ -8,6 +8,9 @@
       {%- if cell.occupant is not null -%}
         {{- piece -}}
       {%- endif -%}
+      {%- if positionnable_piece -%}
+        {{- positionnable_piece -}}
+      {%- endif -%}
     </{{ cell_tag }}>
   {% else %}
     <div class="{{ attributes.class }}"></div>"

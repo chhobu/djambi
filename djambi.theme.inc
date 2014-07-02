@@ -76,9 +76,6 @@ function template_preprocess_djambi_grid(&$variables) {
       if (!empty($turn->getMove()->getSelectedPiece())) {
         $variables['grid']['#attributes']['class'][] = 'is-with-selected-piece';
       }
-      else {
-        $variables['grid']['#attributes']['class'][] = 'is-without-selected-piece';
-      }
     }
   }
   elseif ($game->isFinished()) {
@@ -124,15 +121,22 @@ function template_preprocess_djambi_piece(&$variables) {
       if (!empty($move) && !empty($move->getSelectedPiece()) && $move->getSelectedPiece()->getId() == $piece->getId()) {
         $attributes['class'][] = 'is-selected';
       }
+      elseif (!empty($move) && !empty($move->getFirstInteraction()) && $move->getFirstInteraction()->getSelectedPiece()->getId() == $piece->getId()) {
+        $attributes['class'][] = 'is-positionnable';
+        if ($move->getFirstInteraction() instanceof \Djambi\Moves\Murder) {
+          $attributes['class'][] = 'is-dead';
+        }
+      }
       if ($piece->isSelectable()) {
         $attributes['for'] = 'edit-cells-' . Unicode::strtolower($piece->getPosition()->getName());
         $variables['piece_tag'] = 'label';
       }
       if ($piece->isMovable()) {
         $attributes['class'][] = 'is-movable';
+        $attributes['data-reachable-cells'] = implode(" ", $piece->getAllowableMovesNames());
       }
     }
-    if ($piece->isAlive()) {
+    if ($piece->isAlive() && !in_array('is-dead', $attributes['class'])) {
       $attributes['class'][] = 'is-alive';
       $attributes['class'][] = 'djambi-piece--type-' . $piece->getDescription()->getType();
       if ($piece->getFaction()->getControl()->isAlive()) {
@@ -180,6 +184,15 @@ function template_preprocess_djambi_cell(&$variables) {
     }
     elseif (!empty($cell->getOccupant()) && $cell->getOccupant()->isSelected()) {
       $attributes['class'][] = 'is-selected';
+      $current_move = $cell->getOccupant()->getBattlefield()->getCurrentTurn()->getMove();
+      if (!empty($current_move->getFirstInteraction()) && !empty($current_move->getFirstInteraction()->getSelectedPiece())
+      && $current_move->getFirstInteraction()->getSelectedPiece()->getId() != $cell->getOccupant()->getId()
+      && $current_move->getFirstInteraction()->getSelectedPiece()->getPosition()->getName() == $cell->getName()) {
+        $variables['positionnable_piece'] = array(
+          '#theme' => 'djambi_piece',
+          '#piece' => $current_move->getFirstInteraction()->getSelectedPiece(),
+        );
+      }
     }
     elseif (!empty($cell->getOccupant()) && $cell->getOccupant()->isMovable()) {
       $turn = $cell->getOccupant()->getBattlefield()->getCurrentTurn();

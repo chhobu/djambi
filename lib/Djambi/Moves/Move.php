@@ -123,7 +123,8 @@ class Move extends PersistantDjambiObject {
 
   public function selectPiece(Piece $piece) {
     if ($this->getActingFaction()->getId() != $piece->getFaction()->getControl()->getId()) {
-      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MOVE_UNCONTROLLED));
+      throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MOVE_UNCONTROLLED,
+        array('%piece_id' => $piece->getId())));
     }
     if (!$piece->isAlive() || !$piece->isMovable()) {
       throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_MOVE_UNMOVABLE));

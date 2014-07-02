@@ -33,9 +33,9 @@
     width: @cell-size - @piece-border * 2;
     height: @cell-size - @piece-border * 2;
     border-width: @piece-border;
-    line-height: @cell-size - @piece-border * 2 - @cell-padding * 2;
+    line-height: 50%;
+    font-size: @cell-size - @piece-border * 2;
     &:before {
-      font-size: @cell-size - @piece-border * 2;
       padding: @cell-padding 0;
     }
   }
@@ -63,7 +63,6 @@
   width: 100%;
   height: 100%;
   background-color: #eee;
-  overflow: hidden;
   display: inline-block;
   vertical-align: middle;
   text-align: center;
@@ -103,17 +102,9 @@
   .djambi-grid.is-with-highlighted-cells &.is-selectable, .djambi-grid.is-with-selected-piece.is-with-highlighted-cells &.is-with-movable-piece {
     background-color: #bbb;
   }
-  .djambi-grid.is-red-turn.is-with-highlighted-cells &.is-selectable {
-    background-color: fade(@faction-red, 50%);
-  }
-  .djambi-grid.is-green-turn.is-with-highlighted-cells &.is-selectable {
-    background-color: fade(@faction-green, 50%);
-  }
-  .djambi-grid.is-yellow-turn.is-with-highlighted-cells &.is-selectable {
-    background-color: fade(@faction-yellow, 50%);
-  }
-  .djambi-grid.is-blue-turn.is-with-highlighted-cells &.is-selectable {
-    background-color: fade(@faction-blue, 50%);
+  .djambi-grid.is-with-selected-piece &.is-pointable:hover {
+    cursor: pointer;
+    background-color: #999;
   }
 }
 
@@ -142,34 +133,37 @@
     font-weight: bold;
     text-shadow: 2px 2px 2px #999999;
   }
+  &.is-dragged {
+    z-index: 20;
+  }
+  &.is-positionnable {
+    opacity: 0.75;
+    cursor: move;
+  }
 }
 
-.djambi-faction-name, .djambi-piece, .djambi-piece-name, .datatable th {
-  &.is-blue-side {
-    background-color: @faction-blue;
+.faction-color-rules(@name, @color) {
+  .djambi-faction-name, .djambi-piece, .djambi-piece-name, .datatable th {
+    &.is-@{name}-side {
+      background-color: @color;
+    }
+    &.is-@{name}-origin {
+      border-color: @color;
+    }
   }
-  &.is-blue-origin {
-    border-color: @faction-blue;
+  .djambi-grid.is-@{name}-turn.is-with-highlighted-cells .djambi-cell.is-selectable {
+    background-color: fade(@color, 50%);
   }
-  &.is-red-side {
-    background-color: @faction-red;
-  }
-  &.is-red-origin {
-    border-color: @faction-red;
-  }
-  &.is-green-side {
-    background-color: @faction-green;
-  }
-  &.is-green-origin {
-    border-color: @faction-green;
-  }
-  &.is-yellow-side {
-    background-color: @faction-yellow;
-  }
-  &.is-yellow-origin {
-    border-color: @faction-yellow;
+  .djambi-grid.is-@{name}-turn .djambi-cell {
+    &.is-highlighted, &.is-selectable:hover {
+      background-color: @color !important;
+    }
   }
 }
+.faction-color-rules(~"blue", @faction-blue);
+.faction-color-rules(~"red", @faction-red);
+.faction-color-rules(~"yellow", @faction-yellow);
+.faction-color-rules(~"green", @faction-green);
 
 .djambi-faction-name, .djambi-piece-name {
   display: inline-block;
@@ -193,6 +187,7 @@
   }
   .djambi-infos__current-round em {
     font-size: 400%;
+    line-height: 25%;
   }
   .djambi-infos__playing-next ol {
     text-align: left;

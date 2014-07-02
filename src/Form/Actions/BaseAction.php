@@ -13,12 +13,13 @@ use Djambi\Exceptions\Exception;
 use Djambi\GameManagers\BasicGameManager;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\djambi\Form\BaseGameForm;
+use Drupal\djambi\Form\SandboxGameForm;
 
 abstract class BaseAction implements ActionInterface  {
   use StringTranslationTrait;
   const ACTION_NAME = 'undefined';
 
-  /** @var BaseGameForm */
+  /** @var SandboxGameForm */
   protected $form;
   /** @var array */
   protected $classes = array();
@@ -28,6 +29,8 @@ abstract class BaseAction implements ActionInterface  {
   protected $validate;
   /** @var string */
   protected $title;
+  /** @var string */
+  protected $validateFields = array();
 
   protected function __construct(BaseGameForm $form) {
     $this->form = $form;
@@ -39,6 +42,7 @@ abstract class BaseAction implements ActionInterface  {
       array($form, 'validateForm'),
       array($this, 'validate'),
     );
+    $this->addValidateField('turn_id');
   }
 
   protected function isPrinted() {
@@ -59,9 +63,7 @@ abstract class BaseAction implements ActionInterface  {
       '#submit' => $action->getSubmit(),
       '#validate' => $action->getValidate(),
     );
-    $button['#limit_validation_errors'] = array(
-      array('turn_id'),
-    );
+    $button['#limit_validation_errors'] = array($action->getValidateFields());
     if (!empty($action->classes)) {
       $button['#attributes']['class'] = $action->getClasses();
     }
@@ -91,7 +93,7 @@ abstract class BaseAction implements ActionInterface  {
   }
 
   /**
-   * @return BaseGameForm
+   * @return SandboxGameForm
    */
   protected function getForm() {
     return $this->form;
@@ -132,6 +134,15 @@ abstract class BaseAction implements ActionInterface  {
   }
 
   public function validate(&$form, &$form_state) {
+  }
+
+  protected function getValidateFields() {
+    return $this->validateFields;
+  }
+
+  protected function addValidateField($field) {
+    $this->validateFields[] = $field;
+    return $this;
   }
 
 

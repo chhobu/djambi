@@ -35,16 +35,18 @@ class SandboxGameForm extends BaseGameForm {
   public function createGameManager() {
     $game_factory = new GameFactory();
     $game_factory->setMode(BasicGameManager::MODE_SANDBOX);
-    $game_factory->setId($this->getGameId());
+    $game_factory->setId($this->getFormId());
     $game_factory->addPlayer($this->getCurrentPlayer());
     $this->getCurrentPlayer()->useSeat();
     $this->setGameManager($game_factory->createGameManager());
+    $this->gameManager->setInfo('form', get_class($this));
+    $this->gameManager->setInfo('path', request_uri());
     $this->gameManager->play();
     $this->updateStoredGameManager();
     return $this;
   }
 
-  public function getGameId() {
+  public function getFormId() {
     return static::GAME_ID_PREFIX . $this->getCurrentPlayer()->getId();
   }
 
@@ -60,12 +62,19 @@ class SandboxGameForm extends BaseGameForm {
    *   The form structure.
    */
   public function buildForm(array $form, array &$form_state) {
-    $this->loadStoredGameManager();
+    if (empty($this->getGameManager()) || !empty($form_state['rebuild'])) {
+      $this->loadStoredGameManager();
+    }
 
     $form['#theme'] = 'djambi_grid';
-    $form['#attached']['css'][] = drupal_get_path('module', 'djambi') . '/css/djambi.theme.css';
+    $form['#attached']['library'][] = 'djambi/djambi.ui';
     $form['#djambi_game_manager'] = $this->getGameManager();
     $form['#djambi_current_player'] = $this->getCurrentPlayer();
+    $form['#prefix'] = '<div id="' . static::FORM_WRAPPER . $this->getFormId() . '">';
+    $form['#suffix'] = '</div>';
+    $form['#attributes']['class'][] = 'djambi-grid-form';
+
+    $form_state['no_cache'] = TRUE;
 
     $form['intro'] = array(
       '#markup' => '<p>' . $this->t("Welcome to Djambi training area. You can play here"
@@ -176,6 +185,11 @@ class SandboxGameForm extends BaseGameForm {
     $grid = $this->getGameManager()->getBattlefield();
     $current_phase = $grid->getCurrentTurn()->getMove()->getPhase();
 
+    $grid_form['js-extra-choice'] = array(
+      '#type' => 'hidden',
+      '#value' => '',
+    );
+
     $grid_form['actions'] = array(
       '#type' => 'actions',
     );
@@ -185,14 +199,18 @@ class SandboxGameForm extends BaseGameForm {
       '#validate' => array(array($this, 'validateForm')),
       '#submit' => array(array($this, 'submitForm')),
       '#attributes' => array('class' => array('button--primary')),
+      '#ajax' => array(
+        'path' => 'djambi/ajax',
+        'wrapper' => static::FORM_WRAPPER . $this->getFormId(),
+      ),
     );
 
     switch ($current_phase) {
       case(Move::PHASE_PIECE_SELECTION):
         SkipTurn::addButton($this, $grid_form['actions']);
         DrawProposal::addButton($this, $grid_form['actions']);
-        Withdraw::addButton($this, $grid_form['actions']);
         CancelLastTurn::addButton($this, $grid_form['actions']);
+        Withdraw::addButton($this, $grid_form['actions']);
         Restart::addButton($this, $grid_form['actions']);
         $this->buildFormGridPieceSelection($grid_form);
         break;
@@ -242,7 +260,7 @@ class SandboxGameForm extends BaseGameForm {
   protected function buildFormGridPieceSelection(array &$grid_form) {
     $grid = $this->getGameManager()->getBattlefield();
     $cell_choices = array();
-    foreach ($grid->getPlayingFaction()->getPieces() as $piece) {
+    foreach ($grid->getPlayingFaction()->getControlledPieces() as $piece) {
       if ($piece->isMovable()) {
         $cell_choices[$piece->getPosition()->getName()] = GameUI::printPieceFullName($piece) . ' (' . $piece->getPosition()->getName() . ')';
         $piece->setSelectable(TRUE);
@@ -270,8 +288,13 @@ class SandboxGameForm extends BaseGameForm {
       $grid->getCurrentTurn()->getMove()->selectPiece($piece);
     }
     catch (Exception $exception) {
-      $this->setFormError('cells', $form_state, $this->t('Invalid piece selection detected : @message. Please choose a movable piece.',
+      $this->setFormError('cells', $form_state, $this->t('@message Please choose a movable piece.',
         array('@message' => $exception->getMessage())));
+    }
+    if (!empty($form_state['input']['js-extra-choice'])) {
+      $form_state['values']['cells'] = $form_state['input']['js-extra-choice'];
+      unset($form_state['input']['js-extra-choice']);
+      $this->validatePieceDestination($form, $form_state);
     }
   }
 

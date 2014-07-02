@@ -249,21 +249,24 @@ class Piece extends PersistantDjambiObject {
     $this->setPosition($destination);
     $trigerred_events = array();
     if ($this->getDescription()->hasHabilityMustLive()) {
-      $trigerred_events[] = new Event(new GlossaryTerm(Glossary::EVENT_LEADER_KILLED, array(
+      $main_event = new Event(new GlossaryTerm(Glossary::EVENT_LEADER_KILLED, array(
         '!faction_id' => $this->getFaction()->getId(),
         '!piece_id' => $this->getId(),
       )));
+      $trigerred_events[] = $main_event;
       if ($old_position->getType() == Cell::TYPE_THRONE) {
-        $trigerred_events = new Event(new GlossaryTerm(Glossary::EVENT_THRONE_MURDER, array(
+        $trigerred_events[] = new Event(new GlossaryTerm(Glossary::EVENT_THRONE_MURDER, array(
           '!piece_id' => $this->getId(),
         )));
       }
       if ($destination->getType() == Cell::TYPE_THRONE) {
-        $trigerred_events = new Event(new GlossaryTerm(Glossary::EVENT_THRONE_MAUSOLEUM, array(
+        $trigerred_events[] = new Event(new GlossaryTerm(Glossary::EVENT_THRONE_MAUSOLEUM, array(
           '!piece_id' => $this->getId(),
         )));
       }
-      $this->getFaction()->setControl($this->faction->getControl());
+      $old_control = $this->getFaction()->getControl()->getId();
+      $this->getFaction()->setControl($this->getBattlefield()->getCurrentTurn()->getActingFaction());
+      $main_event->logChange(new FactionChange($this->getFaction(), 'controlId', $old_control, $this->getFaction()->getControl()->getId()));
       $this->getFaction()->dieDieDie(Faction::STATUS_KILLED);
     }
     if (!empty($trigerred_events)) {

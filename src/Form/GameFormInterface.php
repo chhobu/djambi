@@ -35,11 +35,6 @@ interface GameFormInterface {
   public function getCurrentPlayer();
 
   /**
-   * @return String
-   */
-  public function getGameId();
-
-  /**
    * @param $string
    * @param $args
    *

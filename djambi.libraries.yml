@@ -1,0 +1,12 @@
+djambi.ui:
+  js:
+    js/djambi.js: {}
+  css:
+    theme:
+      css/djambi.theme.css: {}
+  dependencies:
+    - core/jquery
+    - core/jquery.once
+    - core/jquery.ui.droppable
+    - core/jquery.ui.draggable
+    - core/drupal
