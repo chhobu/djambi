@@ -1,5 +1,5 @@
 (function ($, Drupal) {
-  Drupal.behaviors.djambiPlayer = {attach: function() {
+  Drupal.behaviors.djambiPlaying = {attach: function() {
     var $form = $('.djambi-grid-form');
     var $grid = $('.djambi-grid');
     // Glisser-déposer d'une pièce
@@ -57,7 +57,7 @@
     $grid.find('.is-with-movable-piece').not('label').addClass('is-pointable').click(function() {
       var $form = $(this).parents('form');
       $form.find("input[name=\"js-extra-choice\"]").val($(this).data('cell-name'));
-      $form.find('input.button--cancel-selection').click();
+      $form.find('input.button--cancel-selection').mousedown();
     });
     // Application d'un style sur le conteneur du bouton radio sélectionné
     $form.find('.form-radios input.form-radio').change(function() {

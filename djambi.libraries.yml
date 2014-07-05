@@ -1,12 +1,19 @@
-djambi.ui:
+djambi.ui.watch:
   js:
-    js/djambi.js: {}
+    js/djambi.watch.js: {}
   css:
     theme:
       css/djambi.theme.css: {}
   dependencies:
     - core/jquery
     - core/jquery.once
+    - core/drupal
+
+djambi.ui.play:
+  js:
+    js/djambi.play.js: {}
+  dependencies:
+    - djambi/djambi.ui.watch
     - core/jquery.ui.droppable
     - core/jquery.ui.draggable
-    - core/drupal
+

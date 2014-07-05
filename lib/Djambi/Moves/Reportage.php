@@ -67,6 +67,14 @@ class Reportage extends BaseMoveInteraction implements MoveInteractionInterface 
   }
 
   public function revert() {
-    $this->getChoice()->getOccupant()->setAlive(TRUE);
+    if (!empty($this->getChoice())) {
+      $this->getChoice()->getOccupant()->setAlive(TRUE);
+    }
+  }
+
+  public function getMessage() {
+    return new GlossaryTerm(Glossary::INTERACTION_REPORTAGE_MESSAGE, array(
+      '!piece_id' => $this->getTriggeringMove()->getSelectedPiece()->getId(),
+    ));
   }
 }

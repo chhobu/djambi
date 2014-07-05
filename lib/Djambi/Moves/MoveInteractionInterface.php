@@ -39,4 +39,6 @@ interface MoveInteractionInterface {
   public function revert();
 
   public static function isTriggerable(Move $move, Piece $target = NULL, $allow_interactions = TRUE);
+
+  public function getMessage();
 }

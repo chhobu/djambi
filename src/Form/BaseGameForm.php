@@ -155,6 +155,27 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     return $this;
   }
 
+  /**
+   * @inheritdoc
+   */
+  public function buildForm(array $form, array &$form_state) {
+    if (empty($this->getGameManager()) || !empty($form_state['rebuild'])) {
+      $this->loadStoredGameManager();
+    }
+
+    $form['#theme'] = 'djambi_grid';
+    $form['#attached']['library'][] = 'djambi/djambi.ui.watch';
+    $form['#djambi_game_manager'] = $this->getGameManager();
+    $form['#djambi_current_player'] = $this->getCurrentPlayer();
+    $form['#prefix'] = '<div id="' . static::FORM_WRAPPER . $this->getFormId() . '">';
+    $form['#suffix'] = '</div>';
+    $form['#attributes']['class'][] = 'djambi-grid-form';
+
+    $form_state['no_cache'] = TRUE;
+
+    return $form;
+  }
+
   public function submitForm(array &$form, array &$form_state) {
     $form_state['rebuild'] = TRUE;
     $this->updateStoredGameManager();
@@ -210,6 +231,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
       '#value' => t('Save display settings'),
       '#submit' => array(array($this, 'submitDisplaySettings')),
       '#limit_validation_errors' => array(array('display')),
+      '#ajax' => $this->getAjaxSettings(),
     );
     if ($settings != GameUI::getDefaultDisplaySettings()) {
       $form['display']['actions']['display-reset'] = array(
@@ -218,11 +240,13 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
         '#submit' => array(array($this, 'submitResetDisplaySettings')),
         '#limit_validation_errors' => array(),
         '#attributes' => array('class' => array('button--cancel')),
+        '#ajax' => $this->getAjaxSettings(),
       );
     }
   }
 
   public function submitDisplaySettings($form, &$form_state) {
+    $form_state['rebuild'] = TRUE;
     $settings = array_merge($this->getCurrentPlayer()->getDisplaySettings(), $form_state['values']['display']);
     $default_settings = GameUI::getDefaultDisplaySettings();
     foreach ($settings as $key => $value) {
@@ -242,6 +266,13 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
   public function submitResetDisplaySettings($form, &$form_state) {
     $this->getCurrentPlayer()->clearDisplaySettings();
     $_SESSION['djambi']['extend_display_fieldset'] = TRUE;
+  }
+
+  protected function getAjaxSettings() {
+    return array(
+      'path' => 'djambi/ajax',
+      'wrapper' => static::FORM_WRAPPER . $this->getFormId(),
+    );
   }
 
 }

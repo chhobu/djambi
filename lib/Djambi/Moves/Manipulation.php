@@ -81,4 +81,11 @@ class Manipulation extends BaseMoveInteraction implements MoveInteractionInterfa
     $this->getSelectedPiece()->setPosition($this->getTriggeringMove()->getDestination());
   }
 
+  public function getMessage() {
+    return new GlossaryTerm(Glossary::INTERACTION_MANIPULATION_MESSAGE, array(
+      '!piece_id1' => $this->getTriggeringMove()->getSelectedPiece()->getId(),
+      '!piece_id2' => $this->getSelectedPiece()->getId(),
+    ));
+  }
+
 }

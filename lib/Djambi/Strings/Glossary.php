@@ -22,6 +22,12 @@ class Glossary {
   const SIDE_RED = "Red";
   const SIDE_YELLOW = "Yellow";
 
+  const INTERACTION_MURDER_MESSAGE = "!piece_id2 has been slayed by !piece_id1. Select now a place to place to bury its corpse.";
+  const INTERACTION_MANIPULATION_MESSAGE = "!piece_id2 has been manipulated by !piece_id's devious words. Select now its new location.";
+  const INTERACTION_NECROMOBILITY_MESSAGE = "!piece_id has desecrated a grave in %location. Select now a new burial place.";
+  const INTERACTION_EVACUATION_MESSAGE = "!piece_id cannot occupy the throne case. Select a runaway location.";
+  const INTERACTION_REPORTAGE_MESSAGE = "!piece_id is on the way to reveal a massive scandal. Select the victim to focus on.";
+
   const EXCEPTION_MANIPULATION_BAD_DESTINATION = "Attempt to place manipulated piece (%piece_id) into an occupied cell (%location).";
   const EXCEPTION_MOVE_DISALLOWED = "Attempt to move a piece (%piece_id) to an unauthorized location (%location).";
   const EXCEPTION_MOVE_ILLOGIC = "Attempt to choose piece destination before piece selection phase.";

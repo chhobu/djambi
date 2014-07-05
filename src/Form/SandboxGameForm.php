@@ -6,13 +6,9 @@ use Djambi\Exceptions\Exception;
 use Djambi\GameFactories\GameFactory;
 use Djambi\GameManagers\BasicGameManager;
 use Djambi\Gameplay\Faction;
-use Djambi\Moves\Manipulation;
 use Djambi\Moves\Move;
 use Djambi\Moves\MoveInteractionInterface;
-use Djambi\Moves\Murder;
-use Djambi\Moves\Necromobility;
 use Djambi\Moves\Reportage;
-use Djambi\Moves\ThroneEvacuation;
 use Djambi\Strings\GlossaryTerm;
 use Drupal\djambi\Form\Actions\CancelLastTurn;
 use Drupal\djambi\Form\Actions\CancelPieceSelection;
@@ -51,30 +47,11 @@ class SandboxGameForm extends BaseGameForm {
   }
 
   /**
-   * Form constructor.
-   *
-   * @param array $form
-   *   An associative array containing the structure of the form.
-   * @param array $form_state
-   *   An associative array containing the current state of the form.
-   *
-   * @return array
-   *   The form structure.
+   * @inheritdoc
    */
   public function buildForm(array $form, array &$form_state) {
-    if (empty($this->getGameManager()) || !empty($form_state['rebuild'])) {
-      $this->loadStoredGameManager();
-    }
-
-    $form['#theme'] = 'djambi_grid';
-    $form['#attached']['library'][] = 'djambi/djambi.ui';
-    $form['#djambi_game_manager'] = $this->getGameManager();
-    $form['#djambi_current_player'] = $this->getCurrentPlayer();
-    $form['#prefix'] = '<div id="' . static::FORM_WRAPPER . $this->getFormId() . '">';
-    $form['#suffix'] = '</div>';
-    $form['#attributes']['class'][] = 'djambi-grid-form';
-
-    $form_state['no_cache'] = TRUE;
+    $form = parent::buildForm($form, $form_state);
+    $form['#attached']['library'][] = 'djambi/djambi.ui.play';
 
     $form['intro'] = array(
       '#markup' => '<p>' . $this->t("Welcome to Djambi training area. You can play here"
@@ -199,58 +176,32 @@ class SandboxGameForm extends BaseGameForm {
       '#validate' => array(array($this, 'validateForm')),
       '#submit' => array(array($this, 'submitForm')),
       '#attributes' => array('class' => array('button--primary')),
-      '#ajax' => array(
-        'path' => 'djambi/ajax',
-        'wrapper' => static::FORM_WRAPPER . $this->getFormId(),
-      ),
+      '#ajax' => $this->getAjaxSettings(),
     );
 
     switch ($current_phase) {
       case(Move::PHASE_PIECE_SELECTION):
-        SkipTurn::addButton($this, $grid_form['actions']);
-        DrawProposal::addButton($this, $grid_form['actions']);
-        CancelLastTurn::addButton($this, $grid_form['actions']);
-        Withdraw::addButton($this, $grid_form['actions']);
-        Restart::addButton($this, $grid_form['actions']);
+        SkipTurn::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
+        DrawProposal::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
+        CancelLastTurn::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
+        Withdraw::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
+        Restart::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
         $this->buildFormGridPieceSelection($grid_form);
         break;
 
       case(Move::PHASE_PIECE_DESTINATION):
-        CancelPieceSelection::addButton($this, $grid_form['actions']);
+        CancelPieceSelection::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
         $this->buildFormGridPieceDestination($grid_form);
         break;
 
       case(Move::PHASE_PIECE_INTERACTIONS):
-        CancelPieceSelection::addButton($this, $grid_form['actions']);
+        CancelPieceSelection::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
         $interaction = $grid->getCurrentTurn()->getMove()->getFirstInteraction();
-        $args = array();
-        if ($interaction->getSelectedPiece()->isAlive()) {
-          $args['!target'] = GameUI::printPieceFullName($interaction->getSelectedPiece());
+        if ($interaction instanceof Reportage) {
+          $this->buildFormGridVictimChoice($grid_form, $interaction);
         }
-        if ($interaction->getSelectedPiece()->getId() != $interaction->getTriggeringMove()->getSelectedPiece()) {
-          $args['!piece'] = GameUI::printPieceFullName($interaction->getTriggeringMove()
-              ->getSelectedPiece());
-        }
-        if ($interaction instanceof Murder) {
-          $this->buildFormGridFreeCellSelection($grid_form, $interaction,
-            $this->t("!target has been slayed by !piece. Select now a place to place to bury its corpse.", $args));
-        }
-        elseif ($interaction instanceof Manipulation) {
-          $this->buildFormGridFreeCellSelection($grid_form, $interaction,
-            $this->t("!target has been manipulated by !piece's devious words. Select now its new location.", $args));
-        }
-        elseif ($interaction instanceof Necromobility) {
-          $args['!location'] = $interaction->getTriggeringMove()->getDestination()->getName();
-          $this->buildFormGridFreeCellSelection($grid_form, $interaction,
-            $this->t("!piece has desecrated a grave in !location. Select now a new burial place.", $args));
-        }
-        elseif ($interaction instanceof ThroneEvacuation) {
-          $this->buildFormGridFreeCellSelection($grid_form, $interaction,
-            $this->t("!piece cannot occupy the throne case. Select a runaway location.", $args));
-        }
-        elseif ($interaction instanceof Reportage) {
-          $this->buildFormGridVictimChoice($grid_form, $interaction,
-            $this->t("!piece cannot reveal a scandal on several persons. Select the victim to focus on.", $args));
+        else {
+          $this->buildFormGridFreeCellSelection($grid_form, $interaction);
         }
         break;
     }
@@ -334,7 +285,7 @@ class SandboxGameForm extends BaseGameForm {
     }
   }
 
-  protected function buildFormGridFreeCellSelection(&$grid_form, MoveInteractionInterface $interaction, $message) {
+  protected function buildFormGridFreeCellSelection(&$grid_form, MoveInteractionInterface $interaction) {
     $cell_choices = array();
     foreach ($interaction->getPossibleChoices() as $free_cell) {
       $cell_choices[$free_cell->getName()] = $free_cell->getName();
@@ -345,25 +296,25 @@ class SandboxGameForm extends BaseGameForm {
       '#type' => 'radios',
       '#required' => TRUE,
       '#options' => $cell_choices,
-      '#title' => $message,
+      '#title' => $interaction->getMessage(),
       '#attributes' => array('class' => array('is-inline')),
     );
     $grid_form['actions']['validation']['#validate'][] = array($this, 'validateInteractionChoice');
   }
 
-  protected function buildFormGridVictimChoice(&$grid_form, Reportage $interaction, $message) {
+  protected function buildFormGridVictimChoice(&$grid_form, Reportage $interaction) {
     $cell_choices = array();
     foreach ($interaction->getPossibleChoices() as $cell) {
       $cell_choices[$cell->getName()] = GameUI::printPieceFullName($cell->getOccupant())
         . ' (' . $cell->getName() . ')';
-      $cell->getOccupant()->setSelectable(TRUE);
+      $cell->setSelectable(TRUE);
     }
     asort($cell_choices);
     $grid_form['cells'] = array(
       '#type' => 'radios',
       '#required' => TRUE,
       '#options' => $cell_choices,
-      '#title' => $message,
+      '#title' => $interaction->getMessage(),
       '#attributes' => array('class' => array('is-inline')),
     );
     $grid_form['actions']['validation']['#validate'][] = array($this, 'validateInteractionChoice');
@@ -421,13 +372,13 @@ class SandboxGameForm extends BaseGameForm {
       );
     }
     $grid_form['actions'] = array('#type' => 'actions');
-    DrawReject::addButton($this, $grid_form['actions']);
-    DrawAccept::addButton($this, $grid_form['actions']);
+    DrawReject::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
+    DrawAccept::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
   }
 
   public function buildFormFinished(array &$grid_form) {
     $grid_form['actions'] = array('#type' => 'actions');
-    Restart::addButton($this, $grid_form['actions']);
+    Restart::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
   }
 
 }

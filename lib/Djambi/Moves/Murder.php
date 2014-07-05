@@ -81,7 +81,13 @@ class Murder extends BaseMoveInteraction implements MoveInteractionInterface {
   }
 
   public function revert() {
-    $this->getSelectedPiece()->setPosition($this->getTriggeringMove()->getDestination())
-      ->setAlive(TRUE);
+    $this->getSelectedPiece()->setPosition($this->getTriggeringMove()->getDestination())->setAlive(TRUE);
+  }
+
+  public function getMessage() {
+    return new GlossaryTerm(Glossary::INTERACTION_MURDER_MESSAGE, array(
+      '!piece_id1' => $this->getTriggeringMove()->getSelectedPiece()->getId(),
+      '!piece_id2' => $this->getSelectedPiece()->getId(),
+    ));
   }
 }

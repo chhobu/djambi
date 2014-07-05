@@ -62,6 +62,12 @@ class Cell extends SerializableDjambiObject {
 
   /**
    * Construit une cellule de Djambi à partir de ses coordonnées x / y.
+   *
+   * @param Battlefield $grid
+   * @param $x
+   * @param $y
+   *
+   * @return \Djambi\Gameplay\Cell
    */
   public static function createByXY(Battlefield $grid, $x, $y) {
     $x_corrected = $x - 1;

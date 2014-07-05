@@ -53,7 +53,7 @@ abstract class BaseAction implements ActionInterface  {
     return TRUE;
   }
 
-  public static function addButton(BaseGameForm $form_object, array &$form_array, $weight = 0) {
+  public static function addButton(BaseGameForm $form_object, array &$form_array, array $ajax = NULL, $weight = 0) {
     $action = new static($form_object);
     if (!$action->isPrinted()) {
       return $action;
@@ -69,6 +69,9 @@ abstract class BaseAction implements ActionInterface  {
     }
     if (!$action->isActive()) {
       $button['#disabled'] = TRUE;
+    }
+    if (!empty($ajax)) {
+      $button['#ajax'] = $ajax;
     }
     if (!empty($weight)) {
       $button['#weight'] = $weight;

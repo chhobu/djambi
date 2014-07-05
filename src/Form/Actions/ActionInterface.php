@@ -13,5 +13,5 @@ use Drupal\djambi\Form\BaseGameForm;
 
 interface ActionInterface {
   public function validate(&$form, &$form_state);
-  public static function addButton(BaseGameForm $form_object, array &$form_array, $weight = 0);
+  public static function addButton(BaseGameForm $form_object, array &$form_array, array $ajax = NULL, $weight = 0);
 }

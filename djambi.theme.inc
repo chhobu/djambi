@@ -26,7 +26,8 @@ function template_preprocess_djambi_grid(&$variables) {
     }
   }
   else {
-    $last_move = end($game->getBattlefield()->getPastTurns());
+    $past_turns = $game->getBattlefield()->getPastTurns();
+    $last_move = end($past_turns);
     $caption = t('Displaying final positions (round %round - move %move).', array(
       '%round' => $last_move['round'],
       '%move' => $last_move['id'],

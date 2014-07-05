@@ -4,6 +4,8 @@ namespace Djambi\Moves;
 
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Piece;
+use Djambi\Strings\Glossary;
+use Djambi\Strings\GlossaryTerm;
 
 class ThroneEvacuation extends BaseMoveInteraction implements MoveInteractionInterface {
 
@@ -31,5 +33,11 @@ class ThroneEvacuation extends BaseMoveInteraction implements MoveInteractionInt
 
   public function revert() {
     $this->getSelectedPiece()->setPosition($this->getTriggeringMove()->getDestination());
+  }
+
+  public function getMessage() {
+    return new GlossaryTerm(Glossary::INTERACTION_EVACUATION_MESSAGE, array(
+      '!piece_id' => $this->getTriggeringMove()->getSelectedPiece()->getId(),
+    ));
   }
 }

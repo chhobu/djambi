@@ -48,4 +48,11 @@ class Necromobility extends BaseMoveInteraction implements MoveInteractionInterf
   public function revert() {
     $this->getSelectedPiece()->setPosition($this->getTriggeringMove()->getDestination());
   }
+
+  public function getMessage() {
+    return new GlossaryTerm(Glossary::INTERACTION_NECROMOBILITY_MESSAGE, array(
+      '!piece_id' => $this->getTriggeringMove()->getSelectedPiece()->getId(),
+      '%location' => $this->getTriggeringMove()->getDestination()->getName(),
+    ));
+  }
 }
