@@ -264,6 +264,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
   }
 
   public function submitResetDisplaySettings($form, &$form_state) {
+    $form_state['rebuild'] = TRUE;
     $this->getCurrentPlayer()->clearDisplaySettings();
     $_SESSION['djambi']['extend_display_fieldset'] = TRUE;
   }
