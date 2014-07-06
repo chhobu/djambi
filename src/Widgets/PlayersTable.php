@@ -12,7 +12,6 @@ namespace Drupal\djambi\Widgets;
 use Djambi\Exceptions\Exception;
 use Djambi\GameManagers\GameManagerInterface;
 use Djambi\Gameplay\Faction;
-use Djambi\Players\BasePlayer;
 use Djambi\Players\HumanPlayer;
 use Djambi\Strings\GlossaryTerm;
 use Drupal\djambi\Utils\GameUI;
@@ -51,7 +50,7 @@ class PlayersTable extends BaseTable {
   }
 
   protected function isCurrentPlayer(Faction $faction) {
-    /** @var BasePlayer $current_player */
+    /** @var HumanPlayer $current_player */
     $current_player = $this->data['current_player'];
     return $current_player->isPlayingFaction($faction);
   }
@@ -113,6 +112,9 @@ class PlayersTable extends BaseTable {
 
       case(Faction::STATUS_WINNER):
         return t("Winner !");
+
+      case(Faction::STATUS_WITHDRAW):
+        return t("Withdrawn");
 
       default:
         $return = new GlossaryTerm($faction->getStatus());

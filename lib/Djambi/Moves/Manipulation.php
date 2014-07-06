@@ -88,4 +88,12 @@ class Manipulation extends BaseMoveInteraction implements MoveInteractionInterfa
     ));
   }
 
+  public static function log(array &$items, array $interaction_history, array $turn_history) {
+    $items[] = new GlossaryTerm(Glossary::INTERACTION_MOVE_LOG, array(
+      '@piece_id' => $interaction_history['selectedPiece'],
+      '%origin' => $turn_history['move']['destination'],
+      '%destination' => $interaction_history['choice'],
+    ));
+  }
+
 }

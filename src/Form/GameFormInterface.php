@@ -41,4 +41,8 @@ interface GameFormInterface {
    * @return string
    */
   public function translateDjambiStrings($string, $args);
+
+  public function submitDisplaySettings(array $form, array &$form_state);
+
+  public function submitResetDisplaySettings(array $form, array &$form_state);
 }

@@ -63,6 +63,7 @@ class Reportage extends BaseMoveInteraction implements MoveInteractionInterface 
         array('%location' => $cell->getName())));
     }
     $cell->getOccupant()->dieDieDie($cell, $this->getTriggeringMove());
+    $this->setSelectedPiece($cell->getOccupant());
     return parent::executeChoice($cell);
   }
 
@@ -77,4 +78,17 @@ class Reportage extends BaseMoveInteraction implements MoveInteractionInterface 
       '!piece_id' => $this->getTriggeringMove()->getSelectedPiece()->getId(),
     ));
   }
+
+  public static function log(array &$items, array $interaction_history, array $turn_history) {
+    $items[] = new GlossaryTerm(Glossary::INTERACTION_KILLED_LOG, array(
+      '@piece_id' => $interaction_history['selectedPiece'],
+      '%location' => $interaction_history['choice'],
+    ));
+  }
+
+  public function isDealingWithPiecesOnly() {
+    return TRUE;
+  }
+
+
 }

@@ -55,4 +55,12 @@ class Necromobility extends BaseMoveInteraction implements MoveInteractionInterf
       '%location' => $this->getTriggeringMove()->getDestination()->getName(),
     ));
   }
+
+  public static function log(array &$items, array $interaction_history, array $turn_history) {
+    $items[] = new GlossaryTerm(Glossary::INTERACTION_CORPSE_LOG, array(
+      '@corpse_id' => $interaction_history['selectedPiece'],
+      '%origin' => $turn_history['move']['destination'],
+      '%destination' => $interaction_history['choice'],
+    ));
+  }
 }

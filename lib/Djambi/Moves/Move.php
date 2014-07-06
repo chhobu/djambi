@@ -349,4 +349,24 @@ class Move extends PersistantDjambiObject {
     }
   }
 
+  public static function log(&$items, $turn_history) {
+    $items[] = new GlossaryTerm(Glossary::INTERACTION_MOVE_LOG, array(
+      '@piece_id' => $turn_history['move']['selectedPiece'],
+      '%origin' => $turn_history['move']['origin'],
+      '%destination' => $turn_history['move']['destination'],
+    ));
+    if (!empty($turn_history['move']['kills'])) {
+      foreach ($turn_history['move']['kills'] as $location => $kill) {
+        $items[] = new GlossaryTerm(Glossary::INTERACTION_KILLED_LOG,
+          array('@piece_id' => $kill, '%location' => $location));
+      }
+    }
+    if (!empty($turn_history['move']['interactions'])) {
+      foreach ($turn_history['move']['interactions'] as $interaction) {
+        call_user_func_array($interaction['className'] . '::log',
+          array(&$items, $interaction, $turn_history));
+      }
+    }
+  }
+
 }

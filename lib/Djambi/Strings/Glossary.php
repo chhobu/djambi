@@ -28,6 +28,10 @@ class Glossary {
   const INTERACTION_EVACUATION_MESSAGE = "!piece_id cannot occupy the throne case. Select a runaway location.";
   const INTERACTION_REPORTAGE_MESSAGE = "!piece_id is on the way to reveal a massive scandal. Select the victim to focus on.";
 
+  const INTERACTION_MOVE_LOG = "@piece_id : %origin to %destination";
+  const INTERACTION_CORPSE_LOG = "@corpse_id : %origin to %destination";
+  const INTERACTION_KILLED_LOG = "@piece_id killed in %location";
+
   const EXCEPTION_MANIPULATION_BAD_DESTINATION = "Attempt to place manipulated piece (%piece_id) into an occupied cell (%location).";
   const EXCEPTION_MOVE_DISALLOWED = "Attempt to move a piece (%piece_id) to an unauthorized location (%location).";
   const EXCEPTION_MOVE_ILLOGIC = "Attempt to choose piece destination before piece selection phase.";

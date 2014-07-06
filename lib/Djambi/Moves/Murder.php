@@ -90,4 +90,16 @@ class Murder extends BaseMoveInteraction implements MoveInteractionInterface {
       '!piece_id2' => $this->getSelectedPiece()->getId(),
     ));
   }
+
+  public static function log(array &$items, array $interaction_history, array $turn_history) {
+    $items[] = new GlossaryTerm(Glossary::INTERACTION_KILLED_LOG, array(
+      '@piece_id' => $interaction_history['selectedPiece'],
+      '%location' => $turn_history['move']['destination'],
+    ));
+    $items[] = new GlossaryTerm(Glossary::INTERACTION_CORPSE_LOG, array(
+      '@corpse_id' => $interaction_history['selectedPiece'],
+      '%origin' => $turn_history['move']['destination'],
+      '%destination' => $interaction_history['choice'],
+    ));
+  }
 }

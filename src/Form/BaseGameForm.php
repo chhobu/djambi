@@ -43,7 +43,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     // Gestion des chaînes traduisibles issues de la librairie Djambi
     Glossary::getInstance()->setTranslaterHandler(array($form, 'translateDjambiStrings'));
     // Gestion de l'utilisateur courant
-    $form->setCurrentPlayer(Drupal8Player::fromCurrentUser($form->currentUser(), $form->getRequest()));
+    $form->currentPlayer = Drupal8Player::fromCurrentUser($form->currentUser(), $form->getRequest());
     // Utilisation d'un objet de type KeyValueStore
     $form->tmpStore = $container->get('djambi.shorttempstore')->get('djambi', $form->getCurrentPlayer()->getId());
     return $form;
@@ -51,14 +51,17 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
 
   public static function retrieve(Drupal8Player $player, GameManagerInterface $game_manager, ShortTempStore $store) {
     $form = new static();
-    $form->setCurrentPlayer($player);
-    $form->setTmpStore($store);
+    $form->tmpStore = $store;
+    $form->currentPlayer = $player;
     $form->setGameManager($game_manager);
     Glossary::getInstance()->setTranslaterHandler(array($form, 'translateDjambiStrings'));
     return $form;
   }
 
   public function translateDjambiStrings($string, $args) {
+    if (isset($args['@corpse_id'])) {
+      $args['@corpse_id'] = $this->t('corpse');
+    }
     $piece_replacements = array(
       '!piece_id_1' => TRUE,
       '%piece_id_1' => FALSE,
@@ -121,16 +124,6 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     return $this->currentPlayer;
   }
 
-  protected function setCurrentPlayer(Drupal8Player $player) {
-    $this->currentPlayer = $player;
-    return $this;
-  }
-
-  protected function setTmpStore(ShortTempStore $store) {
-    $this->tmpStore = $store;
-    return $this;
-  }
-
   protected function getTmpStore() {
     return $this->tmpStore;
   }
@@ -141,7 +134,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
 
   protected function updateStoredGameManager() {
     $this->getTmpStore()->setExpire(60 * 60);
-    $this->getTmpStore()->setIfOwner($this->getFormId(), $this->getGameManager());
+    $this->getTmpStore()->set($this->getFormId(), $this->getGameManager());
   }
 
   protected function loadStoredGameManager() {
@@ -245,7 +238,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     }
   }
 
-  public function submitDisplaySettings($form, &$form_state) {
+  public function submitDisplaySettings(array $form, array &$form_state) {
     $form_state['rebuild'] = TRUE;
     $settings = array_merge($this->getCurrentPlayer()->getDisplaySettings(), $form_state['values']['display']);
     $default_settings = GameUI::getDefaultDisplaySettings();
@@ -263,7 +256,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     $_SESSION['djambi']['extend_display_fieldset'] = TRUE;
   }
 
-  public function submitResetDisplaySettings($form, &$form_state) {
+  public function submitResetDisplaySettings(array $form, array &$form_state) {
     $form_state['rebuild'] = TRUE;
     $this->getCurrentPlayer()->clearDisplaySettings();
     $_SESSION['djambi']['extend_display_fieldset'] = TRUE;

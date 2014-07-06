@@ -124,4 +124,8 @@ abstract class BaseMoveInteraction extends PersistantDjambiObject implements Mov
     return $extra_interaction;
   }
 
+  public function isDealingWithPiecesOnly() {
+    return FALSE;
+  }
+
 }
