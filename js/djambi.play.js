@@ -2,6 +2,8 @@
   Drupal.behaviors.djambiPlaying = {attach: function() {
     var $form = $('.djambi-grid-form');
     var $grid = $('.djambi-grid');
+    // Cache du bouton valider si besoin
+    $form.find('.is-minimized .button--primary').hide();
     // Glisser-déposer d'une pièce
     var $pieces = $grid.find('label.djambi-piece');
     if ($pieces.length > 0) {

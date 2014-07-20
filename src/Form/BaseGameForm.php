@@ -178,7 +178,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
   }
 
   protected function buildFormDisplaySettings(&$form, &$form_state) {
-    $settings = $this->getCurrentPlayer()->loadDisplaySettings()->getDisplaySettings();
+    $settings = $this->getCurrentPlayer()->getDisplaySettings();
     if (!empty($_SESSION['djambi']['extend_display_fieldset'])) {
       $open = TRUE;
       unset($_SESSION['djambi']['extend_display_fieldset']);
@@ -192,11 +192,31 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
       '#open' => $open,
       '#tree' => TRUE,
     );
-    $setting = GameUI::SETTING_HIGHLIGHT_CELLS;
-    $form['display'][$setting] = array(
+    if ($this->currentPlayer->isPlayingGame($this->getGameManager())) {
+      $setting = GameUI::SETTING_HIGHLIGHT_CELLS;
+      $form['display'][$setting] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Change cell background colors to highlight possible selections or allowable moves'),
+        '#default_value' => $settings[$setting],
+      );
+      $setting2 = GameUI::SETTING_DISPLAY_PLAYERS_TABLE;
+      $form['display'][$setting2] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Display current side statuses table'),
+        '#default_value' => $settings[$setting2],
+      );
+      $setting3 = GameUI::SETTING_DISPLAY_CHOICES;
+      $form['display'][$setting3] = array(
+        '#type' => 'checkbox',
+        '#title' => t('Display all avalaible choices below the grid'),
+        '#default_value' => $settings[$setting3],
+      );
+    }
+    $setting4 = GameUI::SETTING_DISPLAY_LAST_MOVES_PANEL;
+    $form['display'][$setting4] = array(
       '#type' => 'checkbox',
-      '#title' => t('Change cell background colors to highlight possible selections or allowable moves'),
-      '#default_value' => $settings[$setting],
+      '#title' => t('Display last moves panel'),
+      '#default_value' => $settings[$setting4],
     );
     if ($this->getGameManager()->getDisposition()->getGrid()->getShape() == BaseGrid::SHAPE_HEXAGONAL) {
       $setting = GameUI::SETTING_DISPLAY_CELL_NAME_HEXAGONAL;

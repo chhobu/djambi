@@ -7,12 +7,12 @@
     </div>
     <div class='table__cell'>
       {{ grid }}
+      <div class="djambi-grid__actions {{ display_cells_class }}">
+        {{ form.cells }}
+        {{ form.actions }}
+      </div>
     </div>
   </div>
-</div>
-<div class="djambi-grid__actions">
-  {{ form.cells }}
-  {{ form.actions }}
 </div>
 {{ form.display }}
 {{ form|without('intro', 'game_status_panel', 'game_infos_panel', 'cells', 'actions', 'display') }}

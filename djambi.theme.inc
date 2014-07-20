@@ -1,4 +1,5 @@
 <?php
+use Djambi\GameManagers\BaseGameManager;
 use Djambi\GameManagers\GameManagerInterface;
 use Djambi\Gameplay\Cell;
 use Djambi\Grids\BaseGrid;
@@ -81,6 +82,12 @@ function template_preprocess_djambi_grid(&$variables) {
   }
   elseif ($game->isFinished()) {
     $variables['grid']['#attributes']['class'][] = 'is-finished';
+  }
+  if ($game->getStatus() == BaseGameManager::STATUS_PENDING && !$current_player->getDisplaySetting(GameUI::SETTING_DISPLAY_CHOICES)) {
+    $variables['display_cells_class'] = 'is-minimized';
+  }
+  else {
+    $variables['display_cells_class'] = 'is-maximized';
   }
 }
 

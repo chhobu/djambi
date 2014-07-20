@@ -2,6 +2,7 @@
 namespace Djambi\Players;
 
 
+use Djambi\GameManagers\GameManagerInterface;
 use Djambi\Gameplay\Faction;
 
 interface PlayerInterface {
@@ -55,4 +56,11 @@ interface PlayerInterface {
    * @return bool
    */
   public function isPlayingFaction(Faction $faction);
+
+  /**
+   * @param GameManagerInterface $game
+   *
+   * @retun bool
+   */
+  public function isPlayingGame(GameManagerInterface $game);
 }

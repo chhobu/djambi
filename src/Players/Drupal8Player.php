@@ -15,7 +15,7 @@ abstract class Drupal8Player extends HumanPlayer {
   protected $account;
 
   /** @var array */
-  protected $displaySettings = array();
+  protected $displaySettings;
 
   public function setAccount(AccountInterface $user) {
     $this->account = $user;
@@ -27,6 +27,9 @@ abstract class Drupal8Player extends HumanPlayer {
   }
 
   public function getDisplaySetting($setting) {
+    if (is_null($this->displaySettings)) {
+      $this->loadDisplaySettings();
+    }
     if (!isset($this->displaySettings[$setting])) {
       throw new PlayerInvalidException("Unknown setting : " . $setting);
     }
@@ -34,6 +37,9 @@ abstract class Drupal8Player extends HumanPlayer {
   }
 
   public function getDisplaySettings() {
+    if (is_null($this->displaySettings)) {
+      $this->loadDisplaySettings();
+    }
     return $this->displaySettings;
   }
 
@@ -44,6 +50,7 @@ abstract class Drupal8Player extends HumanPlayer {
 
   public function saveDisplaySettings($settings) {
     $this->displaySettings = $settings;
+    $this->loadDisplaySettings();
     return $this;
   }
 

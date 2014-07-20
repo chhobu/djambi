@@ -65,7 +65,9 @@ class SandboxGameForm extends BaseGameForm {
       '#value' => !empty($current_turn) ? $current_turn->getId() : NULL,
     );
 
-    $this->buildGameStatusPanel($form);
+    if ($this->getCurrentPlayer()->getDisplaySetting(GameUI::SETTING_DISPLAY_PLAYERS_TABLE)) {
+      $this->buildGameStatusPanel($form);
+    }
 
     switch ($this->getGameManager()->getStatus()) {
       case(BaseGameManager::STATUS_PENDING):
@@ -141,63 +143,65 @@ class SandboxGameForm extends BaseGameForm {
       'description' => $playing_next_markup,
       'attributes' => array('class' => array('djambi-infos__playing-next')),
     );
-    $last_moves = array();
-    $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
-    $past_turns = $this->getGameManager()->getBattlefield()->getPastTurns();
-    krsort($past_turns);
-    foreach ($past_turns as $turn) {
-      if ($current_turn->getRound() == $turn['round'] || ($current_turn->getRound() - 1 == $turn['round'] && $current_turn->getPlayOrderKey() <= $turn['playOrderKey'])) {
-        $move = $this->t('%time : !faction', array(
-          '%time' => \Drupal::service('date')->format($turn['end'], 'time'),
-          '!faction' => GameUI::printFactionFullName($game->getBattlefield()->findFactionById($turn['actingFaction'])),
-        ));
-        $submoves = array();
-        if (!empty($turn['events'])) {
-          foreach ($turn['events'] as $event) {
-            if (!empty($event['changes'])) {
-              foreach ($event['changes'] as $change) {
-                if ($change['change'] == 'lastDrawProposal') {
-                  $submoves[] = $this->t('ask for a draw...');
-                }
-                elseif ($change['change'] == 'drawStatus' && $change['newValue'] == Faction::DRAW_STATUS_ACCEPTED) {
-                  $submoves[] = $this->t('draw accepted');
-                }
-                elseif ($change['change'] == 'drawStatus' && $change['newValue'] == Faction::DRAW_STATUS_REJECTED) {
-                  $submoves[] = $this->t('draw rejected');
-                }
-                if ($change['change'] == 'status' && $change['newValue'] == Faction::STATUS_WITHDRAW) {
-                  $submoves[] = $this->t('withdrawal !');
-                }
-                if ($change['change'] == 'skippedTurns') {
-                  $submoves[] = $this->t('turn skipped...');
+    if ($this->getCurrentPlayer()->getDisplaySetting(GameUI::SETTING_DISPLAY_LAST_MOVES_PANEL)) {
+      $last_moves = array();
+      $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
+      $past_turns = $this->getGameManager()->getBattlefield()->getPastTurns();
+      krsort($past_turns);
+      foreach ($past_turns as $turn) {
+        if ($current_turn->getRound() == $turn['round'] || ($current_turn->getRound() - 1 == $turn['round'] && $current_turn->getPlayOrderKey() <= $turn['playOrderKey'])) {
+          $move = $this->t('%time : !faction', array(
+            '%time' => \Drupal::service('date')->format($turn['end'], 'time'),
+            '!faction' => GameUI::printFactionFullName($game->getBattlefield()->findFactionById($turn['actingFaction'])),
+          ));
+          $submoves = array();
+          if (!empty($turn['events'])) {
+            foreach ($turn['events'] as $event) {
+              if (!empty($event['changes'])) {
+                foreach ($event['changes'] as $change) {
+                  if ($change['change'] == 'lastDrawProposal') {
+                    $submoves[] = $this->t('ask for a draw...');
+                  }
+                  elseif ($change['change'] == 'drawStatus' && $change['newValue'] == Faction::DRAW_STATUS_ACCEPTED) {
+                    $submoves[] = $this->t('draw accepted');
+                  }
+                  elseif ($change['change'] == 'drawStatus' && $change['newValue'] == Faction::DRAW_STATUS_REJECTED) {
+                    $submoves[] = $this->t('draw rejected');
+                  }
+                  if ($change['change'] == 'status' && $change['newValue'] == Faction::STATUS_WITHDRAW) {
+                    $submoves[] = $this->t('withdrawal !');
+                  }
+                  if ($change['change'] == 'skippedTurns') {
+                    $submoves[] = $this->t('turn skipped...');
+                  }
                 }
               }
             }
           }
+          if (!empty($turn['move'])) {
+            Move::log($submoves, $turn);
+          }
+          $submoves_markup = array(
+            '#theme' => 'item_list',
+            '#attributes' => array('class' => array('submoves')),
+            '#items' => $submoves,
+          );
+          $move .= drupal_render($submoves_markup);
+          $last_moves[] = $move;
         }
-        if (!empty($turn['move'])) {
-          Move::log($submoves, $turn);
-        }
-        $submoves_markup = array(
-          '#theme' => 'item_list',
-          '#attributes' => array('class' => array('submoves')),
-          '#items' => $submoves,
-        );
-        $move .= drupal_render($submoves_markup);
-        $last_moves[] = $move;
       }
-    }
-    if (!empty($last_moves)) {
-      $last_moves_markup = array(
-        '#theme' => 'item_list',
-        '#items' => $last_moves,
-        '#list_type' => 'ul',
-      );
-      $descriptions[] = array(
-        'term' => t('Last moves :'),
-        'description' => $last_moves_markup,
-        'attributes' => array('class' => array('djambi-infos__last-moves')),
-      );
+      if (!empty($last_moves)) {
+        $last_moves_markup = array(
+          '#theme' => 'item_list',
+          '#items' => $last_moves,
+          '#list_type' => 'ul',
+        );
+        $descriptions[] = array(
+          'term' => t('Last moves :'),
+          'description' => $last_moves_markup,
+          'attributes' => array('class' => array('djambi-infos__last-moves')),
+        );
+      }
     }
     $form['game_infos_panel'] = array(
       '#theme' => 'description_list',

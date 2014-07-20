@@ -15,8 +15,11 @@ class GameUI {
 
   const SETTING_GRID_SIZE = 'grid-size';
   const SETTING_HIGHLIGHT_CELLS = 'highlight-cells';
+  const SETTING_DISPLAY_PLAYERS_TABLE = 'display-players-table';
+  const SETTING_DISPLAY_CHOICES = 'display_choices';
   const SETTING_DISPLAY_CELL_NAME_CARDINAL = 'display-cell-names-cardinal';
   const SETTING_DISPLAY_CELL_NAME_HEXAGONAL = 'display-cell-names-hexagonal';
+  const SETTING_DISPLAY_LAST_MOVES_PANEL = 'display-last-moves-panel';
 
   const GRID_SIZE_SMALL = 'small';
   const GRID_SIZE_BIG = 'big';
@@ -29,6 +32,9 @@ class GameUI {
       static::SETTING_HIGHLIGHT_CELLS => TRUE,
       static::SETTING_DISPLAY_CELL_NAME_CARDINAL => FALSE,
       static::SETTING_DISPLAY_CELL_NAME_HEXAGONAL => TRUE,
+      static::SETTING_DISPLAY_PLAYERS_TABLE => TRUE,
+      static::SETTING_DISPLAY_CHOICES => TRUE,
+      static::SETTING_DISPLAY_LAST_MOVES_PANEL => TRUE,
     );
   }
 

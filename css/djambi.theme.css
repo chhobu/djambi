@@ -1,5 +1,5 @@
 .djambi-grid {
-  margin: 1em auto;
+  margin: 1em 0;
   border: 2px solid #000;
   border-top: 0;
 }
@@ -313,6 +313,7 @@
 }
 .djambi-infos__last-moves ul li ul li {
   list-style-type: none;
+  white-space: nowrap;
 }
 .djambi-infos__last-moves .is-pointable {
   cursor: help;
@@ -324,4 +325,7 @@
 }
 .djambi-grid__actions .form-item {
   margin-top: 0;
+}
+.djambi-grid__actions.is-minimized .fieldset-wrapper {
+  display: none;
 }

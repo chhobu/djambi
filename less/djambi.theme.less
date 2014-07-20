@@ -7,7 +7,7 @@
 @no-faction: #999;
 
 .djambi-grid {
-  margin: 1em auto;
+  margin: 1em 0;
   border: 2px solid #000;
   border-top: 0;
   & td {
@@ -233,6 +233,7 @@
 .djambi-infos__last-moves {
   ul li ul li {
     list-style-type: none;
+    white-space: nowrap;
   }
   .is-pointable {
     cursor: help;
@@ -245,5 +246,10 @@
   padding: 0.25em 1em;
   .form-item {
     margin-top: 0;
+  }
+  &.is-minimized {
+    .fieldset-wrapper {
+      display: none;
+    }
   }
 }
