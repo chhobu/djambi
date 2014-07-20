@@ -10,7 +10,7 @@ namespace Drupal\djambi\Form\Actions;
 
 
 use Djambi\Exceptions\Exception;
-use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\BaseGameManager;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\djambi\Form\BaseGameForm;
 use Drupal\djambi\Form\SandboxGameForm;
@@ -46,7 +46,7 @@ abstract class BaseAction implements ActionInterface  {
   }
 
   protected function isPrinted() {
-    return $this->form->getGameManager()->getStatus() == BasicGameManager::STATUS_PENDING;
+    return $this->form->getGameManager()->getStatus() == BaseGameManager::STATUS_PENDING;
   }
 
   protected function isActive() {

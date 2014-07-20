@@ -1,0 +1,7 @@
+<span class="{{ attributes.class }}"{{ attributes }}>
+{%- if dead == true -%}
+  {{- "corpse"|t -}}
+{%- else -%}
+  {{- piece.id -}}
+{% endif -%}
+</span>

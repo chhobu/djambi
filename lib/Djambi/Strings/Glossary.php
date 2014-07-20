@@ -71,6 +71,15 @@ class Glossary {
   const EVENT_THRONE_MAUSOLEUM = "!piece_id body has been placed in the throne case mausoleum. Let's worship his memory.";
   const EVENT_MOVE_COMPLETED = "A move was made by faction !faction_id.";
 
+  const MODE_FRIENDLY_DESCRIPTION = "friendly game";
+  const MODE_SANDBOX_DESCRIPTION = "sandbox game";
+  const MODE_TRAINING_DESCRIPTION = "training game";
+
+  const STATUS_RECRUITING_DESCRIPTION = "recruiting new players";
+  const STATUS_PENDING_DESCRIPTION = "pending";
+  const STATUS_DRAW_PROPOSAL_DESCRIPTION = "draw negociation";
+  const STATUS_FINISHED_DESCRIPTION = "finished";
+
   /** @var Glossary */
   protected static $instance;
   protected $translaterHandler = 'strtr';

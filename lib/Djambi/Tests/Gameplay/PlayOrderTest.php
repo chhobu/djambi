@@ -11,7 +11,7 @@ namespace Djambi\Tests\Gameplay;
 
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
-use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\BaseGameManager;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
@@ -45,7 +45,7 @@ class PlayOrderTest extends BaseDjambiTest {
 
     $factory = new GameFactory();
     $factory->setDisposition($disposition->deliverDisposition());
-    $factory->setMode(BasicGameManager::MODE_SANDBOX);
+    $factory->setMode(BaseGameManager::MODE_SANDBOX);
     $this->game = $factory->createGameManager();
     $skip_turn_rules = $this->game->getDisposition()->getOptionsStore()->retrieve(StandardRuleset::GAMEPLAY_ELEMENT_SKIPPED_TURNS);
     $skip_turn_rules->setValue(-1);

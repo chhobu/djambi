@@ -32,11 +32,12 @@ class GameUI {
     );
   }
 
-  public static function printPieceFullName(Piece $piece, $html = TRUE) {
+  public static function printPieceFullName(Piece $piece, $html = TRUE, $display_dead_name = FALSE) {
     $elements = array(
       '#theme' => 'djambi_piece_full_name',
       '#piece' => $piece,
       '#html' => $html,
+      '#display_dead_name' => $display_dead_name,
     );
     return drupal_render($elements);
   }
@@ -49,4 +50,14 @@ class GameUI {
     );
     return drupal_render($elements);
   }
+
+  public static function printPieceLog(Piece $piece, $dead = FALSE) {
+    $elements = array(
+      '#theme' => 'djambi_piece_log',
+      '#piece' => $piece,
+      '#dead' => $dead,
+    );
+    return drupal_render($elements);
+  }
+
 }

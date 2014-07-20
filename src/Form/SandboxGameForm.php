@@ -4,7 +4,7 @@ namespace Drupal\djambi\Form;
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Exceptions\Exception;
 use Djambi\GameFactories\GameFactory;
-use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\BaseGameManager;
 use Djambi\Gameplay\Faction;
 use Djambi\Moves\Move;
 use Djambi\Moves\MoveInteractionInterface;
@@ -29,7 +29,7 @@ class SandboxGameForm extends BaseGameForm {
    */
   public function createGameManager() {
     $game_factory = new GameFactory();
-    $game_factory->setMode(BasicGameManager::MODE_SANDBOX);
+    $game_factory->setMode(BaseGameManager::MODE_SANDBOX);
     $game_factory->setId($this->getFormId());
     $game_factory->addPlayer($this->getCurrentPlayer());
     $this->getCurrentPlayer()->useSeat();
@@ -68,17 +68,17 @@ class SandboxGameForm extends BaseGameForm {
     $this->buildGameStatusPanel($form);
 
     switch ($this->getGameManager()->getStatus()) {
-      case(BasicGameManager::STATUS_PENDING):
+      case(BaseGameManager::STATUS_PENDING):
         $this->buildPendingGameInfosPanel($form);
         $this->buildFormGrid($form);
         break;
 
-      case(BasicGameManager::STATUS_DRAW_PROPOSAL):
+      case(BaseGameManager::STATUS_DRAW_PROPOSAL):
         $this->buildPendingGameInfosPanel($form);
         $this->buildFormDrawProposal($form);
         break;
 
-      case(BasicGameManager::STATUS_FINISHED):
+      case(BaseGameManager::STATUS_FINISHED):
         $this->buildFormFinished($form);
         break;
     }
@@ -176,14 +176,11 @@ class SandboxGameForm extends BaseGameForm {
           }
         }
         if (!empty($turn['move'])) {
-          // TODO : affichage d'une pièce réduite au lieu de ses initiales
-          // TODO : mise en forme
-          // TODO : clignotement des cases sur clic
-          // TODO : bouton permettant de voir le déplacement
           Move::log($submoves, $turn);
         }
         $submoves_markup = array(
           '#theme' => 'item_list',
+          '#attributes' => array('class' => array('submoves')),
           '#items' => $submoves,
         );
         $move .= drupal_render($submoves_markup);

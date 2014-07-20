@@ -62,6 +62,14 @@ function djambi_theme() {
       'variables' => array('faction' => NULL, 'html' => TRUE),
       'template' => 'djambi-faction-full-name',
     ),
+    'djambi_piece_log' => array(
+      'variables' => array(
+        'piece' => NULL,
+        'dead' => NULL,
+      ),
+      'file' => 'djambi.theme.inc',
+      'template' => 'djambi-piece-log',
+    ),
     'description_list' => array(
       'variables' => array('groups' => array(), 'attributes' => array()),
       'template' => 'description-list',

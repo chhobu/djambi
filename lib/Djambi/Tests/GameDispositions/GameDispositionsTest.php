@@ -11,7 +11,7 @@ namespace Djambi\Tests\GameDispositions;
 
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
-use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\BaseGameManager;
 use Djambi\GameManagers\GameManagerInterface;
 use Djambi\Gameplay\Faction;
 
@@ -25,7 +25,7 @@ class GameDispositionsTest extends \PHPUnit_Framework_TestCase {
 
   public function setUp() {
     $this->gameFactory = new GameFactory();
-    $this->getGameFactory()->setMode(BasicGameManager::MODE_SANDBOX);
+    $this->getGameFactory()->setMode(BaseGameManager::MODE_SANDBOX);
     parent::setUp();
   }
 

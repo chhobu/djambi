@@ -12,7 +12,7 @@ use Djambi\Exceptions\GridInvalidException;
 use Djambi\Exceptions\CellNotFoundException;
 use Djambi\Exceptions\FactionNotFoundException;
 use Djambi\Exceptions\PieceNotFoundException;
-use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\BaseGameManager;
 use Djambi\GameManagers\GameManagerInterface;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Grids\BaseGrid;
@@ -131,7 +131,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     foreach ($scheme_sides as $side) {
       if ($side['start_status'] == Faction::STATUS_READY) {
         /* @var HumanPlayer $player */
-        if ($game->getMode() == BasicGameManager::MODE_SANDBOX) {
+        if ($game->getMode() == BaseGameManager::MODE_SANDBOX) {
           $player = current($players);
         }
         else {
@@ -227,7 +227,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
         $battlefield->findFactionById($controlled)->setControl($battlefield->findFactionById($controller), FALSE);
       }
     }
-    $game->setStatus($ready ? BasicGameManager::STATUS_PENDING : BasicGameManager::STATUS_RECRUITING);
+    $game->setStatus($ready ? BaseGameManager::STATUS_PENDING : BaseGameManager::STATUS_RECRUITING);
     return $battlefield;
   }
 
@@ -459,7 +459,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
         $faction->setStatus(Faction::STATUS_DRAW)->setRanking($nb_living_factions);
       }
     }
-    $this->getGameManager()->setStatus(BasicGameManager::STATUS_FINISHED);
+    $this->getGameManager()->setStatus(BaseGameManager::STATUS_FINISHED);
     $this->currentTurn->logEvent(new Event(new GlossaryTerm(Glossary::EVENT_THIS_IS_THE_END)));
     $this->pastTurns[] = $this->getCurrentTurn()->endsTurn()->toArray();
     $this->buildFinalRanking($nb_living_factions);
@@ -635,7 +635,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     $scheme_size = count($this->factions) * 2;
     $turn_scheme = array();
     $events = array();
-    $peace_negociation = $this->getGameManager()->getStatus() == BasicGameManager::STATUS_DRAW_PROPOSAL;
+    $peace_negociation = $this->getGameManager()->getStatus() == BaseGameManager::STATUS_DRAW_PROPOSAL;
     foreach ($this->factions as $faction) {
       if ($faction->isAlive() && $faction->getControl()->getId() == $faction->getId()) {
         $nb_factions++;

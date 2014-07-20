@@ -9,7 +9,7 @@
 namespace Drupal\djambi\Form\Actions;
 
 
-use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\BaseGameManager;
 use Drupal\djambi\Form\BaseGameForm;
 
 class Restart extends BaseAction {
@@ -24,8 +24,8 @@ class Restart extends BaseAction {
 
   public function isPrinted() {
     return in_array($this->getForm()->getGameManager()->getStatus(),
-      array(BasicGameManager::STATUS_PENDING, BasicGameManager::STATUS_FINISHED))
-    && $this->getForm()->getGameManager()->getMode() == BasicGameManager::MODE_SANDBOX;
+      array(BaseGameManager::STATUS_PENDING, BaseGameManager::STATUS_FINISHED))
+    && $this->getForm()->getGameManager()->getMode() == BaseGameManager::MODE_SANDBOX;
   }
 
   public function validate(&$form, &$form_state) {

@@ -60,7 +60,14 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
 
   public function translateDjambiStrings($string, $args) {
     if (isset($args['@corpse_id'])) {
-      $args['@corpse_id'] = $this->t('corpse');
+      $args['!corpse_name'] = GameUI::printPieceLog($this->getGameManager()->getBattlefield()->findPieceById($args['@corpse_id']), TRUE);
+      $string = str_replace('@corpse_id', '!corpse_name', $string);
+      unset($args['@corpse_id']);
+    }
+    if (isset($args['@piece_id'])) {
+      $args['!piece_name'] = GameUI::printPieceLog($this->getGameManager()->getBattlefield()->findPieceById($args['@piece_id']), FALSE);
+      $string = str_replace('@piece_id', '!piece_name', $string);
+      unset($args['@piece_id']);
     }
     $piece_replacements = array(
       '!piece_id_1' => TRUE,
@@ -72,9 +79,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     );
     foreach ($piece_replacements as $replacement => $html) {
       if (isset($args[$replacement])) {
-        $args[$replacement] = GameUI::printPieceFullName($this->getGameManager()
-            ->getBattlefield()
-            ->findPieceById($args[$replacement]), $html);
+        $args[$replacement] = GameUI::printPieceFullName($this->getGameManager()->getBattlefield()->findPieceById($args[$replacement]), $html);
       }
     }
     $faction_replacements = array(
@@ -87,9 +92,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     );
     foreach ($faction_replacements as $replacement => $html) {
       if (isset($args[$replacement])) {
-        $args[$replacement] = GameUI::printFactionFullName($this->getGameManager()
-            ->getBattlefield()
-            ->findFactionById($args[$replacement]), $html);
+        $args[$replacement] = GameUI::printFactionFullName($this->getGameManager()->getBattlefield()->findFactionById($args[$replacement]), $html);
       }
     }
     return $this->t($string, $args);

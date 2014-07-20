@@ -8,7 +8,7 @@
 namespace Djambi\Gameplay;
 
 use Djambi\Exceptions\DisallowedActionException;
-use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\BaseGameManager;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Persistance\PersistantDjambiObject;
 use Djambi\Players\ComputerPlayer;
@@ -225,10 +225,10 @@ class Faction extends PersistantDjambiObject {
 
   public function setDrawStatus($value) {
     if (is_null($value)) {
-      $this->getBattlefield()->getGameManager()->setStatus(BasicGameManager::STATUS_PENDING);
+      $this->getBattlefield()->getGameManager()->setStatus(BaseGameManager::STATUS_PENDING);
     }
     else {
-      $this->getBattlefield()->getGameManager()->setStatus(BasicGameManager::STATUS_DRAW_PROPOSAL);
+      $this->getBattlefield()->getGameManager()->setStatus(BaseGameManager::STATUS_DRAW_PROPOSAL);
     }
     $this->drawStatus = $value;
     return $this;
@@ -467,7 +467,7 @@ class Faction extends PersistantDjambiObject {
   }
 
   public function callForADraw() {
-    if ($this->getBattlefield()->getGameManager()->getStatus() != BasicGameManager::STATUS_PENDING || !$this->canCallForADraw()) {
+    if ($this->getBattlefield()->getGameManager()->getStatus() != BaseGameManager::STATUS_PENDING || !$this->canCallForADraw()) {
       throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_ASK_DRAW_DISALLOWED));
     }
     $old_draw_value = $this->getLastDrawProposal();
@@ -490,7 +490,7 @@ class Faction extends PersistantDjambiObject {
   }
 
   public function acceptDraw() {
-    if ($this->getBattlefield()->getGameManager()->getStatus() != BasicGameManager::STATUS_DRAW_PROPOSAL &&
+    if ($this->getBattlefield()->getGameManager()->getStatus() != BaseGameManager::STATUS_DRAW_PROPOSAL &&
       $this->getDrawStatus() != static::DRAW_STATUS_UNDECIDED) {
       throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_DRAW_ANSWER_DISALLOWED));
     }
@@ -521,7 +521,7 @@ class Faction extends PersistantDjambiObject {
   }
 
   public function rejectDraw() {
-    if ($this->getBattlefield()->getGameManager()->getStatus() != BasicGameManager::STATUS_DRAW_PROPOSAL &&
+    if ($this->getBattlefield()->getGameManager()->getStatus() != BaseGameManager::STATUS_DRAW_PROPOSAL &&
       $this->getDrawStatus() != static::DRAW_STATUS_UNDECIDED) {
       throw new DisallowedActionException(new GlossaryTerm(Glossary::EXCEPTION_DRAW_ANSWER_DISALLOWED));
     }

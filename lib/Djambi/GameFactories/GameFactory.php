@@ -6,7 +6,7 @@ namespace Djambi\GameFactories;
 use Djambi\Exceptions\Exception;
 use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\GameDispositions\GameDispositionsFactory;
-use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\BaseGameManager;
 use Djambi\GameManagers\GameManagerInterface;
 use Djambi\IA\DummyIA;
 use Djambi\Players\ComputerPlayer;
@@ -15,7 +15,7 @@ use Djambi\Players\PlayerInterface;
 
 class GameFactory implements GameFactoryInterface {
   /** @var string */
-  private $mode = BasicGameManager::MODE_FRIENDLY;
+  private $mode = BaseGameManager::MODE_FRIENDLY;
   /** @var PlayerInterface[] */
   private $players = array();
   /** @var BaseGameDisposition */
@@ -152,10 +152,10 @@ class GameFactory implements GameFactoryInterface {
       $default_player = current($this->getPlayers());
     }
     for ($i = count($this->players) + 1; $i <= $disposition->getNbPlayers(); $i++) {
-      if ($i == 1 || $this->getMode() == BasicGameManager::MODE_SANDBOX) {
+      if ($i == 1 || $this->getMode() == BaseGameManager::MODE_SANDBOX) {
         $this->addPlayer($default_player, $i);
       }
-      elseif ($this->getMode() == BasicGameManager::MODE_TRAINING) {
+      elseif ($this->getMode() == BaseGameManager::MODE_TRAINING) {
         $computer = new ComputerPlayer();
         $this->addPlayer($computer->useIa($this->getDefaultComputerIa()));
       }

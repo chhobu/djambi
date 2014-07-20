@@ -118,6 +118,9 @@
   font-size: 90%;
   font-style: italic;
 }
+.djambi-cell.is-blinking {
+  background-color: #666 !important;
+}
 .djambi-grid.is-with-highlighted-cells .djambi-cell.is-reachable {
   background-color: #ddd;
 }
@@ -165,6 +168,25 @@
   opacity: 0.75;
   cursor: move;
 }
+.djambi-piece-log {
+  width: 1.8em;
+  height: 1.8em;
+  display: inline-block;
+  border-radius: 1em;
+  box-shadow: 3px 3px 2px #333;
+  overflow: hidden;
+}
+.djambi-piece-log:before {
+  display: inline-block;
+  content: attr(data-piece-type);
+  font-weight: bold;
+  width: 1.8em;
+  line-height: 1.8em;
+  text-align: center;
+}
+.djambi-piece-log.is-dead {
+  background-color: #333;
+}
 .djambi-faction-name.is-blue-side,
 .djambi-piece.is-blue-side,
 .djambi-piece-name.is-blue-side,
@@ -176,6 +198,9 @@
 .djambi-piece-name.is-blue-origin,
 .datatable th.is-blue-origin {
   border-color: #99ccff;
+}
+.djambi-piece-log.is-blue-origin {
+  background-color: #99ccff;
 }
 .djambi-grid.is-blue-turn.is-with-highlighted-cells .djambi-cell.is-selectable {
   background-color: rgba(153, 204, 255, 0.5);
@@ -196,6 +221,9 @@
 .datatable th.is-red-origin {
   border-color: #ee3333;
 }
+.djambi-piece-log.is-red-origin {
+  background-color: #ee3333;
+}
 .djambi-grid.is-red-turn.is-with-highlighted-cells .djambi-cell.is-selectable {
   background-color: rgba(238, 51, 51, 0.5);
 }
@@ -215,6 +243,9 @@
 .datatable th.is-yellow-origin {
   border-color: #ffcc00;
 }
+.djambi-piece-log.is-yellow-origin {
+  background-color: #ffcc00;
+}
 .djambi-grid.is-yellow-turn.is-with-highlighted-cells .djambi-cell.is-selectable {
   background-color: rgba(255, 204, 0, 0.5);
 }
@@ -233,6 +264,9 @@
 .djambi-piece-name.is-green-origin,
 .datatable th.is-green-origin {
   border-color: #99dd00;
+}
+.djambi-piece-log.is-green-origin {
+  background-color: #99dd00;
 }
 .djambi-grid.is-green-turn.is-with-highlighted-cells .djambi-cell.is-selectable {
   background-color: rgba(153, 221, 0, 0.5);
@@ -263,14 +297,25 @@
 .djambi-infos dd.single-description-item {
   margin-bottom: 1em;
 }
-.djambi-infos .djambi-infos__current-round em {
-  font-size: 400%;
-  line-height: 25%;
-}
-.djambi-infos .djambi-infos__playing-next ol {
+.djambi-infos ul,
+.djambi-infos ol {
   text-align: left;
   padding: 0;
   list-style-position: inside;
+}
+.djambi-infos ul li,
+.djambi-infos ol li {
+  margin: 0 0.5em;
+}
+.djambi-infos__current-round em {
+  font-size: 400%;
+  line-height: 25%;
+}
+.djambi-infos__last-moves ul li ul li {
+  list-style-type: none;
+}
+.djambi-infos__last-moves .is-pointable {
+  cursor: help;
 }
 .djambi-grid__actions {
   background-color: #EEEEEE;

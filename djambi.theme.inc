@@ -209,3 +209,22 @@ function template_preprocess_djambi_cell(&$variables) {
   }
   $variables['attributes'] = new Attribute($attributes);
 }
+
+function template_preprocess_djambi_piece_log(&$variables) {
+  /** @var \Djambi\Gameplay\Piece $piece */
+  $piece = $variables['piece'];
+  $attributes['class'][] = 'djambi-piece-log';
+  $attributes['class'][] = $variables['dead'] ? 'is-dead' : 'is-alive';
+  if (!$variables['dead']) {
+    $attributes['data-piece-type'] = $piece->getDescription()->getShortname();
+    $attributes['title'] = GameUI::printPieceFullName($piece, FALSE, TRUE);
+    $attributes['class'][] = 'is-' . $piece->getFaction()->getClass() . '-origin';
+    if ($piece->isAlive()) {
+      $attributes['class'][] = 'is-still-alive';
+    }
+  }
+  else {
+    $attributes['title'] = t('A dead piece');
+  }
+  $variables['attributes'] = new Attribute($attributes);
+}

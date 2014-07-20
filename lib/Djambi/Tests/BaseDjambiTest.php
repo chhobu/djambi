@@ -9,7 +9,8 @@
 namespace Djambi\Tests;
 require_once 'bootstrap.php';
 
-use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\BaseGameManager;
+use Djambi\GameManagers\GameManagerInterface;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Piece;
@@ -19,7 +20,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
 
   const CHECK_SAME_VALUE = '---auto---';
 
-  /** @var BasicGameManager */
+  /** @var GameManagerInterface */
   protected $game;
 
   protected function checkPossibleMoves(Piece $piece, $expected_moves) {
@@ -31,7 +32,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
 
   protected function checkNewTurn($faction_id) {
     $playing_faction_id = $this->game->getBattlefield()->getPlayingFaction()->getId();
-    $this->assertEquals(BasicGameManager::STATUS_PENDING, $this->game->getStatus());
+    $this->assertEquals(BaseGameManager::STATUS_PENDING, $this->game->getStatus());
     $this->assertEquals($faction_id, $playing_faction_id, "Current playing faction is " . $playing_faction_id);
   }
 
@@ -57,7 +58,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
 
   protected function checkGameFinished($winner) {
     $grid = $this->game->getBattlefield();
-    $this->checkGameStatus(BasicGameManager::STATUS_FINISHED);
+    $this->checkGameStatus(BaseGameManager::STATUS_FINISHED);
     $this->assertEquals(NULL, $grid->getPlayingFaction());
     $this->assertEquals(NULL, $grid->getCurrentTurn());
     if (!is_array($winner)) {

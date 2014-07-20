@@ -3,14 +3,14 @@ namespace Djambi\Tests\Gameplay;
 
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
-use Djambi\GameManagers\BasicGameManager;
+use Djambi\GameManagers\BaseGameManager;
 use Djambi\Tests\BaseDjambiTest;
 
 class RollbackTurnTest extends BaseDjambiTest {
   public function setUp() {
     $factory = new GameFactory();
     $factory->setDisposition(GameDispositionsFactory::useDisposition('2std'));
-    $factory->setMode(BasicGameManager::MODE_SANDBOX);
+    $factory->setMode(BaseGameManager::MODE_SANDBOX);
     $this->game = $factory->createGameManager();
   }
 

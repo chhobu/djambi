@@ -93,6 +93,9 @@
     font-size: 90%;
     font-style: italic;
   }
+  &.is-blinking {
+    background-color: #666 !important;
+  }
   .djambi-grid.is-with-highlighted-cells &.is-reachable {
     background-color: #ddd;
   }
@@ -142,6 +145,26 @@
   }
 }
 
+.djambi-piece-log {
+  width: 1.8em;
+  height: 1.8em;
+  display: inline-block;
+  border-radius: 1em;
+  box-shadow: 3px 3px 2px #333;
+  overflow: hidden;
+  &:before {
+    display: inline-block;
+    content: attr(data-piece-type);
+    font-weight: bold;
+    width: 1.8em;
+    line-height: 1.8em;
+    text-align: center;
+  }
+  &.is-dead {
+    background-color: #333;
+  }
+}
+
 .faction-color-rules(@name, @color) {
   .djambi-faction-name, .djambi-piece, .djambi-piece-name, .datatable th {
     &.is-@{name}-side {
@@ -150,6 +173,9 @@
     &.is-@{name}-origin {
       border-color: @color;
     }
+  }
+  .djambi-piece-log.is-@{name}-origin {
+    background-color: @color;
   }
   .djambi-grid.is-@{name}-turn.is-with-highlighted-cells .djambi-cell.is-selectable {
     background-color: fade(@color, 50%);
@@ -185,14 +211,31 @@
   dd.last-description-item, dd.single-description-item {
     margin-bottom: 1em;
   }
-  .djambi-infos__current-round em {
-    font-size: 400%;
-    line-height: 25%;
-  }
-  .djambi-infos__playing-next ol {
+  ul, ol {
     text-align: left;
     padding: 0;
     list-style-position: inside;
+    li {
+      margin: 0 0.5em;
+    }
+  }
+}
+
+.djambi-infos__current-round {
+  em {
+    font-size: 400%;
+    line-height: 25%;
+  }
+}
+
+.djambi-infos__playing-next {}
+
+.djambi-infos__last-moves {
+  ul li ul li {
+    list-style-type: none;
+  }
+  .is-pointable {
+    cursor: help;
   }
 }
 

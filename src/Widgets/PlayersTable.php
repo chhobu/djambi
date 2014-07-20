@@ -120,7 +120,7 @@ class PlayersTable extends BaseTable {
         $return = new GlossaryTerm($faction->getStatus());
     }
     if ($faction->getControl()->getId() != $faction->getId()) {
-      $return .= " - " . t("Remaining pieces are new controlled by !faction side.",
+      $return .= " - " . t("Remaining pieces are now controlled by !faction side.",
           array('!faction' => GameUI::printFactionFullName($faction->getControl())));
     }
     return $return;
