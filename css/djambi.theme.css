@@ -284,12 +284,13 @@
   text-align: center;
 }
 .djambi-infos dt {
-  font-variant: small-caps;
+  font-weight: bold;
 }
 .djambi-infos dd {
   border: 2px solid #999;
+  border-left: 0;
+  border-right: 0;
   background-color: #eee;
-  border-radius: 0.5em;
   margin: 0;
   padding: 0.25em;
 }
@@ -321,6 +322,8 @@
 .djambi-grid__actions {
   background-color: #EEEEEE;
   border: 2px solid #999999;
+  border-left: 0;
+  border-right: 0;
   padding: 0.25em 1em;
 }
 .djambi-grid__actions .form-item {
@@ -328,4 +331,7 @@
 }
 .djambi-grid__actions.is-minimized .fieldset-wrapper {
   display: none;
+}
+.djambi-grid__actions legend {
+  font-weight: bold;
 }

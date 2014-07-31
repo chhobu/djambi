@@ -81,6 +81,7 @@ class SandboxGameForm extends BaseGameForm {
         break;
 
       case(BaseGameManager::STATUS_FINISHED):
+        $this->buildFinalGameInfosPanel($form);
         $this->buildFormFinished($form);
         break;
     }
@@ -110,6 +111,7 @@ class SandboxGameForm extends BaseGameForm {
         '#caption' => t("Current sides statuses"),
       ),
     );
+    return $this;
   }
 
   protected function buildPendingGameInfosPanel(array &$form) {
@@ -143,17 +145,67 @@ class SandboxGameForm extends BaseGameForm {
       'description' => $playing_next_markup,
       'attributes' => array('class' => array('djambi-infos__playing-next')),
     );
+    $last_moves = $this->buildLastMovesPanel($game->getBattlefield()->getCurrentTurn()->getRound(),
+      $game->getBattlefield()->getCurrentTurn()->getPlayOrderKey());
+    if (!empty($last_moves)) {
+      $last_moves_markup = array(
+        '#theme' => 'item_list',
+        '#items' => $last_moves,
+        '#list_type' => 'ul',
+      );
+      $descriptions[] = array(
+        'term' => t('Last moves :'),
+        'description' => $last_moves_markup,
+        'attributes' => array('class' => array('djambi-infos__last-moves')),
+      );
+    }
+    $form['game_infos_panel'] = array(
+      '#theme' => 'description_list',
+      '#groups' => $descriptions,
+      '#attributes' => array('class' => array('djambi-infos')),
+    );
+    return $this;
+  }
+
+  protected function buildFinalGameInfosPanel(&$form) {
+    $descriptions = array();
+    $past_turns = $this->getGameManager()->getBattlefield()->getPastTurns();
+    $last_turn = end($past_turns);
+    $descriptions[] = array(
+      'term' => t('Final round :'),
+      'description' => t('Round %round', array(
+        '%round' => $last_turn['round'],
+      )),
+      'attributes' => array('class' => array('djambi-infos__current-round')),
+    );
+    $last_moves = $this->buildLastMovesPanel($last_turn['round'], $last_turn['playOrderKey']);
+    if (!empty($last_moves)) {
+      $last_moves_markup = array(
+        '#theme' => 'item_list',
+        '#items' => $last_moves,
+        '#list_type' => 'ul',
+      );
+      $descriptions[] = array(
+        'term' => t('Last moves :'),
+        'description' => $last_moves_markup,
+        'attributes' => array('class' => array('djambi-infos__last-moves')),
+      );
+    }
+    $form['game_infos_panel'] = array(
+      '#theme' => 'description_list',
+      '#groups' => $descriptions,
+      '#attributes' => array('class' => array('djambi-infos')),
+    );
+    return $this;
+  }
+
+  protected function buildLastMovesPanel($current_round, $current_play_order) {
+    $last_moves = array();
     if ($this->getCurrentPlayer()->getDisplaySetting(GameUI::SETTING_DISPLAY_LAST_MOVES_PANEL)) {
-      $last_moves = array();
-      $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
       $past_turns = $this->getGameManager()->getBattlefield()->getPastTurns();
       krsort($past_turns);
       foreach ($past_turns as $turn) {
-        if ($current_turn->getRound() == $turn['round'] || ($current_turn->getRound() - 1 == $turn['round'] && $current_turn->getPlayOrderKey() <= $turn['playOrderKey'])) {
-          $move = $this->t('%time : !faction', array(
-            '%time' => \Drupal::service('date')->format($turn['end'], 'time'),
-            '!faction' => GameUI::printFactionFullName($game->getBattlefield()->findFactionById($turn['actingFaction'])),
-          ));
+        if ($current_round == $turn['round'] || ($current_round - 1 == $turn['round'] && $current_play_order <= $turn['playOrderKey'])) {
           $submoves = array();
           if (!empty($turn['events'])) {
             foreach ($turn['events'] as $event) {
@@ -186,28 +238,17 @@ class SandboxGameForm extends BaseGameForm {
             '#attributes' => array('class' => array('submoves')),
             '#items' => $submoves,
           );
-          $move .= drupal_render($submoves_markup);
+          $move = $this->t('%time, !faction : !submove', array(
+            '%time' => \Drupal::service('date')->format($turn['end'], 'time'),
+            '!faction' => GameUI::printFactionFullName($this->getGameManager()->getBattlefield()
+                ->findFactionById($turn['actingFaction'])),
+            '!submove' => drupal_render($submoves_markup),
+          ));
           $last_moves[] = $move;
         }
       }
-      if (!empty($last_moves)) {
-        $last_moves_markup = array(
-          '#theme' => 'item_list',
-          '#items' => $last_moves,
-          '#list_type' => 'ul',
-        );
-        $descriptions[] = array(
-          'term' => t('Last moves :'),
-          'description' => $last_moves_markup,
-          'attributes' => array('class' => array('djambi-infos__last-moves')),
-        );
-      }
     }
-    $form['game_infos_panel'] = array(
-      '#theme' => 'description_list',
-      '#groups' => $descriptions,
-      '#attributes' => array('class' => array('djambi-infos')),
-    );
+    return $last_moves;
   }
 
   public function validateForm(array &$form, array &$form_state) {

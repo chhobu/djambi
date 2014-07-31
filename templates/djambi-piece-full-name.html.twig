@@ -1,5 +1,5 @@
 {% if html -%}
-  <span class="djambi-piece-name djambi-piece-name--type-{{ piece.description.type }} is-{{ piece.faction.class }}-origin is-{{ piece.faction.control.class }}-side">
+  <span class="{{ attributes.class }}"{{ attributes }}>
 {%- endif %}
 {% if display_dead_name == false and piece.isAlive() == false -%}
   {{- 'a dead piece'|t -}}

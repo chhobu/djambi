@@ -74,7 +74,8 @@ class PlayersTable extends BaseTable {
 
   protected function buildPlayersRowData(Faction $faction) {
     if (!empty($faction->getPlayer())) {
-      return $faction->getPlayer()->displayName() . ($this->isCurrentPlayer($faction) ? " " . t("(Me !)") : "");
+      $info = array('#markup' => $faction->getPlayer()->displayName() . ($this->isCurrentPlayer($faction) ? " " . t("(Me !)") : ""));
+      return drupal_render($info);
     }
     else {
       return $this->returnEmptyValue();
@@ -120,8 +121,10 @@ class PlayersTable extends BaseTable {
         $return = new GlossaryTerm($faction->getStatus());
     }
     if ($faction->getControl()->getId() != $faction->getId()) {
-      $return .= " - " . t("Remaining pieces are now controlled by !faction side.",
-          array('!faction' => GameUI::printFactionFullName($faction->getControl())));
+      $return = t("!firstline. Remaining pieces are now controlled by !faction side.", array(
+        '!faction' => GameUI::printFactionFullName($faction->getControl()),
+        '!firstline' => $return,
+      ));
     }
     return $return;
   }

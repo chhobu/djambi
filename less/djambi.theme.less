@@ -199,12 +199,13 @@
 .djambi-infos {
   text-align: center;
   dt {
-    font-variant: small-caps;
+    font-weight: bold;
   }
   dd {
     border: 2px solid #999;
+    border-left: 0;
+    border-right: 0;
     background-color: #eee;
-    border-radius: 0.5em;
     margin: 0;
     padding: 0.25em;
   }
@@ -243,6 +244,8 @@
 .djambi-grid__actions {
   background-color: #EEEEEE;
   border: 2px solid #999999;
+  border-left: 0;
+  border-right: 0;
   padding: 0.25em 1em;
   .form-item {
     margin-top: 0;
@@ -251,5 +254,8 @@
     .fieldset-wrapper {
       display: none;
     }
+  }
+  legend {
+    font-weight: bold;
   }
 }

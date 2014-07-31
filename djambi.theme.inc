@@ -14,17 +14,18 @@ function template_preprocess_djambi_grid(&$variables) {
   /** @var GameManagerInterface $game */
   $game = $variables['form']['#djambi_game_manager'];
   if ($game->isPending()) {
-    $caption = t('Displaying current turn (round %round - move %move).', array(
-      '%round' => $game->getBattlefield()->getCurrentTurn()->getRound(),
-      '%move' => $game->getBattlefield()->getCurrentTurn()->getId(),
-    ));
     if ($current_player->isPlayingFaction($game->getBattlefield()->getPlayingFaction()->getControl())) {
-      $caption .= ' ' . t("It's your turn !");
+      $phase = t("It's your turn !");
     }
     else {
-      $caption .= ' ' . t("Waiting for !player decisions...",
-        array('!player' => $game->getBattlefield()->getPlayingFaction()->getPlayer()->displayName()));
+      $phase = t("Waiting for !player decisions...",
+          array('!player' => $game->getBattlefield()->getPlayingFaction()->getPlayer()->displayName()));
     }
+    $caption = t('Displaying current turn (round %round - move %move). !phase.', array(
+      '%round' => $game->getBattlefield()->getCurrentTurn()->getRound(),
+      '%move' => $game->getBattlefield()->getCurrentTurn()->getId(),
+      '!phase' => $phase,
+    ));
   }
   else {
     $past_turns = $game->getBattlefield()->getPastTurns();
@@ -167,6 +168,8 @@ function template_preprocess_djambi_piece(&$variables) {
 function template_preprocess_djambi_cell(&$variables) {
   /** @var Cell $cell */
   $cell = $variables['cell'];
+  /** @var GameManagerInterface $game */
+  $game = $variables['game'];
   $piece = array(
     '#theme' => 'djambi_piece',
     '#piece' => $cell->getOccupant(),
@@ -180,41 +183,66 @@ function template_preprocess_djambi_cell(&$variables) {
   $variables['cell_tag'] = 'div';
   $attributes['class'][] = 'djambi-cell';
   $attributes['class'][] = 'djambi-cell--type-' . $cell->getType();
-  if ($cell->isReachable()) {
-    $attributes['class'][] = 'is-reachable';
-  }
-  if ($cell->isEnabled()) {
-    $attributes['class'][] = (empty($cell->getOccupant()) ? 'is-free' : 'is-occupied');
-    if ($cell->isSelectable()) {
-      $attributes['class'][] = 'is-selectable';
-      $variables['cell_tag'] = 'label';
-      $attributes['for'] = 'edit-cells-' . Unicode::strtolower($cell->getName());
+  if ($game->isPending()) {
+    if ($cell->isReachable()) {
+      $attributes['class'][] = 'is-reachable';
     }
-    elseif (!empty($cell->getOccupant()) && $cell->getOccupant()->isSelected()) {
-      $attributes['class'][] = 'is-selected';
-      $current_move = $cell->getOccupant()->getBattlefield()->getCurrentTurn()->getMove();
-      if (!empty($current_move->getFirstInteraction()) && !empty($current_move->getFirstInteraction()->getSelectedPiece())
-      && $current_move->getFirstInteraction()->getSelectedPiece()->getId() != $cell->getOccupant()->getId()
-      && $current_move->getFirstInteraction()->getSelectedPiece()->getPosition()->getName() == $cell->getName()) {
-        $variables['positionnable_piece'] = array(
-          '#theme' => 'djambi_piece',
-          '#piece' => $current_move->getFirstInteraction()->getSelectedPiece(),
-        );
-      }
-    }
-    elseif (!empty($cell->getOccupant()) && $cell->getOccupant()->isMovable()) {
-      $turn = $cell->getOccupant()->getBattlefield()->getCurrentTurn();
-      if (!empty($turn) && !empty($turn->getMove()) && empty($turn->getMove()->getSelectedPiece())) {
+    if ($cell->isEnabled()) {
+      $attributes['class'][] = (empty($cell->getOccupant()) ? 'is-free' : 'is-occupied');
+      if ($cell->isSelectable()) {
         $attributes['class'][] = 'is-selectable';
+        $variables['cell_tag'] = 'label';
+        $attributes['for'] = 'edit-cells-' . Unicode::strtolower($cell->getName());
       }
-      else {
-        $attributes['class'][] = 'is-with-movable-piece';
+      elseif (!empty($cell->getOccupant()) && $cell->getOccupant()->isSelected()) {
+        $attributes['class'][] = 'is-selected';
+        $current_move = $game->getBattlefield()->getCurrentTurn()->getMove();
+        if (!empty($current_move->getFirstInteraction()) && !empty($current_move->getFirstInteraction()->getSelectedPiece())
+          && $current_move->getFirstInteraction()
+            ->getSelectedPiece()
+            ->getId() != $cell->getOccupant()->getId()
+          && $current_move->getFirstInteraction()
+            ->getSelectedPiece()
+            ->getPosition()
+            ->getName() == $cell->getName()
+        ) {
+          $variables['positionnable_piece'] = array(
+            '#theme' => 'djambi_piece',
+            '#piece' => $current_move->getFirstInteraction()->getSelectedPiece(),
+          );
+        }
+      }
+      elseif (!empty($cell->getOccupant()) && $cell->getOccupant()->isMovable()) {
+        $turn = $cell->getOccupant()->getBattlefield()->getCurrentTurn();
+        if (!empty($turn) && !empty($turn->getMove()) && empty($turn->getMove()->getSelectedPiece())) {
+          $attributes['class'][] = 'is-selectable';
+        }
+        else {
+          $attributes['class'][] = 'is-with-movable-piece';
+        }
       }
     }
-    $attributes['title'] = t('Cell @name', array('@name' => $cell->getName()));
-    $attributes['data-cell-name'] = $cell->getName();
   }
+  $attributes['title'] = t('Cell @name', array('@name' => $cell->getName()));
+  $attributes['data-cell-name'] = $cell->getName();
   $variables['attributes'] = new Attribute($attributes);
+}
+
+function template_preprocess_djambi_piece_full_name(&$variables) {
+  if ($variables['html']) {
+    /** @var \Djambi\Gameplay\Piece $piece */
+    $piece = $variables['piece'];
+    $attributes['class'][] = "djambi-piece-name";
+    if ($piece->isAlive()) {
+      $attributes['class'][] = "djambi-piece-name--type-" . $piece->getDescription()->getType();
+      $attributes['class'][] = "is-" . $piece->getFaction()->getClass() . "-origin";
+      $attributes['class'][] = "is-" . $piece->getFaction()->getControl()->getClass() . "-side";
+    }
+    else {
+      $attributes['class'][] = "is-dead";
+    }
+    $variables['attributes'] = new Attribute($attributes);
+  }
 }
 
 function template_preprocess_djambi_piece_log(&$variables) {
