@@ -15,20 +15,11 @@ class GlossaryTermTest extends BaseDjambiTest {
    * @dataProvider provideTerms
    */
   public function testDisplayTerm($string, $args, $expected, $expected_with_handler) {
+    Glossary::getInstance()->setTranslaterHandler(NULL);
     $term = new GlossaryTerm($string, $args);
     $string = $term->__toString();
     $this->assertEquals($expected, $string);
-  }
 
-  /**
-   * @param string $string
-   * @param array $args
-   * @param string $expected
-   * @param string $expected_with_handler
-   *
-   * @dataProvider provideTerms
-   */
-  public function testDisplayTermWithHandler($string, $args, $expected, $expected_with_handler) {
     Glossary::getInstance()->setTranslaterHandler(array($this, 'translaterTestHandler'));
     $term = new GlossaryTerm($string, $args);
     $string2 = $term->__toString();
@@ -70,6 +61,10 @@ class GlossaryTermTest extends BaseDjambiTest {
 
   /**
    * @dataProvider provideTermsForPersistance
+   *
+   * @param $object
+   * @param $expected
+   * @param array $context
    */
   public function testTermPersistance($object, $expected, $context = array()) {
     $this->checkObjectTransformation($object, $expected, $context);
@@ -77,9 +72,12 @@ class GlossaryTermTest extends BaseDjambiTest {
 
   /**
    * @dataProvider provideTermsForPersistance
+   *
+   * @param $object
+   * @param $expected
    */
-  public function testTermSerialization($object, $expected, $context = array()) {
-    $this->checkObjectSerialization($object, $expected, $context);
+  public function testTermSerialization($object, $expected) {
+    $this->checkObjectSerialization($object, $expected);
   }
 
   public function provideTermsForPersistance() {

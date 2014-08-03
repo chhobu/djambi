@@ -23,9 +23,12 @@ class PersistantDjambiObjectTest extends BaseDjambiTest {
 
   /**
    * @dataProvider addObjectDataProvider
+   *
+   * @param $object
+   * @param $expected_properties
    */
-  public function testObjectSerialization($object, $expected_properties, $context = array()) {
-    $this->checkObjectSerialization($object, $expected_properties, $context);
+  public function testObjectSerialization($object, $expected_properties) {
+    $this->checkObjectSerialization($object, $expected_properties);
   }
 
   public function addObjectDataProvider() {

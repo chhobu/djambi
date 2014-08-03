@@ -162,7 +162,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
     return $new_object;
   }
 
-  protected function checkObjectSerialization($object, $expected_properties, $context = array()) {
+  protected function checkObjectSerialization($object, $expected_properties) {
     $string = serialize($object);
     $new_object = unserialize($string);
     $this->compareObjectsAfterTransformation($object, $new_object, $expected_properties);

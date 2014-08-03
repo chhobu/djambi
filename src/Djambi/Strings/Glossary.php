@@ -99,6 +99,9 @@ class Glossary {
   }
 
   public function setTranslaterHandler($translater) {
+    if (is_null($translater)) {
+      $translater = 'strtr';
+    }
     $this->translaterHandler = $translater;
   }
 
