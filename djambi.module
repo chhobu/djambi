@@ -1,6 +1,6 @@
 <?php
 $classloader = drupal_classloader();
-$classloader->add('Djambi', __DIR__ . '/lib');
+$classloader->add('Djambi', __DIR__ . '/src');
 
 /**
  * Implements hook_permission().

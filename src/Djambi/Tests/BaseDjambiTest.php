@@ -143,7 +143,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
       }
     }
     $this->assertEquals($is_completed, $move->isCompleted());
-    $past_turn = current($this->game->getBattlefield()->getPastTurns());
+    $past_turn = end($this->game->getBattlefield()->getPastTurns());
     $move->log($this->log, $past_turn);
   }
 
