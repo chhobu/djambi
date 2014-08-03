@@ -110,6 +110,7 @@ class MilitantTest extends BaseDjambiTest {
       'murder' => array(
         'type' => 'Djambi\\Moves\\Murder',
         'choice' => $bury_in,
+        'message' => $target->getId() . " has been slayed by " . $piece->getId() . ". Select now a place to place to bury its corpse.",
         'pieces_selection' => FALSE,
         'forbidden_choices' => explode(' ', "C6 A7 B6 F2 C6 D4 D3"),
       ),

@@ -75,6 +75,8 @@ class DiplomatTest extends BaseDjambiTest {
   /**
    * @dataProvider provideForbiddenDestinations
    * @expectedException \Djambi\Exceptions\DisallowedActionException
+   *
+   * @param $position
    */
   public function testDiplomatForbiddenMoves($position) {
     $this->game->play();
@@ -138,6 +140,8 @@ class DiplomatTest extends BaseDjambiTest {
       'manipulation' => array(
         'type' => 'Djambi\\Moves\\Manipulation',
         'choice' => $placement,
+        'message' =>  $target->getId() . " has been manipulated by " . $piece->getId() . "'s devious words. Select now its new location.",
+        'pieces_selection' => FALSE,
         'forbidden_choices' => array(
           self::THRONE_POSITION,
           self::MILITANT1_TEAM2_START_POSITION,

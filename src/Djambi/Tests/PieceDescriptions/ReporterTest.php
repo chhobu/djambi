@@ -146,6 +146,7 @@ class ReporterTest extends BaseDjambiTest {
         'type' => 'Djambi\\Moves\\Reportage',
         'pieces_selection' => TRUE,
         'choice' => self::MILITANT1_TEAM2_START_POSITION,
+        'message' => $piece->getId() . ' is on the way to reveal a massive scandal. Select the victim to focus on.',
         'expected_choices' => array(
           self::MILITANT1_TEAM2_START_POSITION,
           $leader_position,

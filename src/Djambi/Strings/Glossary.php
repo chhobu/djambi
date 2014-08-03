@@ -23,7 +23,7 @@ class Glossary {
   const SIDE_YELLOW = "Yellow";
 
   const INTERACTION_MURDER_MESSAGE = "!piece_id2 has been slayed by !piece_id1. Select now a place to place to bury its corpse.";
-  const INTERACTION_MANIPULATION_MESSAGE = "!piece_id2 has been manipulated by !piece_id's devious words. Select now its new location.";
+  const INTERACTION_MANIPULATION_MESSAGE = "!piece_id2 has been manipulated by !piece_id1's devious words. Select now its new location.";
   const INTERACTION_NECROMOBILITY_MESSAGE = "!piece_id has desecrated a grave in %location. Select now a new burial place.";
   const INTERACTION_EVACUATION_MESSAGE = "!piece_id cannot occupy the throne case. Select a runaway location.";
   const INTERACTION_REPORTAGE_MESSAGE = "!piece_id is on the way to reveal a massive scandal. Select the victim to focus on.";

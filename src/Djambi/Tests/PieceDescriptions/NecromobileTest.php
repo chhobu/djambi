@@ -118,6 +118,7 @@ class NecromobileTest extends BaseDjambiTest {
         'type' => 'Djambi\\Moves\\ThroneEvacuation',
         'expected_choices' => explode(' ', 'A1 E3 E4 C4 E5 C3 F4 G4 B4 A4 F6 G7 B2'),
         'choice' => $evacuate,
+        'message' => $piece->getId() . " cannot occupy the throne case. Select a runaway location.",
       ),
     );
     $this->doMove($piece, $destination, $expected_interactions);
@@ -144,6 +145,7 @@ class NecromobileTest extends BaseDjambiTest {
       'necromobility' => array(
         'type' => 'Djambi\\Moves\\Necromobility',
         'pieces_selection' => FALSE,
+        'message' => $piece->getId() . ' has desecrated a grave in ' . $destination . '. Select now a new burial place.',
         'choice' => $bury_in,
         'forbidden_choices' => array(
           self::MILITANT1_TEAM2_START_POSITION,

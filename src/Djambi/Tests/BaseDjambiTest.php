@@ -107,6 +107,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
         'expected_choices',
         'forbidden_choices',
         'pieces_selection',
+        'message',
       );
       foreach ($expected_interactions as $expected) {
         foreach (array_keys($expected) as $key) {
@@ -123,6 +124,9 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
         $possible_choices = array();
         foreach ($interaction->findPossibleChoices()->getPossibleChoices() as $choice) {
           $possible_choices[] = $choice->getName();
+        }
+        if (!empty($expected['message'])) {
+          $this->assertEquals($expected['message'], $interaction->getMessage()->__toString());
         }
         if (!empty($expected['pieces_selection'])) {
           $this->assertEquals($interaction->isDealingWithPiecesOnly(), $expected['pieces_selection']);
