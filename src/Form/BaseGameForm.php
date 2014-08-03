@@ -13,6 +13,7 @@ use Djambi\GameManagers\GameManagerInterface;
 use Djambi\Grids\BaseGrid;
 use Djambi\Strings\Glossary;
 use Drupal\Core\Form\FormBase;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Players\Drupal8Player;
 use Drupal\djambi\Services\ShortTempStore;
 use Drupal\djambi\Utils\GameUI;
@@ -131,10 +132,6 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     return $this->tmpStore;
   }
 
-  public function getErrorHandler() {
-    return $this->errorHandler();
-  }
-
   protected function updateStoredGameManager() {
     $this->getTmpStore()->setExpire(60 * 60);
     $this->getTmpStore()->set($this->getFormId(), $this->getGameManager());
@@ -154,8 +151,9 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
   /**
    * @inheritdoc
    */
-  public function buildForm(array $form, array &$form_state) {
-    if (empty($this->getGameManager()) || !empty($form_state['rebuild'])) {
+  public function buildForm(array $form, FormStateInterface $form_state) {
+    $rebuild = $form_state->get('rebuild');
+    if (empty($this->getGameManager()) || !empty($rebuild)) {
       $this->loadStoredGameManager();
     }
 
@@ -167,17 +165,17 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     $form['#suffix'] = '</div>';
     $form['#attributes']['class'][] = 'djambi-grid-form';
 
-    $form_state['no_cache'] = TRUE;
+    $form_state->set('no_cache', TRUE);
 
     return $form;
   }
 
-  public function submitForm(array &$form, array &$form_state) {
-    $form_state['rebuild'] = TRUE;
+  public function submitForm(array &$form, FormStateInterface $form_state) {
+    $form_state->setRebuild(TRUE);
     $this->updateStoredGameManager();
   }
 
-  protected function buildFormDisplaySettings(&$form, &$form_state) {
+  protected function buildFormDisplaySettings(&$form, FormStateInterface $form_state) {
     $settings = $this->getCurrentPlayer()->getDisplaySettings();
     if (!empty($_SESSION['djambi']['extend_display_fieldset'])) {
       $open = TRUE;
@@ -261,9 +259,10 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     }
   }
 
-  public function submitDisplaySettings(array $form, array &$form_state) {
-    $form_state['rebuild'] = TRUE;
-    $settings = array_merge($this->getCurrentPlayer()->getDisplaySettings(), $form_state['values']['display']);
+  public function submitDisplaySettings(array $form, FormStateInterface $form_state) {
+    $form_state->setRebuild(TRUE);
+    $values = $form_state->getValues();
+    $settings = array_merge($this->getCurrentPlayer()->getDisplaySettings(), $values['display']);
     $default_settings = GameUI::getDefaultDisplaySettings();
     foreach ($settings as $key => $value) {
       if (!isset($default_settings[$key]) || $default_settings[$key] == $value) {
@@ -279,10 +278,10 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     $_SESSION['djambi']['extend_display_fieldset'] = TRUE;
   }
 
-  public function submitResetDisplaySettings(array $form, array &$form_state) {
-    $form_state['rebuild'] = TRUE;
+  public function submitResetDisplaySettings(array $form, FormStateInterface $form_state) {
+    $form_state->setRebuild(TRUE);
     $this->getCurrentPlayer()->clearDisplaySettings();
-    unset($form_state['input']);
+    $form_state->set('input', NULL);
     $_SESSION['djambi']['extend_display_fieldset'] = TRUE;
   }
 

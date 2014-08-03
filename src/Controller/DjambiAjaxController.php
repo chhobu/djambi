@@ -3,6 +3,7 @@ namespace Drupal\djambi\Controller;
 
 use Djambi\GameManagers\GameManagerInterface;
 use Drupal\Core\Controller\ControllerBase;
+use Drupal\Core\Form\FormState;
 use Drupal\djambi\Form\BaseGameForm;
 use Drupal\djambi\Players\Drupal8Player;
 use Drupal\djambi\Services\ShortTempStore;
@@ -41,10 +42,12 @@ class DjambiAjaxController extends ControllerBase {
       $this->gameManager,
       $this->store,
     ));
-    $form_state = $this->formBuilder()->getFormStateDefaults();
-    $form_state['no_redirect'] = TRUE;
-    $form_state['input'] = $request->request->all();
-    $form_state['build_info']['callback_object'] = $this->formController;
+    $form_state = new FormState();
+    $form_state->set('no_redirect', TRUE);
+    $form_state->set('input', $request->request->all());
+    $build_info = $form_state->get('build_info');
+    $build_info['callback_object'] = $this->formController;
+    $form_state->set('build_info', $build_info);
     $form = $this->formController->buildForm(array(), $form_state);
     $this->formBuilder()->prepareForm($this->formController->getFormId(), $form, $form_state);
     $this->formBuilder()->processForm($this->formController->getFormId(), $form, $form_state);

@@ -9,6 +9,7 @@ use Djambi\Gameplay\Faction;
 use Djambi\Moves\Move;
 use Djambi\Moves\MoveInteractionInterface;
 use Djambi\Strings\GlossaryTerm;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Form\Actions\CancelLastTurn;
 use Drupal\djambi\Form\Actions\CancelPieceSelection;
 use Drupal\djambi\Form\Actions\DrawAccept;
@@ -48,7 +49,7 @@ class SandboxGameForm extends BaseGameForm {
   /**
    * @inheritdoc
    */
-  public function buildForm(array $form, array &$form_state) {
+  public function buildForm(array $form, FormStateInterface $form_state) {
     $form = parent::buildForm($form, $form_state);
     $form['#attached']['library'][] = 'djambi/djambi.ui.play';
 
@@ -251,12 +252,13 @@ class SandboxGameForm extends BaseGameForm {
     return $last_moves;
   }
 
-  public function validateForm(array &$form, array &$form_state) {
+  public function validateForm(array &$form, FormStateInterface $form_state) {
     $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
     $current_turn_id = !empty($current_turn) ? $current_turn->getId() : NULL;
-    $transmitted_turn_id = $form_state['input']['turn_id'];
+    $input = $form_state->get('input');
+    $transmitted_turn_id = $input['turn_id'];
     if ($current_turn_id != $transmitted_turn_id) {
-      $this->setFormError('turn_id', $form_state, $this->t("You are using an outdated version of this game. It has been now refreshed, you can now select an other action."));
+      $form_state->setErrorByName('turn_id', $this->t("You are using an outdated version of this game. It has been now refreshed, you can now select an other action."));
     }
   }
 
@@ -330,10 +332,12 @@ class SandboxGameForm extends BaseGameForm {
     $grid_form['actions']['validation']['#validate'][] = array($this, 'validatePieceSelection');
   }
 
-  public function validatePieceSelection(array &$form, array &$form_state) {
+  public function validatePieceSelection(array &$form, FormStateInterface $form_state) {
     $grid = $this->getGameManager()->getBattlefield();
+    $values = $form_state->getValues();
+    $inputs = $form_state->get('input');
     try {
-      $piece = $grid->findCellByName($form_state['values']['cells'])->getOccupant();
+      $piece = $grid->findCellByName($values['cells'])->getOccupant();
       $old_selected_piece = $grid->getCurrentTurn()->getMove()->getSelectedPiece();
       if (!is_null($old_selected_piece) && $old_selected_piece->getId() != $piece->getId()) {
         $grid->getCurrentTurn()->resetMove();
@@ -341,12 +345,14 @@ class SandboxGameForm extends BaseGameForm {
       $grid->getCurrentTurn()->getMove()->selectPiece($piece);
     }
     catch (Exception $exception) {
-      $this->setFormError('cells', $form_state, $this->t('@message Please choose a movable piece.',
+      $form_state->setErrorByName('cells', $this->t('@message Please choose a movable piece.',
         array('@message' => $exception->getMessage())));
     }
-    if (!empty($form_state['input']['js-extra-choice'])) {
-      $form_state['values']['cells'] = $form_state['input']['js-extra-choice'];
-      unset($form_state['input']['js-extra-choice']);
+    if (!empty($inputs['js-extra-choice'])) {
+      $values['cells'] = $inputs['js-extra-choice'];
+      unset($inputs['js-extra-choice']);
+      $form_state->set('values', $values);
+      $form_state->set('input', $inputs);
       $this->validatePieceDestination($form, $form_state);
     }
   }
@@ -373,17 +379,18 @@ class SandboxGameForm extends BaseGameForm {
     $grid_form['actions']['validation']['#validate'][] = array($this, 'validatePieceDestination');
   }
 
-  public function validatePieceDestination(array &$form, array &$form_state) {
+  public function validatePieceDestination(array &$form, FormStateInterface $form_state) {
     $grid = $this->getGameManager()->getBattlefield();
+    $values = $form_state->getValues();
     try {
-      $cell = $grid->findCellByName($form_state['values']['cells']);
+      $cell = $grid->findCellByName($values['cells']);
       $grid->getCurrentTurn()->getMove()->executeChoice($cell);
     }
     catch (DisallowedActionException $exception) {
-      $this->setFormError('cells', $form_state, $this->t('You have selected an unreachable cell. Please choose a valid destination.'));
+      $form_state->setErrorByName('cells', $this->t('You have selected an unreachable cell. Please choose a valid destination.'));
     }
     catch (Exception $exception) {
-      $this->setFormError('cells', $form_state, $this->t('Invalid destination detected. Please choose an empty cell.'));
+      $form_state->setErrorByName('cells', $this->t('Invalid destination detected. Please choose an empty cell.'));
     }
   }
 
@@ -422,21 +429,22 @@ class SandboxGameForm extends BaseGameForm {
     $grid_form['actions']['validation']['#validate'][] = array($this, 'validateInteractionChoice');
   }
 
-  public function validateInteractionChoice(&$form, &$form_state) {
+  public function validateInteractionChoice(&$form, FormStateInterface $form_state) {
     $grid = $this->getGameManager()->getBattlefield();
     $move = $grid->getCurrentTurn()->getMove();
+    $values = $form_state->getValues();
     if (!empty($move) && !empty($move->getInteractions())) {
       try {
-        $move->getFirstInteraction()->executeChoice($grid->findCellByName($form_state['values']['cells']));
+        $move->getFirstInteraction()->executeChoice($grid->findCellByName($values['cells']));
       }
       catch (Exception $exception) {
-        $this->setFormError('cells', $form_state, $this->t('Invalid choice detected : @exception. Please select an other option.',
+        $form_state->setErrorByName('cells', $this->t('Invalid choice detected : @exception. Please select an other option.',
           array('@exception' => $exception->getMessage())));
       }
     }
     else {
       $grid->getCurrentTurn()->resetMove();
-      $this->setFormError('cells', $form_state, $this->t('Invalid move data. Please start again your actions.'));
+      $form_state->setErrorByName('cells', $this->t('Invalid move data. Please start again your actions.'));
     }
   }
 

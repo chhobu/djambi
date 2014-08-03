@@ -11,6 +11,7 @@ namespace Drupal\djambi\Form\Actions;
 
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\GameOptions\StandardRuleset;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Form\BaseGameForm;
 
 class SkipTurn extends BaseAction {
@@ -45,15 +46,15 @@ class SkipTurn extends BaseAction {
     return $can_skip;
   }
 
-  public function validate(&$form, &$form_state) {
-    if ($this->getForm()->getErrorHandler()->getAnyErrors()) {
+  public function validate(&$form, FormStateInterface $form_state) {
+    if (!empty($form_state->getErrors())) {
       return;
     }
     try {
       $this->getForm()->getGameManager()->getBattlefield()->getPlayingFaction()->skipTurn();
     }
     catch (DisallowedActionException $exception) {
-      $this->raiseError($exception);
+      $this->raiseError($form_state, $exception);
     }
   }
 }

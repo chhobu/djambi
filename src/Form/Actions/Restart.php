@@ -10,6 +10,7 @@ namespace Drupal\djambi\Form\Actions;
 
 
 use Djambi\GameManagers\BaseGameManager;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Form\BaseGameForm;
 
 class Restart extends BaseAction {
@@ -28,7 +29,7 @@ class Restart extends BaseAction {
     && $this->getForm()->getGameManager()->getMode() == BaseGameManager::MODE_SANDBOX;
   }
 
-  public function validate(&$form, &$form_state) {
+  public function validate(&$form, FormStateInterface $form_state) {
     $this->getForm()->resetGameManager();
   }
 }

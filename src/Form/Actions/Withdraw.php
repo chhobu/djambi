@@ -10,6 +10,7 @@ namespace Drupal\djambi\Form\Actions;
 
 
 use Djambi\Exceptions\DisallowedActionException;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Form\BaseGameForm;
 
 class Withdraw extends BaseAction {
@@ -22,15 +23,15 @@ class Withdraw extends BaseAction {
     parent::__construct($form);
   }
 
-  public function validate(&$form, &$form_state) {
-    if ($this->getForm()->getErrorHandler()->getAnyErrors()) {
+  public function validate(&$form, FormStateInterface $form_state) {
+    if (!empty($form_state->getErrors())) {
       return;
     }
     try {
       $this->getForm()->getGameManager()->getBattlefield()->getPlayingFaction()->withdraw();
     }
     catch (DisallowedActionException $exception) {
-      $this->raiseError($exception);
+      $this->raiseError($form_state, $exception);
     }
   }
 }

@@ -64,6 +64,7 @@ class ReporterTest extends BaseDjambiTest {
     $destination = 'C1';
     $this->doMove($piece1, $destination, NULL);
 
+    $this->checkLog($piece1->getId() . ' : ' . self::REPORTER_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece1, $destination);
     $this->checkEmptyCell(self::REPORTER_TEAM1_START_POSITION);
@@ -72,6 +73,8 @@ class ReporterTest extends BaseDjambiTest {
   /**
    * @dataProvider provideForbiddenDestinations
    * @expectedException \Djambi\Exceptions\DisallowedActionException
+   *
+   * @param $position
    */
   public function testReporterForbiddenMoves($position) {
     $this->game->play();
@@ -115,6 +118,8 @@ class ReporterTest extends BaseDjambiTest {
     $target = $grid->findCellByName(self::MILITANT1_TEAM2_START_POSITION)->getOccupant();
     $this->doMove($piece, $destination, NULL);
 
+    $this->checkLog($piece->getId() . ' : ' . self::REPORTER_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($target->getId() . ' killed in ' . self::MILITANT1_TEAM2_START_POSITION);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
     $this->checkPosition($target, self::MILITANT1_TEAM2_START_POSITION);
@@ -139,6 +144,7 @@ class ReporterTest extends BaseDjambiTest {
     $expected_interaction = array(
       'reportage' => array(
         'type' => 'Djambi\\Moves\\Reportage',
+        'pieces_selection' => TRUE,
         'choice' => self::MILITANT1_TEAM2_START_POSITION,
         'expected_choices' => array(
           self::MILITANT1_TEAM2_START_POSITION,
@@ -148,6 +154,8 @@ class ReporterTest extends BaseDjambiTest {
     );
     $this->doMove($piece, $destination, $expected_interaction);
 
+    $this->checkLog($piece->getId() . ' : ' . self::REPORTER_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($target->getId() . ' killed in ' . self::MILITANT1_TEAM2_START_POSITION);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
     $this->checkPosition($target, self::MILITANT1_TEAM2_START_POSITION);

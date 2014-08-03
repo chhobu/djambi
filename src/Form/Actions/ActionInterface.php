@@ -9,9 +9,10 @@
 namespace Drupal\djambi\Form\Actions;
 
 
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Form\BaseGameForm;
 
 interface ActionInterface {
-  public function validate(&$form, &$form_state);
+  public function validate(&$form, FormStateInterface $form_state);
   public static function addButton(BaseGameForm $form_object, array &$form_array, array $ajax = NULL, $weight = 0);
 }

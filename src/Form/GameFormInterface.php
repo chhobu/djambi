@@ -10,6 +10,7 @@ namespace Drupal\djambi\Form;
 
 
 use Djambi\GameManagers\GameManagerInterface;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Players\Drupal8Player;
 
 interface GameFormInterface {
@@ -42,7 +43,7 @@ interface GameFormInterface {
    */
   public function translateDjambiStrings($string, $args);
 
-  public function submitDisplaySettings(array $form, array &$form_state);
+  public function submitDisplaySettings(array $form, FormStateInterface $form_state);
 
-  public function submitResetDisplaySettings(array $form, array &$form_state);
+  public function submitResetDisplaySettings(array $form, FormStateInterface $form_state);
 }

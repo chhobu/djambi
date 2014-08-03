@@ -13,7 +13,7 @@ class Necromobility extends BaseMoveInteraction implements MoveInteractionInterf
 
   public static function isTriggerable(Move $move, Piece $target = NULL, $allow_interactions = TRUE) {
     if (!empty($target) && self::checkNecromobilityPossibility($move->getSelectedPiece(), $target, $allow_interactions) && $allow_interactions) {
-      $move->triggerInteraction(new static($move, $target));
+      $move->triggerInteraction(new self($move, $target));
       return TRUE;
     }
     return FALSE;

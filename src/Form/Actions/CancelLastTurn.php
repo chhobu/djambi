@@ -9,6 +9,7 @@
 namespace Drupal\djambi\Form\Actions;
 
 
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Form\BaseGameForm;
 
 class CancelLastTurn extends BaseAction {
@@ -25,8 +26,8 @@ class CancelLastTurn extends BaseAction {
     return count($this->getForm()->getGameManager()->getBattlefield()->getPastTurns()) > 0;
   }
 
-  public function validate(&$form, &$form_state) {
-    if ($this->getForm()->getErrorHandler()->getAnyErrors()) {
+  public function validate(&$form, FormStateInterface $form_state) {
+    if (!empty($form_state->getErrors())) {
       return;
     }
     $this->getForm()->getGameManager()->getBattlefield()->cancelLastTurn();

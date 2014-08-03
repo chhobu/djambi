@@ -15,6 +15,7 @@ use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Piece;
 use Djambi\Persistance\ArrayableInterface;
+use Djambi\Strings\GlossaryTerm;
 
 abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
 
@@ -22,6 +23,8 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
 
   /** @var GameManagerInterface */
   protected $game;
+  /** @var GlossaryTerm[]  */
+  protected $log = array();
 
   protected function checkPossibleMoves(Piece $piece, $expected_moves) {
     $diff = array_diff($piece->getAllowableMovesNames(), $expected_moves);
@@ -71,7 +74,17 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
     }
   }
 
-  protected function doMove($piece, $destination, $expected_interactions = array(), $is_completed = TRUE) {
+  /**
+   * @param Piece $piece
+   * @param String $destination
+   * @param array $expected_interactions
+   * @param bool $is_completed
+   *
+   * @throws \Djambi\Exceptions\DisallowedActionException
+   * @throws \Djambi\Exceptions\IllogicMoveException
+   */
+  protected function doMove(Piece $piece, $destination, $expected_interactions = array(), $is_completed = TRUE) {
+    $this->log = array();
     $grid = $this->game->getBattlefield();
     $move = $grid->getCurrentTurn()->getMove();
     $move->selectPiece($piece);
@@ -93,6 +106,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
         'type',
         'expected_choices',
         'forbidden_choices',
+        'pieces_selection',
       );
       foreach ($expected_interactions as $expected) {
         foreach (array_keys($expected) as $key) {
@@ -110,6 +124,9 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
         foreach ($interaction->findPossibleChoices()->getPossibleChoices() as $choice) {
           $possible_choices[] = $choice->getName();
         }
+        if (!empty($expected['pieces_selection'])) {
+          $this->assertEquals($interaction->isDealingWithPiecesOnly(), $expected['pieces_selection']);
+        }
         if (!empty($expected['expected_choices'])) {
           $diff1 = array_diff($possible_choices, $expected['expected_choices']);
           $this->assertEmpty($diff1, "Some possible choices were not expected : " . implode(', ', $diff1));
@@ -126,6 +143,8 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
       }
     }
     $this->assertEquals($is_completed, $move->isCompleted());
+    $past_turn = current($this->game->getBattlefield()->getPastTurns());
+    $move->log($this->log, $past_turn);
   }
 
   /**
@@ -203,6 +222,15 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
       }
       $this->assertEquals($expected_value, $actual_value, "Property \"" . $property . "\" from class \"" . get_class($object) . "\" fails persisting");
     }
+  }
+
+  protected function checkLog($string) {
+    foreach ($this->log as $log) {
+      if ($string == $log->__toString()) {
+        return;
+      }
+    }
+    $this->fail("String \"" . $string . "\" not found in log.");
   }
 
 }

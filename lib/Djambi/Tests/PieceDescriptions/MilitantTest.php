@@ -69,6 +69,7 @@ class MilitantTest extends BaseDjambiTest {
     $destination = 'A6';
     $this->doMove($piece1, $destination, NULL);
 
+    $this->checkLog($piece1->getId() . ' : ' . self::MILITANT1_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece1, $destination);
     $this->checkEmptyCell(self::MILITANT1_TEAM1_START_POSITION);
@@ -109,10 +110,14 @@ class MilitantTest extends BaseDjambiTest {
       'murder' => array(
         'type' => 'Djambi\\Moves\\Murder',
         'choice' => $bury_in,
+        'pieces_selection' => FALSE,
         'forbidden_choices' => explode(' ', "C6 A7 B6 F2 C6 D4 D3"),
       ),
     ));
 
+    $this->checkLog($piece->getId() . ' : ' . self::MILITANT2_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($target->getId() . ' killed in ' . $destination);
+    $this->checkLog($target->getId() . ' : ' . $destination . ' to ' . $bury_in);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
     $this->checkEmptyCell(self::MILITANT2_TEAM1_START_POSITION);

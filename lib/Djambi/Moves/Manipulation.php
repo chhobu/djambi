@@ -17,7 +17,7 @@ class Manipulation extends BaseMoveInteraction implements MoveInteractionInterfa
     $piece = $move->getSelectedPiece();
     if (!empty($target) && static::checkManipulatingPossibility($piece, $target, $allow_interactions)) {
       if ($piece->getPosition()->getType() != Cell::TYPE_THRONE) {
-        $move->triggerInteraction(new static($move, $target));
+        $move->triggerInteraction(new self($move, $target));
       }
       else {
         $event = new Event(new GlossaryTerm(Glossary::EVENT_ASSASSIN_GOLDEN_MOVE, array(
@@ -33,7 +33,7 @@ class Manipulation extends BaseMoveInteraction implements MoveInteractionInterfa
   }
 
   public static function triggerGoldenMove(Move $move, Piece $target, Cell $destination) {
-    $golden_move = new static($move, $target);
+    $golden_move = new self($move, $target);
     $move->triggerInteraction($golden_move);
     $golden_move->executeChoice($destination);
   }

@@ -9,14 +9,15 @@
 namespace Drupal\djambi\Form\Actions;
 
 
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Form\BaseGameForm;
 
 class CancelPieceSelection extends BaseAction {
 
   const ACTION_NAME = 'cancel-selection';
 
-  public function validate(&$form, &$form_state) {
-    if ($this->getForm()->getErrorHandler()->getAnyErrors()) {
+  public function validate(&$form, FormStateInterface $form_state) {
+    if (!empty($form_state->getErrors())) {
       return;
     }
     $this->getForm()->getGameManager()->getBattlefield()->getCurrentTurn()->resetMove();

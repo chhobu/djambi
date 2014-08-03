@@ -11,6 +11,7 @@ namespace Drupal\djambi\Form\Actions;
 
 use Djambi\Exceptions\Exception;
 use Djambi\GameManagers\BaseGameManager;
+use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\djambi\Form\BaseGameForm;
 use Drupal\djambi\Form\SandboxGameForm;
@@ -130,13 +131,13 @@ abstract class BaseAction implements ActionInterface  {
     $this->classes[] = $class;
   }
 
-  protected function raiseError(Exception $exception) {
-    $this->getForm()->getErrorHandler()->setErrorByName(static::ACTION_NAME, $form_state, $this->t('Invalid action fired : @exception.', array(
+  protected function raiseError(FormStateInterface $form_state, Exception $exception) {
+    $form_state->setErrorByName(static::ACTION_NAME, $this->t('Invalid action fired : @exception.', array(
       '@exception' => $exception->getMessage(),
     )));
   }
 
-  public function validate(&$form, &$form_state) {
+  public function validate(&$form, FormStateInterface $form_state) {
   }
 
   protected function getValidateFields() {

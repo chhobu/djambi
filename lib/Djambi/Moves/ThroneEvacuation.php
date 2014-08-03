@@ -11,7 +11,7 @@ class ThroneEvacuation extends BaseMoveInteraction implements MoveInteractionInt
 
   public static function isTriggerable(Move $move, Piece $target = NULL, $allow_interactions = TRUE) {
     if (!$move->getSelectedPiece()->getDescription()->hasHabilityAccessThrone() && $move->getDestination()->getType() == Cell::TYPE_THRONE) {
-      $move->triggerInteraction(new static($move));
+      $move->triggerInteraction(new self($move));
     }
     return TRUE;
   }

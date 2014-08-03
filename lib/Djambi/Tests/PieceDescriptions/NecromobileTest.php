@@ -69,6 +69,7 @@ class NecromobileTest extends BaseDjambiTest {
     $destination = 'C1';
     $this->doMove($piece1, $destination, NULL);
 
+    $this->checkLog($piece1->getId() . ' : ' . self::NECRO_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece1, $destination);
     $this->checkEmptyCell(self::NECRO_TEAM1_START_POSITION);
@@ -77,6 +78,8 @@ class NecromobileTest extends BaseDjambiTest {
   /**
    * @dataProvider provideForbiddenDestinations
    * @expectedException \Djambi\Exceptions\DisallowedActionException
+   *
+   * @param String $position
    */
   public function testNecromobileForbiddenMoves($position) {
     $this->game->play();
@@ -119,6 +122,9 @@ class NecromobileTest extends BaseDjambiTest {
     );
     $this->doMove($piece, $destination, $expected_interactions);
 
+    $this->checkLog($piece->getId() . ' : ' . self::NECRO_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($target->getId() . ' : ' . $destination . ' to ' . $bury_in);
+    $this->checkLog($piece->getId() . ' : ' . $destination . ' to ' . $evacuate);
     $this->checkPosition($piece, $evacuate);
     $this->checkPosition($target, $bury_in);
     $this->assertFalse($target->isAlive());
@@ -137,6 +143,7 @@ class NecromobileTest extends BaseDjambiTest {
     $this->doMove($piece, $destination, array(
       'necromobility' => array(
         'type' => 'Djambi\\Moves\\Necromobility',
+        'pieces_selection' => FALSE,
         'choice' => $bury_in,
         'forbidden_choices' => array(
           self::MILITANT1_TEAM2_START_POSITION,
@@ -150,6 +157,8 @@ class NecromobileTest extends BaseDjambiTest {
       ),
     ));
 
+    $this->checkLog($piece->getId() . ' : ' . self::NECRO_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($target->getId() . ' : ' . $destination . ' to ' . $bury_in);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
     $this->checkPosition($target, $bury_in);

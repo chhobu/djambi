@@ -16,7 +16,7 @@ class Murder extends BaseMoveInteraction implements MoveInteractionInterface {
     $piece = $move->getSelectedPiece();
     if (!empty($target) && static::checkMurderingPossibility($piece, $target, $allow_interactions)) {
       if (!$piece->getDescription()->hasHabilitySignature()) {
-        $move->triggerInteraction(new static($move, $target));
+        $move->triggerInteraction(new self($move, $target));
         return TRUE;
       }
       else {
