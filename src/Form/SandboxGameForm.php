@@ -53,13 +53,6 @@ class SandboxGameForm extends BaseGameForm {
     $form = parent::buildForm($form, $form_state);
     $form['#attached']['library'][] = 'djambi/djambi.ui.play';
 
-    $form['intro'] = array(
-      '#markup' => '<p>' . $this->t("Welcome to Djambi training area. You can play here"
-      . " a Djambi game where you control successively all sides : this way, "
-      . " you will be able to learn Djambi basic rules, experiment new tactics "
-      . " or play with (future ex-)friends in a hot chair mode.") . '</p>',
-    );
-
     $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
     $form['turn_id'] = array(
       '#type' => 'hidden',
@@ -94,13 +87,14 @@ class SandboxGameForm extends BaseGameForm {
 
   protected function buildGameStatusPanel(array &$form) {
     $players_table = PlayersTable::build(array('game' => $this->getGameManager(), 'current_player' => $this->getCurrentPlayer()));
+    $date_service = \Drupal::service('date.formatter');
     $form['game_status_panel'] = array(
       '#type' => 'details',
       '#open' => TRUE,
       '#title' => $this->t('Game status : %status, started at %created, last change at %updated', array(
         '%status' => new GlossaryTerm($this->getGameManager()->getStatus()),
-        '%created' => \Drupal::service('date')->format($this->getGameManager()->getBegin(), 'short'),
-        '%updated' => \Drupal::service('date')->format($this->getGameManager()->getChanged(), 'short'),
+        '%created' => $date_service->format($this->getGameManager()->getBegin(), 'short'),
+        '%updated' => $date_service->format($this->getGameManager()->getChanged(), 'short'),
       )),
       'players_table' => array(
         '#theme' => 'table',
@@ -201,52 +195,59 @@ class SandboxGameForm extends BaseGameForm {
   }
 
   protected function buildLastMovesPanel($current_round, $current_play_order) {
+    if (!$this->getCurrentPlayer()->getDisplaySetting(GameUI::SETTING_DISPLAY_LAST_MOVES_PANEL)) {
+      return NULL;
+    }
     $last_moves = array();
-    if ($this->getCurrentPlayer()->getDisplaySetting(GameUI::SETTING_DISPLAY_LAST_MOVES_PANEL)) {
-      $past_turns = $this->getGameManager()->getBattlefield()->getPastTurns();
-      krsort($past_turns);
-      foreach ($past_turns as $turn) {
-        if ($current_round == $turn['round'] || ($current_round - 1 == $turn['round'] && $current_play_order <= $turn['playOrderKey'])) {
-          $submoves = array();
-          if (!empty($turn['events'])) {
-            foreach ($turn['events'] as $event) {
-              if (!empty($event['changes'])) {
-                foreach ($event['changes'] as $change) {
-                  if ($change['change'] == 'lastDrawProposal') {
-                    $submoves[] = $this->t('ask for a draw...');
-                  }
-                  elseif ($change['change'] == 'drawStatus' && $change['newValue'] == Faction::DRAW_STATUS_ACCEPTED) {
-                    $submoves[] = $this->t('draw accepted');
-                  }
-                  elseif ($change['change'] == 'drawStatus' && $change['newValue'] == Faction::DRAW_STATUS_REJECTED) {
-                    $submoves[] = $this->t('draw rejected');
-                  }
-                  if ($change['change'] == 'status' && $change['newValue'] == Faction::STATUS_WITHDRAW) {
-                    $submoves[] = $this->t('withdrawal !');
-                  }
-                  if ($change['change'] == 'skippedTurns') {
-                    $submoves[] = $this->t('turn skipped...');
-                  }
+    $past_turns = $this->getGameManager()->getBattlefield()->getPastTurns();
+    krsort($past_turns);
+    foreach ($past_turns as $turn) {
+      if ($current_round == $turn['round'] || ($current_round - 1 == $turn['round'] && $current_play_order <= $turn['playOrderKey'])) {
+        $submoves = array();
+        if (!empty($turn['events'])) {
+          foreach ($turn['events'] as $event) {
+            if (!empty($event['changes'])) {
+              foreach ($event['changes'] as $change) {
+                if ($change['change'] == 'lastDrawProposal') {
+                  $submoves[] = $this->t('ask for a draw...');
+                }
+                elseif ($change['change'] == 'drawStatus' && $change['newValue'] == Faction::DRAW_STATUS_ACCEPTED) {
+                  $submoves[] = $this->t('draw accepted');
+                }
+                elseif ($change['change'] == 'drawStatus' && $change['newValue'] == Faction::DRAW_STATUS_REJECTED) {
+                  $submoves[] = $this->t('draw rejected');
+                }
+                if ($change['change'] == 'status' && $change['newValue'] == Faction::STATUS_WITHDRAW) {
+                  $submoves[] = $this->t('withdrawal !');
+                }
+                if ($change['change'] == 'skippedTurns') {
+                  $submoves[] = $this->t('turn skipped...');
                 }
               }
             }
           }
-          if (!empty($turn['move'])) {
-            Move::log($submoves, $turn);
-          }
-          $submoves_markup = array(
-            '#theme' => 'item_list',
-            '#attributes' => array('class' => array('submoves')),
-            '#items' => $submoves,
-          );
-          $move = $this->t('%time, !faction : !submove', array(
-            '%time' => \Drupal::service('date')->format($turn['end'], 'time'),
-            '!faction' => GameUI::printFactionFullName($this->getGameManager()->getBattlefield()
-                ->findFactionById($turn['actingFaction'])),
-            '!submove' => drupal_render($submoves_markup),
-          ));
-          $last_moves[] = $move;
         }
+        if (!empty($turn['move'])) {
+          Move::log($submoves, $turn);
+        }
+        $submoves_markup = array(
+          '#theme' => 'item_list',
+          '#attributes' => array('class' => array('submoves')),
+          '#items' => $submoves,
+        );
+        $move = array(
+          '#theme' => 'djambi_last_move_item',
+          '#time' => \Drupal::service('date.formatter')->format($turn['end'], 'time'),
+          '#side' => GameUI::printFactionFullName($this->getGameManager()
+            ->getBattlefield()
+            ->findFactionById($turn['actingFaction'])
+          ),
+          '#description' => drupal_render($submoves_markup),
+        );
+        $last_moves[] = array(
+          '#wrapper_attributes' => array('class' => array('djambi-last-move-item')),
+          'value' => $move,
+        );
       }
     }
     return $last_moves;
@@ -255,7 +256,7 @@ class SandboxGameForm extends BaseGameForm {
   public function validateForm(array &$form, FormStateInterface $form_state) {
     $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
     $current_turn_id = !empty($current_turn) ? $current_turn->getId() : NULL;
-    $input = $form_state->get('input');
+    $input = $form_state->getUserInput();
     $transmitted_turn_id = $input['turn_id'];
     if ($current_turn_id != $transmitted_turn_id) {
       $form_state->setErrorByName('turn_id', $this->t("You are using an outdated version of this game. It has been now refreshed, you can now select an other action."));
@@ -277,8 +278,8 @@ class SandboxGameForm extends BaseGameForm {
     $grid_form['actions']['validation'] = array(
       '#type' => 'submit',
       '#value' => $this->t('Validate'),
-      '#validate' => array(array($this, 'validateForm')),
-      '#submit' => array(array($this, 'submitForm')),
+      '#validate' => array('::validateForm'),
+      '#submit' => array('::submitForm'),
       '#attributes' => array('class' => array('button--primary')),
       '#ajax' => $this->getAjaxSettings(),
     );
@@ -329,13 +330,13 @@ class SandboxGameForm extends BaseGameForm {
       '#title' => $this->t('Select a movable piece...'),
       '#attributes' => array('class' => array('is-inline')),
     );
-    $grid_form['actions']['validation']['#validate'][] = array($this, 'validatePieceSelection');
+    $grid_form['actions']['validation']['#validate'][] = '::validatePieceSelection';
   }
 
   public function validatePieceSelection(array &$form, FormStateInterface $form_state) {
     $grid = $this->getGameManager()->getBattlefield();
     $values = $form_state->getValues();
-    $inputs = $form_state->get('input');
+    $inputs = $form_state->getUserInput();
     try {
       $piece = $grid->findCellByName($values['cells'])->getOccupant();
       $old_selected_piece = $grid->getCurrentTurn()->getMove()->getSelectedPiece();
@@ -351,8 +352,8 @@ class SandboxGameForm extends BaseGameForm {
     if (!empty($inputs['js-extra-choice'])) {
       $values['cells'] = $inputs['js-extra-choice'];
       unset($inputs['js-extra-choice']);
-      $form_state->set('values', $values);
-      $form_state->set('input', $inputs);
+      $form_state->setValues($values);
+      $form_state->setUserInput($inputs);
       $this->validatePieceDestination($form, $form_state);
     }
   }
@@ -376,7 +377,7 @@ class SandboxGameForm extends BaseGameForm {
       )),
       '#attributes' => array('class' => array('is-inline')),
     );
-    $grid_form['actions']['validation']['#validate'][] = array($this, 'validatePieceDestination');
+    $grid_form['actions']['validation']['#validate'][] = '::validatePieceDestination';
   }
 
   public function validatePieceDestination(array &$form, FormStateInterface $form_state) {
@@ -408,7 +409,7 @@ class SandboxGameForm extends BaseGameForm {
       '#title' => $interaction->getMessage(),
       '#attributes' => array('class' => array('is-inline')),
     );
-    $grid_form['actions']['validation']['#validate'][] = array($this, 'validateInteractionChoice');
+    $grid_form['actions']['validation']['#validate'][] = '::validateInteractionChoice';
   }
 
   protected function buildFormGridVictimChoice(&$grid_form, MoveInteractionInterface $interaction) {
@@ -426,7 +427,7 @@ class SandboxGameForm extends BaseGameForm {
       '#title' => $interaction->getMessage(),
       '#attributes' => array('class' => array('is-inline')),
     );
-    $grid_form['actions']['validation']['#validate'][] = array($this, 'validateInteractionChoice');
+    $grid_form['actions']['validation']['#validate'][] = '::validateInteractionChoice';
   }
 
   public function validateInteractionChoice(&$form, FormStateInterface $form_state) {

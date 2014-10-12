@@ -44,7 +44,8 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
     $this->assertEquals($expected, array_values($play_order), "Play order (" . implode(", ", $play_order) . ") was not what was expected");
   }
 
-  protected function checkPosition(Piece $piece, $position) {
+  protected function checkPosition($piece_id, $position) {
+    $piece = $this->game->getBattlefield()->findPieceById($piece_id);
     $this->assertEquals($position, $piece->getPosition()->getName());
     $occupant = $this->game->getBattlefield()->findCellByName($position)->getOccupant();
     $this->assertNotEquals(NULL, $occupant);
@@ -75,7 +76,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
   }
 
   /**
-   * @param Piece $piece
+   * @param String $piece_id
    * @param String $destination
    * @param array $expected_interactions
    * @param bool $is_completed
@@ -83,9 +84,10 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
    * @throws \Djambi\Exceptions\DisallowedActionException
    * @throws \Djambi\Exceptions\IllogicMoveException
    */
-  protected function doMove(Piece $piece, $destination, $expected_interactions = array(), $is_completed = TRUE) {
+  protected function doMove($piece_id, $destination, $expected_interactions = array(), $is_completed = TRUE) {
     $this->log = array();
     $grid = $this->game->getBattlefield();
+    $piece = $grid->findPieceById($piece_id);
     $move = $grid->getCurrentTurn()->getMove();
     $move->selectPiece($piece);
     $move->executeChoice($grid->findCellByName($destination));

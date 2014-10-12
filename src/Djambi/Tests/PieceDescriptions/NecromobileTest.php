@@ -64,12 +64,11 @@ class NecromobileTest extends BaseDjambiTest {
 
   public function testNecromobileNormalMove() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-N');
+    $piece1 = 't1-N';
     $destination = 'C1';
     $this->doMove($piece1, $destination, NULL);
 
-    $this->checkLog($piece1->getId() . ' : ' . self::NECRO_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($piece1 . ' : ' . self::NECRO_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece1, $destination);
     $this->checkEmptyCell(self::NECRO_TEAM1_START_POSITION);
@@ -83,9 +82,7 @@ class NecromobileTest extends BaseDjambiTest {
    */
   public function testNecromobileForbiddenMoves($position) {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-N');
-    $this->doMove($piece1, $position);
+    $this->doMove('t1-N', $position);
   }
 
   public function provideForbiddenDestinations() {
@@ -106,7 +103,7 @@ class NecromobileTest extends BaseDjambiTest {
       ->setAlive(FALSE);
     $this->game->play();
 
-    $piece = $grid->findPieceById('t1-N');
+    $piece = 't1-N';
     $bury_in = 'D5';
     $evacuate = 'B4';
     $expected_interactions = array(
@@ -118,16 +115,16 @@ class NecromobileTest extends BaseDjambiTest {
         'type' => 'Djambi\\Moves\\ThroneEvacuation',
         'expected_choices' => explode(' ', 'A1 E3 E4 C4 E5 C3 F4 G4 B4 A4 F6 G7 B2'),
         'choice' => $evacuate,
-        'message' => $piece->getId() . " cannot occupy the throne case. Select a runaway location.",
+        'message' => $piece . " cannot occupy the throne case. Select a runaway location.",
       ),
     );
     $this->doMove($piece, $destination, $expected_interactions);
 
-    $this->checkLog($piece->getId() . ' : ' . self::NECRO_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($piece . ' : ' . self::NECRO_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkLog($target->getId() . ' : ' . $destination . ' to ' . $bury_in);
-    $this->checkLog($piece->getId() . ' : ' . $destination . ' to ' . $evacuate);
+    $this->checkLog($piece . ' : ' . $destination . ' to ' . $evacuate);
     $this->checkPosition($piece, $evacuate);
-    $this->checkPosition($target, $bury_in);
+    $this->checkPosition($target->getId(), $bury_in);
     $this->assertFalse($target->isAlive());
     $this->checkNewTurn('t2');
   }
@@ -136,7 +133,7 @@ class NecromobileTest extends BaseDjambiTest {
     $this->game->play();
     $grid = $this->game->getBattlefield();
 
-    $piece = $grid->findPieceById('t1-N');
+    $piece = 't1-N';
     $destination = self::MILITANT_DEAD_START_POSITION;
     $target = $grid->findCellByName($destination)->getOccupant();
     $this->assertNotEquals(NULL, $target);
@@ -145,7 +142,7 @@ class NecromobileTest extends BaseDjambiTest {
       'necromobility' => array(
         'type' => 'Djambi\\Moves\\Necromobility',
         'pieces_selection' => FALSE,
-        'message' => $piece->getId() . ' has desecrated a grave in ' . $destination . '. Select now a new burial place.',
+        'message' => $piece . ' has desecrated a grave in ' . $destination . '. Select now a new burial place.',
         'choice' => $bury_in,
         'forbidden_choices' => array(
           self::MILITANT1_TEAM2_START_POSITION,
@@ -159,17 +156,17 @@ class NecromobileTest extends BaseDjambiTest {
       ),
     ));
 
-    $this->checkLog($piece->getId() . ' : ' . self::NECRO_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($piece . ' : ' . self::NECRO_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkLog($target->getId() . ' : ' . $destination . ' to ' . $bury_in);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
-    $this->checkPosition($target, $bury_in);
+    $this->checkPosition($target->getId(), $bury_in);
     $this->assertFalse($target->isAlive());
 
     $grid->cancelLastTurn();
     $this->checkNewTurn('t1');
     $this->checkPosition($piece, self::NECRO_TEAM1_START_POSITION);
-    $this->checkPosition($target, $destination);
+    $this->checkPosition($target->getId(), $destination);
     $this->assertFalse($target->isAlive());
   }
 
@@ -178,11 +175,8 @@ class NecromobileTest extends BaseDjambiTest {
    */
   public function testBadNecromobility() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-
-    $piece = $grid->findPieceById('t1-N');
     $destination = self::MILITANT_DEAD_START_POSITION;
-    $this->doMove($piece, $destination, array(
+    $this->doMove('t1-N', $destination, array(
       'necromobility' => array('choice' => self::THRONE_POSITION),
     ));
   }

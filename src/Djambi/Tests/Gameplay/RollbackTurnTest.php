@@ -16,7 +16,7 @@ class RollbackTurnTest extends BaseDjambiTest {
 
   public function testRollbackSimpleMove() {
     $this->game->play();
-    $necro1 = $this->game->getBattlefield()->findPieceById('t1-N');
+    $necro1 = 't1-N';
     $this->doMove($necro1, 'C4');
     $this->checkNewTurn('t3');
 

@@ -58,8 +58,7 @@ class LeaderTest extends BaseDjambiTest {
 
   public function testLeaderNormalMove() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-L');
+    $piece1 = 't1-L';
     $destination = 'B4';
     $this->doMove($piece1, $destination, NULL);
 
@@ -71,12 +70,12 @@ class LeaderTest extends BaseDjambiTest {
   /**
    * @dataProvider provideForbiddenDestinations
    * @expectedException \Djambi\Exceptions\DisallowedActionException
+   *
+   * @param $position
    */
   public function testLeaderForbiddenMoves($position) {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-L');
-    $this->doMove($piece1, $position);
+    $this->doMove('t1-L', $position);
   }
 
   public function provideForbiddenDestinations() {
@@ -91,7 +90,7 @@ class LeaderTest extends BaseDjambiTest {
     $this->game->play();
     $grid = $this->game->getBattlefield();
 
-    $piece = $grid->findPieceById('t1-L');
+    $piece = 't1-L';
     $destination = self::MILITANT1_TEAM2_START_POSITION;
     $target = $grid->findCellByName($destination)->getOccupant();
     $placement = 'A2';
@@ -112,17 +111,18 @@ class LeaderTest extends BaseDjambiTest {
 
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
-    $this->checkPosition($target, $placement);
+    $this->checkPosition($target->getId(), $placement);
     $this->checkEmptyCell(self::LEADER_TEAM1_START_POSITION);
     $this->assertFalse($target->isAlive());
   }
 
   public function testLeaderKillThroneLeader() {
     $grid = $this->game->getBattlefield();
-    $target = $grid->findPieceById('t2-L')->setPosition($grid->findCellByName(self::THRONE_POSITION));
+    $target_id = 't2-L';
+    $target = $grid->findPieceById($target_id)->setPosition($grid->findCellByName(self::THRONE_POSITION));
     $this->game->play();
 
-    $piece = $grid->findPieceById('t1-L');
+    $piece = 't1-L';
     $placement = 'A2';
     $this->doMove($piece, self::THRONE_POSITION, array(
       'manipulation' => array(
@@ -132,7 +132,7 @@ class LeaderTest extends BaseDjambiTest {
     ));
 
     $this->checkPosition($piece, self::THRONE_POSITION);
-    $this->checkPosition($target, $placement);
+    $this->checkPosition($target_id, $placement);
     $this->checkEmptyCell(self::LEADER_TEAM1_START_POSITION);
     $this->assertFalse($target->isAlive());
     $this->checkGameFinished('t1');

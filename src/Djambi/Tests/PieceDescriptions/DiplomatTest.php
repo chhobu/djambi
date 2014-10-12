@@ -62,8 +62,7 @@ class DiplomatTest extends BaseDjambiTest {
 
   public function testDiplomatNormalMove() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-D');
+    $piece1 = 't1-D';
     $destination = 'C1';
     $this->doMove($piece1, $destination, NULL);
 
@@ -80,9 +79,7 @@ class DiplomatTest extends BaseDjambiTest {
    */
   public function testDiplomatForbiddenMoves($position) {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-D');
-    $this->doMove($piece1, $position);
+    $this->doMove('t1-D', $position);
   }
 
   public function provideForbiddenDestinations() {
@@ -102,7 +99,7 @@ class DiplomatTest extends BaseDjambiTest {
     $destination = self::THRONE_POSITION;
     $evacuation = 'A4';
     $manipulation = 'A2';
-    $piece = $grid->findPieceById('t1-D');
+    $piece = 't1-D';
     $this->doMove($piece, $destination, array(
       'manipulation' => array(
         'type' => 'Djambi\\Moves\\Manipulation',
@@ -115,14 +112,14 @@ class DiplomatTest extends BaseDjambiTest {
     ));
 
     $this->checkPosition($piece, $evacuation);
-    $this->checkPosition($target, $manipulation);
+    $this->checkPosition($target->getId(), $manipulation);
     $this->assertTrue($target->isAlive());
     $this->checkNewTurn('t2');
 
     $grid->cancelLastTurn();
     $this->checkNewTurn('t1');
     $this->checkPosition($piece, self::DIPLOMAT_TEAM1_START_POSITION);
-    $this->checkPosition($target, $destination);
+    $this->checkPosition($target->getId(), $destination);
     $this->assertTrue($target->isAlive());
     $this->checkEmptyCell($manipulation);
     $this->checkEmptyCell($evacuation);
@@ -132,7 +129,7 @@ class DiplomatTest extends BaseDjambiTest {
     $this->game->play();
     $grid = $this->game->getBattlefield();
 
-    $piece = $grid->findPieceById('t1-D');
+    $piece = 't1-D';
     $destination = self::MILITANT1_TEAM2_START_POSITION;
     $target = $grid->findCellByName($destination)->getOccupant();
     $placement = 'A2';
@@ -140,7 +137,7 @@ class DiplomatTest extends BaseDjambiTest {
       'manipulation' => array(
         'type' => 'Djambi\\Moves\\Manipulation',
         'choice' => $placement,
-        'message' =>  $target->getId() . " has been manipulated by " . $piece->getId() . "'s devious words. Select now its new location.",
+        'message' =>  $target->getId() . " has been manipulated by " . $piece . "'s devious words. Select now its new location.",
         'pieces_selection' => FALSE,
         'forbidden_choices' => array(
           self::THRONE_POSITION,
@@ -155,14 +152,14 @@ class DiplomatTest extends BaseDjambiTest {
 
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
-    $this->checkPosition($target, $placement);
+    $this->checkPosition($target->getId(), $placement);
     $this->checkEmptyCell(self::DIPLOMAT_TEAM1_START_POSITION);
     $this->assertTrue($target->isAlive());
 
     $grid->cancelLastTurn();
     $this->checkNewTurn('t1');
     $this->checkPosition($piece, self::DIPLOMAT_TEAM1_START_POSITION);
-    $this->checkPosition($target, $destination);
+    $this->checkPosition($target->getId(), $destination);
     $this->checkEmptyCell($placement);
     $this->assertTrue($target->isAlive());
   }
@@ -172,12 +169,10 @@ class DiplomatTest extends BaseDjambiTest {
    */
   public function testBadManipulation() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
 
-    $piece = $grid->findPieceById('t1-D');
     $destination = self::MILITANT1_TEAM2_START_POSITION;
     $placement = self::MILITANT1_TEAM2_START_POSITION;
-    $this->doMove($piece, $destination, array(
+    $this->doMove('t1-D', $destination, array(
       'manipulation' => array(
         'type' => 'Djambi\\Moves\\Manipulation',
         'choice' => $placement,
@@ -192,8 +187,8 @@ class DiplomatTest extends BaseDjambiTest {
 
     $destination = self::THRONE_POSITION;
     $manipulation = 'A2';
-    $piece = $grid->findPieceById('t1-D');
-    $this->doMove($piece, $destination, array(
+    $piece_id = 't1-D';
+    $this->doMove($piece_id, $destination, array(
       'manipulation' => array(
         'choice' => $manipulation,
       ),
@@ -201,6 +196,7 @@ class DiplomatTest extends BaseDjambiTest {
     $this->assertEquals('t1', $grid->getPlayingFaction()->getId());
 
     $move = $grid->getCurrentTurn()->getMove();
+    $piece = $grid->findPieceById($piece_id);
     $properties = array(
       'selectedPiece' => $piece,
       'actingFaction' => $piece->getFaction(),
@@ -220,7 +216,7 @@ class DiplomatTest extends BaseDjambiTest {
     $this->assertEquals(NULL, $saved_move->getFirstInteraction()->getChoice());
 
     $grid->getCurrentTurn()->resetMove();
-    $this->doMove($piece, $destination, array(
+    $this->doMove($piece_id, $destination, array(
       'manipulation' => array('choice' => $manipulation),
       'evacuation' => array(
         'expected_choices' => explode(', ', 'D5, D3, E4, C4, E3, E5, C5, C3, D2, D1, F4, G4, D6, D7, B4, A4, F6, G7, B2, A1'),

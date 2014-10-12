@@ -1,6 +1,5 @@
 <?php
-$classloader = drupal_classloader();
-$classloader->add('Djambi', __DIR__ . '/src');
+\Drupal::service('class_loader')->add('Djambi', array(__DIR__ . '/src'));
 
 /**
  * Implements hook_permission().
@@ -9,7 +8,15 @@ function djambi_permission() {
   return array(
     'play djambi sandbox game' => array(
       'title' => t('Play Djambi sandbox game'),
-      'description' => t('Initiate and play a single player Djambi sandbox game.'),
+      'description' => t('Play a single player Djambi sandbox game.'),
+    ),
+    'create multiplayer djambi game' => array(
+      'title' => t('Create Djambi multiplayer game'),
+      'description' => t('Create a new Djambi online game with other human players.')
+    ),
+    'join multiplayer djambi game' => array(
+      'title' => t('Join an existing Djambi mutliplayer game'),
+      'description' => t("Join a Djambi multiplayer game created by another player."),
     ),
   );
 }
@@ -22,7 +29,6 @@ function djambi_theme() {
     'djambi_grid' => array(
       'render element' => 'form',
       'file' => 'djambi.theme.inc',
-      'template' => 'djambi-grid',
     ),
     'djambi_cardinal_grid' => array(
       'variables' => array(
@@ -30,24 +36,23 @@ function djambi_theme() {
         'caption' => NULL,
         'attributes' => array(),
       ),
+      'function' => 'theme_djambi_cardinal_grid',
       'file' => 'djambi.theme.inc',
     ),
+    // TODO créer fonction de thème pour la grille hexagonale
     'djambi_hexagonal_grid' => array(
       'variables' => array(
         'cells' => NULL,
         'caption' => NULL,
         'attributes' => array(),
       ),
-      'template' => 'djambi-hexagonal-grid',
     ),
     'djambi_cell' => array(
       'variables' => array('cell' => NULL, 'game' => NULL),
-      'template' => 'djambi-cell',
       'file' => 'djambi.theme.inc',
     ),
     'djambi_piece' => array(
       'variables' => array('piece' => NULL),
-      'template' => 'djambi-piece',
       'file' => 'djambi.theme.inc',
     ),
     'djambi_piece_full_name' => array(
@@ -57,11 +62,9 @@ function djambi_theme() {
         'display_dead_name' => FALSE,
       ),
       'file' => 'djambi.theme.inc',
-      'template' => 'djambi-piece-full-name',
     ),
     'djambi_faction_full_name' => array(
       'variables' => array('faction' => NULL, 'html' => TRUE),
-      'template' => 'djambi-faction-full-name',
     ),
     'djambi_piece_log' => array(
       'variables' => array(
@@ -69,12 +72,24 @@ function djambi_theme() {
         'dead' => NULL,
       ),
       'file' => 'djambi.theme.inc',
-      'template' => 'djambi-piece-log',
+    ),
+    'djambi_last_move_item' => array(
+      'variables' => array(
+        'time' => NULL,
+        'side' => NULL,
+        'description' => NULL,
+      ),
     ),
     'description_list' => array(
       'variables' => array('groups' => array(), 'attributes' => array()),
-      'template' => 'description-list',
       'file' => 'djambi.html.inc',
     ),
   );
+}
+
+function djambi_help($route_name) {
+  switch($route_name) {
+    case('djambi.sandbox'):
+      return '<p>' . t("Welcome to Djambi training area. You can play here a Djambi game where you control successively all sides : this way,  you will be able to learn Djambi basic rules, experiment new tactics or play with (future ex-)friends in a hot chair mode.") . '</p>';
+  }
 }

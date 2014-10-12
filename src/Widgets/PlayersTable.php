@@ -182,7 +182,7 @@ class PlayersTable extends BaseTable {
     }
     return array(
       'class' => array('is-numeric'),
-      'data' => \Drupal::service('date')->formatInterval($this->factionStats[$faction->getId()]['playTime']),
+      'data' => \Drupal::service('date.formatter')->formatInterval($this->factionStats[$faction->getId()]['playTime']),
     );
   }
 
@@ -192,7 +192,7 @@ class PlayersTable extends BaseTable {
     }
     return array(
       'class' => array('is-numeric'),
-      'data' => \Drupal::service('date')->formatInterval($this->factionStats[$faction->getId()]['playTime'] / $this->factionStats[$faction->getId()]['turns']),
+      'data' => \Drupal::service('date.formatter')->formatInterval($this->factionStats[$faction->getId()]['playTime'] / $this->factionStats[$faction->getId()]['turns']),
     );
   }
 

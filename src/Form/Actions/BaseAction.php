@@ -38,9 +38,9 @@ abstract class BaseAction implements ActionInterface  {
     if (static::ACTION_NAME != 'undefined') {
       $this->addClass('button--' . static::ACTION_NAME);
     }
-    $this->submit = array(array($form, 'submitForm'));
+    $this->submit = array('::submitForm');
     $this->validate = array(
-      array($form, 'validateForm'),
+      '::validateForm',
       array($this, 'validate'),
     );
     $this->addValidateField('turn_id');

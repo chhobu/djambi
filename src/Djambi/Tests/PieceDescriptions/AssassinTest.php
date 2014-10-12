@@ -57,8 +57,7 @@ class AssassinTest extends BaseDjambiTest {
 
   public function testAssassinNormalMove() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-A');
+    $piece1 = 't1-A';
     $destination = 'C1';
     $this->doMove($piece1, $destination, NULL);
 
@@ -73,8 +72,7 @@ class AssassinTest extends BaseDjambiTest {
   public function testAssassinForbiddenMoves() {
     $this->game->play();
     $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-A');
-    $this->doMove($piece1, 'C4');
+    $this->doMove('t1-A', 'C4');
   }
 
   public function testAssassinCanKillLeaderInThroneAndEvacuate() {
@@ -83,7 +81,7 @@ class AssassinTest extends BaseDjambiTest {
     $target = $grid->findPieceById('t2-L')->setPosition($grid->findCellByName($destination));
     $this->game->play();
 
-    $piece = $grid->findPieceById('t1-A');
+    $piece = 't1-A';
     $evacuate = 'D6';
     $expected_interactions = array(
       'evacuation' => array(
@@ -94,7 +92,7 @@ class AssassinTest extends BaseDjambiTest {
     $this->doMove($piece, $destination, $expected_interactions);
 
     $this->checkPosition($piece, $evacuate);
-    $this->checkPosition($target, self::ASSASSIN_TEAM1_START_POSITION);
+    $this->checkPosition($target->getId(), self::ASSASSIN_TEAM1_START_POSITION);
     $this->assertFalse($target->isAlive());
     $this->assertEquals(Faction::STATUS_KILLED, $grid->findFactionById('t2')->getStatus());
     $this->checkGameFinished('t1');
@@ -104,7 +102,7 @@ class AssassinTest extends BaseDjambiTest {
     $this->game->play();
     $grid = $this->game->getBattlefield();
 
-    $piece = $grid->findPieceById('t1-A');
+    $piece = 't1-A';
     $destination = self::MILITANT1_TEAM2_START_POSITION;
     $target = $grid->findCellByName($destination)->getOccupant();
     $this->assertNotEquals(NULL, $target);
@@ -112,13 +110,13 @@ class AssassinTest extends BaseDjambiTest {
 
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
-    $this->checkPosition($target, self::ASSASSIN_TEAM1_START_POSITION);
+    $this->checkPosition($target->getId(), self::ASSASSIN_TEAM1_START_POSITION);
     $this->assertFalse($target->isAlive());
 
     $grid->cancelLastTurn();
     $this->checkNewTurn('t1');
     $this->checkPosition($piece, self::ASSASSIN_TEAM1_START_POSITION);
-    $this->checkPosition($target, $destination);
+    $this->checkPosition($target->getId(), $destination);
     $this->assertTrue($target->isAlive());
   }
 

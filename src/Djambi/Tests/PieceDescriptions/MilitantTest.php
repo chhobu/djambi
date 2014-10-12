@@ -64,12 +64,11 @@ class MilitantTest extends BaseDjambiTest {
 
   public function testMilitantNormalMove() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-M1');
     $destination = 'A6';
+    $piece1 = 't1-M1';
     $this->doMove($piece1, $destination, NULL);
 
-    $this->checkLog($piece1->getId() . ' : ' . self::MILITANT1_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($piece1 . ' : ' . self::MILITANT1_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece1, $destination);
     $this->checkEmptyCell(self::MILITANT1_TEAM1_START_POSITION);
@@ -80,9 +79,7 @@ class MilitantTest extends BaseDjambiTest {
    */
   public function testMilitantForbiddenMoves() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-M1');
-    $this->doMove($piece1, 'D2');
+    $this->doMove('t1-M1', 'D2');
   }
 
   /**
@@ -93,15 +90,14 @@ class MilitantTest extends BaseDjambiTest {
     $grid->findPieceById('t2-L')->setPosition($grid->findCellByName(self::THRONE_POSITION));
     $this->game->play();
 
-    $piece1 = $grid->findPieceById('t1-M1');
-    $this->doMove($piece1, self::THRONE_POSITION);
+    $this->doMove('t1-M1', self::THRONE_POSITION);
   }
 
   public function testMilitantCanKillAndBury() {
     $this->game->play();
     $grid = $this->game->getBattlefield();
 
-    $piece = $grid->findPieceById('t1-M2');
+    $piece = 't1-M2';
     $destination = self::MILITANT1_TEAM2_START_POSITION;
     $target = $grid->findCellByName($destination)->getOccupant();
     $this->assertNotEquals(NULL, $target);
@@ -110,34 +106,34 @@ class MilitantTest extends BaseDjambiTest {
       'murder' => array(
         'type' => 'Djambi\\Moves\\Murder',
         'choice' => $bury_in,
-        'message' => $target->getId() . " has been slayed by " . $piece->getId() . ". Select now a place to place to bury its corpse.",
+        'message' => $target->getId() . " has been slayed by " . $piece . ". Select now a place to place to bury its corpse.",
         'pieces_selection' => FALSE,
         'forbidden_choices' => explode(' ', "C6 A7 B6 F2 C6 D4 D3"),
       ),
     ));
 
-    $this->checkLog($piece->getId() . ' : ' . self::MILITANT2_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($piece . ' : ' . self::MILITANT2_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkLog($target->getId() . ' killed in ' . $destination);
     $this->checkLog($target->getId() . ' : ' . $destination . ' to ' . $bury_in);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
     $this->checkEmptyCell(self::MILITANT2_TEAM1_START_POSITION);
     $this->assertFalse($target->isAlive());
-    $this->checkPosition($target, $bury_in);
+    $this->checkPosition($target->getId(), $bury_in);
 
     $grid->cancelLastTurn();
     $this->checkNewTurn('t1');
     $this->checkPosition($piece, self::MILITANT2_TEAM1_START_POSITION);
     $this->checkEmptyCell($bury_in);
     $this->assertTrue($target->isAlive());
-    $this->checkPosition($target, $destination);
+    $this->checkPosition($target->getId(), $destination);
   }
 
   public function testMilitantCanKillLeaderOutsideThroneAndWin() {
     $this->game->play();
     $grid = $this->game->getBattlefield();
 
-    $piece = $grid->findPieceById('t1-M2');
+    $piece = 't1-M2';
     $destination = self::LEADER_TEAM2_START_POSITION;
     $target = $grid->findCellByName($destination)->getOccupant();
     $this->assertNotEquals(NULL, $target);
@@ -150,7 +146,7 @@ class MilitantTest extends BaseDjambiTest {
     ));
 
     $this->checkPosition($piece, $destination);
-    $this->checkPosition($target, $bury_in);
+    $this->checkPosition($target->getId(), $bury_in);
     $this->checkEmptyCell(self::MILITANT2_TEAM1_START_POSITION);
     $this->assertFalse($target->isAlive());
     $this->assertEquals(Faction::STATUS_KILLED, $grid->findFactionById('t2')->getStatus());
@@ -162,12 +158,9 @@ class MilitantTest extends BaseDjambiTest {
    */
   public function testMilitantBadKill() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-
-    $piece = $grid->findPieceById('t1-M2');
     $destination = self::MILITANT1_TEAM2_START_POSITION;
     $bury_in = 'C6';
-    $this->doMove($piece, $destination, array(
+    $this->doMove('t1-M2', $destination, array(
       'murder' => array(
         'type' => 'Djambi\\Moves\\Murder',
         'choice' => $bury_in,

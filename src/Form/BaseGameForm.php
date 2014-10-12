@@ -152,7 +152,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
    * @inheritdoc
    */
   public function buildForm(array $form, FormStateInterface $form_state) {
-    $rebuild = $form_state->get('rebuild');
+    $rebuild = $form_state->isRebuilding();
     if (empty($this->getGameManager()) || !empty($rebuild)) {
       $this->loadStoredGameManager();
     }
@@ -165,7 +165,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     $form['#suffix'] = '</div>';
     $form['#attributes']['class'][] = 'djambi-grid-form';
 
-    $form_state->set('no_cache', TRUE);
+    $form_state->disableCache();
 
     return $form;
   }
@@ -243,7 +243,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     $form['display']['actions']['display-submit'] = array(
       '#type' => 'submit',
       '#value' => t('Save display settings'),
-      '#submit' => array(array($this, 'submitDisplaySettings')),
+      '#submit' => array('::submitDisplaySettings'),
       '#limit_validation_errors' => array(array('display')),
       '#ajax' => $this->getAjaxSettings(),
     );
@@ -251,7 +251,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
       $form['display']['actions']['display-reset'] = array(
         '#type' => 'submit',
         '#value' => t('Reset to default settings'),
-        '#submit' => array(array($this, 'submitResetDisplaySettings')),
+        '#submit' => array('::submitResetDisplaySettings'),
         '#limit_validation_errors' => array(),
         '#attributes' => array('class' => array('button--cancel')),
         '#ajax' => $this->getAjaxSettings(),
@@ -281,7 +281,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
   public function submitResetDisplaySettings(array $form, FormStateInterface $form_state) {
     $form_state->setRebuild(TRUE);
     $this->getCurrentPlayer()->clearDisplaySettings();
-    $form_state->set('input', NULL);
+    $form_state->setUserInput(array());
     $_SESSION['djambi']['extend_display_fieldset'] = TRUE;
   }
 

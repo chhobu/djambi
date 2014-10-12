@@ -59,7 +59,7 @@ class PlayOrderTest extends BaseDjambiTest {
 
     $this->checkPlayOrder(array('t1', 't2', 't3', 't4'));
     $this->assertEquals(1, $grid->getCurrentTurn()->getRound());
-    $this->doMove($grid->findPieceById('t1-L'), self::THRONE);
+    $this->doMove('t1-L', self::THRONE);
 
     $this->checkNewTurn('t2');
     $this->checkPlayOrder(array('t2', 't1', 't3', 't1', 't4', 't1'));
@@ -79,7 +79,7 @@ class PlayOrderTest extends BaseDjambiTest {
     $this->checkNewTurn('t4');
     $this->checkPlayOrder(array('t4', 't1', 't2', 't1'));
     $this->assertEquals(1, $grid->getCurrentTurn()->getRound());
-    $this->doMove($grid->findPieceById('t4-L'), self::THRONE, array(
+    $this->doMove('t4-L', self::THRONE, array(
       'murder' => array('choice' => 'A5'),
     ));
 
@@ -91,12 +91,12 @@ class PlayOrderTest extends BaseDjambiTest {
     $this->checkNewTurn('t4');
     $this->checkPlayOrder(array('t4', 't4', 't2'));
     $this->assertEquals(2, $grid->getCurrentTurn()->getRound());
-    $this->doMove($grid->findPieceById('t4-L'), 'A1');
+    $this->doMove('t4-L', 'A1');
 
     $this->checkNewTurn('t2');
     $this->checkPlayOrder(array('t2', 't4'));
     $this->assertEquals(3, $grid->getCurrentTurn()->getRound());
-    $this->doMove($grid->findPieceById('t2-L'), self::THRONE);
+    $this->doMove('t2-L', self::THRONE);
 
     $this->checkNewTurn('t4');
     $this->checkPlayOrder(array('t4', 't2', 't2'));
@@ -111,12 +111,12 @@ class PlayOrderTest extends BaseDjambiTest {
     $this->checkNewTurn('t2');
     $this->checkPlayOrder(array('t2', 't4', 't2'));
     $this->assertEquals(4, $grid->getCurrentTurn()->getRound());
-    $this->doMove($grid->findPieceById('t2-L'), 'E5');
+    $this->doMove('t2-L', 'E5');
 
     $this->checkNewTurn('t4');
     $this->checkPlayOrder(array('t4', 't2'));
     $this->assertEquals(4, $grid->getCurrentTurn()->getRound());
-    $this->doMove($grid->findPieceById('t4-L'), 'E5', array(
+    $this->doMove('t4-L', 'E5', array(
       'murder' => array('choice' => 'E4'),
     ));
 
@@ -136,17 +136,17 @@ class PlayOrderTest extends BaseDjambiTest {
 
     $this->checkPlayOrder(array('t1', 't2', 't3', 't4'));
     $this->assertEquals(1, $grid->getCurrentTurn()->getRound());
-    $this->doMove($grid->findPieceById('t1-L'), 'E5', array(
+    $this->doMove('t1-L', 'E5', array(
       'murder' => array('choice' => 'A5'),
     ));
 
     $this->checkNewTurn('t3');
     $this->checkPlayOrder(array('t3', 't4', 't1'));
-    $this->doMove($grid->findPieceById('t3-L'), self::THRONE);
+    $this->doMove('t3-L', self::THRONE);
 
     $this->checkNewTurn('t4');
     $this->checkPlayOrder(array('t4', 't3', 't1', 't3'));
-    $this->doMove($grid->findPieceById('t4-L'), self::THRONE, array(
+    $this->doMove('t4-L', self::THRONE, array(
       'murder' => array('choice' => 'A2'),
     ));
 
@@ -164,7 +164,7 @@ class PlayOrderTest extends BaseDjambiTest {
 
   public function testPlayOrderAfterLeaderKillScenario1() {
     $grid = $this->game->getBattlefield();
-    $m4 = $grid->findPieceById('t4-M');
+    $m4 = 't4-M';
     $this->game->play();
 
     $grid->getPlayingFaction()->skipTurn();
@@ -178,7 +178,7 @@ class PlayOrderTest extends BaseDjambiTest {
     $grid->getPlayingFaction()->skipTurn();
 
     $this->checkPlayOrder(array('t4', 't1', 't2', 't3'));
-    $this->doMove($grid->findPieceById('t4-L'), self::THRONE);
+    $this->doMove('t4-L', self::THRONE);
 
     $this->checkPlayOrder(array('t1', 't4', 't2', 't4', 't3', 't4'));
     $this->assertEquals(2, $grid->getCurrentTurn()->getRound());
@@ -235,12 +235,12 @@ class PlayOrderTest extends BaseDjambiTest {
 
   public function testPlayOrderAfterLeaderKillScenario2() {
     $grid = $this->game->getBattlefield();
-    $m1 = $grid->findPieceById('t1-M');
+    $m1 = 't1-M';
     $this->game->play();
 
     // Tour 1 : Team 1 au pouvoir
     $this->assertEquals(1, $grid->getCurrentTurn()->getRound());
-    $this->doMove($grid->findPieceById('t1-L'), self::THRONE);
+    $this->doMove('t1-L', self::THRONE);
 
     $this->assertEquals(1, $grid->getCurrentTurn()->getRound());
     $this->checkNewTurn('t2');
@@ -280,7 +280,7 @@ class PlayOrderTest extends BaseDjambiTest {
     // Tour 3 : Fin
     $this->assertEquals(4, $grid->getCurrentTurn()->getRound());
     $this->checkPlayOrder(array('t1', 't2', 't1'));
-    $this->doMove($grid->findPieceById('t1-L'), 'E5', array('murder' => array('choice' => 'A3')));
+    $this->doMove('t1-L', 'E5', array('murder' => array('choice' => 'A3')));
 
     $this->checkGameFinished('t1');
     $this->assertEquals(1, $grid->findFactionById('t1')->getRanking());

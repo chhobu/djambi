@@ -124,6 +124,7 @@
   top: -2px;
   left: -1px;
   box-shadow: 3px 3px 2px #333;
+  cursor: help;
   &.is-dead {
     background-color: #333;
     border-color: #333;
@@ -216,8 +217,9 @@
     text-align: left;
     padding: 0;
     list-style-position: inside;
+    margin: 0;
     li {
-      margin: 0 0.5em;
+      margin: 0;
     }
   }
 }
@@ -231,14 +233,21 @@
 
 .djambi-infos__playing-next {}
 
-.djambi-infos__last-moves {
-  ul li ul li {
+.djambi-last-move-item {
+  list-style-type: none;
+  ul li {
     list-style-type: none;
-    white-space: nowrap;
+    margin-bottom: 0.25em;
   }
   .is-pointable {
     cursor: help;
   }
+}
+.djambi-last-move-item-header {
+  display: block;
+  background-color: #ccc;
+  padding: 0 0.25em;
+  white-space: nowrap;
 }
 
 .djambi-grid__actions {

@@ -59,12 +59,11 @@ class ReporterTest extends BaseDjambiTest {
 
   public function testReporterNormalMove() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-R');
+    $piece1 = 't1-R';
     $destination = 'C1';
     $this->doMove($piece1, $destination, NULL);
 
-    $this->checkLog($piece1->getId() . ' : ' . self::REPORTER_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($piece1 . ' : ' . self::REPORTER_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece1, $destination);
     $this->checkEmptyCell(self::REPORTER_TEAM1_START_POSITION);
@@ -78,9 +77,7 @@ class ReporterTest extends BaseDjambiTest {
    */
   public function testReporterForbiddenMoves($position) {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
-    $piece1 = $grid->findPieceById('t1-R');
-    $this->doMove($piece1, $position);
+    $this->doMove('t1-R', $position);
   }
 
   public function provideForbiddenDestinations() {
@@ -99,11 +96,11 @@ class ReporterTest extends BaseDjambiTest {
     $this->game->play();
 
     $destination = 'D3';
-    $piece = $grid->findPieceById('t1-R');
+    $piece = 't1-R';
     $this->doMove($piece, $destination);
 
     $this->checkPosition($piece, $destination);
-    $this->checkPosition($target, self::THRONE_POSITION);
+    $this->checkPosition($target->getId(), self::THRONE_POSITION);
     $this->assertFalse($target->isAlive());
     $this->assertEquals(Faction::STATUS_KILLED, $grid->findFactionById('t2')->getStatus());
     $this->checkGameFinished('t1');
@@ -113,22 +110,22 @@ class ReporterTest extends BaseDjambiTest {
     $this->game->play();
     $grid = $this->game->getBattlefield();
 
-    $piece = $grid->findPieceById('t1-R');
+    $piece = 't1-R';
     $destination = 'E2';
     $target = $grid->findCellByName(self::MILITANT1_TEAM2_START_POSITION)->getOccupant();
     $this->doMove($piece, $destination, NULL);
 
-    $this->checkLog($piece->getId() . ' : ' . self::REPORTER_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($piece . ' : ' . self::REPORTER_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkLog($target->getId() . ' killed in ' . self::MILITANT1_TEAM2_START_POSITION);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
-    $this->checkPosition($target, self::MILITANT1_TEAM2_START_POSITION);
+    $this->checkPosition($target->getId(), self::MILITANT1_TEAM2_START_POSITION);
     $this->assertFalse($target->isAlive());
 
     $grid->cancelLastTurn();
     $this->checkNewTurn('t1');
     $this->checkPosition($piece, self::REPORTER_TEAM1_START_POSITION);
-    $this->checkPosition($target, self::MILITANT1_TEAM2_START_POSITION);
+    $this->checkPosition($target->getId(), self::MILITANT1_TEAM2_START_POSITION);
     $this->assertTrue($target->isAlive());
   }
 
@@ -138,7 +135,7 @@ class ReporterTest extends BaseDjambiTest {
     $leader = $grid->findPieceById('t2-L')->setPosition($grid->findCellByName($leader_position));
     $this->game->play();
 
-    $piece = $grid->findPieceById('t1-R');
+    $piece = 't1-R';
     $destination = 'E2';
     $target = $grid->findCellByName(self::MILITANT1_TEAM2_START_POSITION)->getOccupant();
     $expected_interaction = array(
@@ -146,7 +143,7 @@ class ReporterTest extends BaseDjambiTest {
         'type' => 'Djambi\\Moves\\Reportage',
         'pieces_selection' => TRUE,
         'choice' => self::MILITANT1_TEAM2_START_POSITION,
-        'message' => $piece->getId() . ' is on the way to reveal a massive scandal. Select the victim to focus on.',
+        'message' => $piece . ' is on the way to reveal a massive scandal. Select the victim to focus on.',
         'expected_choices' => array(
           self::MILITANT1_TEAM2_START_POSITION,
           $leader_position,
@@ -155,21 +152,21 @@ class ReporterTest extends BaseDjambiTest {
     );
     $this->doMove($piece, $destination, $expected_interaction);
 
-    $this->checkLog($piece->getId() . ' : ' . self::REPORTER_TEAM1_START_POSITION . ' to ' . $destination);
+    $this->checkLog($piece . ' : ' . self::REPORTER_TEAM1_START_POSITION . ' to ' . $destination);
     $this->checkLog($target->getId() . ' killed in ' . self::MILITANT1_TEAM2_START_POSITION);
     $this->checkNewTurn('t2');
     $this->checkPosition($piece, $destination);
-    $this->checkPosition($target, self::MILITANT1_TEAM2_START_POSITION);
+    $this->checkPosition($target->getId(), self::MILITANT1_TEAM2_START_POSITION);
     $this->assertFalse($target->isAlive());
-    $this->checkPosition($leader, $leader_position);
+    $this->checkPosition($leader->getId(), $leader_position);
     $this->assertTrue($leader->isAlive());
 
     $grid->cancelLastTurn();
     $this->checkNewTurn('t1');
     $this->checkPosition($piece, self::REPORTER_TEAM1_START_POSITION);
-    $this->checkPosition($target, self::MILITANT1_TEAM2_START_POSITION);
+    $this->checkPosition($target->getId(), self::MILITANT1_TEAM2_START_POSITION);
     $this->assertTrue($target->isAlive());
-    $this->checkPosition($leader, $leader_position);
+    $this->checkPosition($leader->getId(), $leader_position);
     $this->assertTrue($leader->isAlive());
   }
 
@@ -182,7 +179,7 @@ class ReporterTest extends BaseDjambiTest {
     $grid->findPieceById('t2-L')->setPosition($grid->findCellByName($leader_position));
     $this->game->play();
 
-    $piece = $grid->findPieceById('t1-R');
+    $piece = 't1-R';
     $destination = 'E2';
     $expected_interaction = array(
       'reportage' => array(
