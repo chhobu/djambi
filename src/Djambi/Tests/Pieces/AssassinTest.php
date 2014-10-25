@@ -6,7 +6,7 @@
  * Time: 12:13
  */
 
-namespace Djambi\Tests\PieceDescriptions;
+namespace Djambi\Tests\Pieces;
 
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
@@ -71,7 +71,6 @@ class AssassinTest extends BaseDjambiTest {
    */
   public function testAssassinForbiddenMoves() {
     $this->game->play();
-    $grid = $this->game->getBattlefield();
     $this->doMove('t1-A', 'C4');
   }
 

@@ -6,7 +6,7 @@
  * Time: 12:13
  */
 
-namespace Djambi\Tests\PieceDescriptions;
+namespace Djambi\Tests\Pieces;
 
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;

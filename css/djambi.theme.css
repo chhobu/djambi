@@ -176,6 +176,7 @@
   border-radius: 1em;
   box-shadow: 3px 3px 2px #333;
   overflow: hidden;
+  vertical-align: bottom;
 }
 .djambi-piece-log:before {
   display: inline-block;
