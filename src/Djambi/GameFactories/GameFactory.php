@@ -3,19 +3,13 @@
 namespace Djambi\GameFactories;
 
 
-use Djambi\Exceptions\Exception;
+use Djambi\Exceptions\UnknownGameManagerException;
 use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\GameDispositions\GameDispositionsFactory;
-use Djambi\GameManagers\BaseGameManager;
-use Djambi\GameManagers\GameManagerInterface;
-use Djambi\IA\DummyIA;
-use Djambi\Players\ComputerPlayer;
-use Djambi\Players\HumanPlayer;
+use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Players\PlayerInterface;
 
 class GameFactory implements GameFactoryInterface {
-  /** @var string */
-  private $mode = BaseGameManager::MODE_FRIENDLY;
   /** @var PlayerInterface[] */
   private $players = array();
   /** @var BaseGameDisposition */
@@ -25,9 +19,9 @@ class GameFactory implements GameFactoryInterface {
   /** @var string */
   private $id;
   /** @var string */
-  private $battlefieldFactory;
+  private $battlefieldClass;
 
-  public function __construct($game_manager_class = '\Djambi\GameManagers\BasicGameManager') {
+  public function __construct($game_manager_class = '\Djambi\GameManagers\SandboxGameManager') {
     $this->setGameManagerClass($game_manager_class);
   }
 
@@ -82,15 +76,6 @@ class GameFactory implements GameFactoryInterface {
     return $this->disposition;
   }
 
-  public function setMode($mode) {
-    $this->mode = $mode;
-    return $this;
-  }
-
-  public function getMode() {
-    return $this->mode;
-  }
-
   public function setId($id) {
     $this->id = $id;
     return $this;
@@ -103,35 +88,33 @@ class GameFactory implements GameFactoryInterface {
     return $this->id;
   }
 
-  public function setBattlefieldFactory($class_name) {
-    $this->battlefieldFactory = $class_name;
+  public function setBattlefieldClass($class_name) {
+    $this->battlefieldClass = $class_name;
     return $this;
   }
 
-  public function getBattlefieldFactory() {
-    return $this->battlefieldFactory;
+  public function getBattlefieldClass() {
+    return $this->battlefieldClass;
   }
 
   /**
    * Instancie une nouvelle partie.
-   *
-   * @throws \Djambi\Exceptions\Exception
-   * @return GameManagerInterface
+
+   * @throws \Djambi\Exceptions\DjambiBaseException
+   * @return PlayableGameInterface
    */
   public function createGameManager() {
     if (class_exists($this->getGameManagerClass())) {
-      $this->addDefaultPlayers();
-      $gm = call_user_func_array($this->getGameManagerClass() . '::createGame', array(
+      $gm = call_user_func_array($this->getGameManagerClass() . '::create', array(
         $this->getPlayers(),
         $this->getId(),
-        $this->getMode(),
         $this->getDisposition(),
-        $this->getBattlefieldFactory(),
+        $this->getBattlefieldClass(),
       ));
       return $gm;
     }
     else {
-      throw new Exception("Game manager " . $this->getGameManagerClass() . " not found.");
+      throw new UnknownGameManagerException("Game manager " . $this->getGameManagerClass() . " not found.");
     }
   }
 
@@ -141,39 +124,6 @@ class GameFactory implements GameFactoryInterface {
 
   protected function getDefaultDisposition() {
     return GameDispositionsFactory::useDisposition('4std');
-  }
-
-  protected function addDefaultPlayers() {
-    $disposition = $this->getDisposition();
-    if (empty($this->getPlayers())) {
-      $default_player = $this->addDefaultCurrentPlayer();
-    }
-    else {
-      $default_player = current($this->getPlayers());
-    }
-    for ($i = count($this->players) + 1; $i <= $disposition->getNbPlayers(); $i++) {
-      if ($i == 1 || $this->getMode() == BaseGameManager::MODE_SANDBOX) {
-        $this->addPlayer($default_player, $i);
-      }
-      elseif ($this->getMode() == BaseGameManager::MODE_TRAINING) {
-        $computer = new ComputerPlayer();
-        $this->addPlayer($computer->useIa($this->getDefaultComputerIa()));
-      }
-      else {
-        $new_human_player = HumanPlayer::createEmptyHumanPlayer();
-        $this->addPlayer($new_human_player);
-      }
-    }
-    return $this;
-  }
-
-  protected function addDefaultCurrentPlayer() {
-    $new_human_player = HumanPlayer::createEmptyHumanPlayer();
-    return $new_human_player;
-  }
-
-  protected function getDefaultComputerIa() {
-    return DummyIA::getClass();
   }
 
 }

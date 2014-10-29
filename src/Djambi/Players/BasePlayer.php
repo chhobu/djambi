@@ -8,7 +8,7 @@ namespace Djambi\Players;
 
 use Djambi\Exceptions\PlayerNotFoundException;
 use Djambi\Exceptions\PlayerInvalidException;
-use Djambi\GameManagers\GameManagerInterface;
+use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Gameplay\Faction;
 use Djambi\Persistance\PersistantDjambiObject;
 
@@ -111,7 +111,7 @@ abstract class BasePlayer extends PersistantDjambiObject implements PlayerInterf
     return FALSE;
   }
 
-  public function isPlayingGame(GameManagerInterface $game) {
+  public function isPlayingGame(PlayableGameInterface $game) {
     foreach ($game->getBattlefield()->getFactions() as $faction) {
       if ($this->isPlayingFaction($faction)) {
         return TRUE;

@@ -11,7 +11,6 @@ namespace Djambi\Tests\Gameplay;
 
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
-use Djambi\GameManagers\BaseGameManager;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
@@ -24,7 +23,7 @@ class PlayOrderTest extends BaseDjambiTest {
   const THRONE = 'C3';
 
   public function setUp() {
-    $disposition = GameDispositionsFactory::createNewCustomDisposition();
+    $disposition = GameDispositionsFactory::initiateCustomDisposition();
     $disposition->setDimensions(5, 5);
     $disposition->addSide(NULL, Faction::STATUS_READY, array(
        new Leader(NULL, 'A5'),
@@ -45,7 +44,6 @@ class PlayOrderTest extends BaseDjambiTest {
 
     $factory = new GameFactory();
     $factory->setDisposition($disposition->deliverDisposition());
-    $factory->setMode(BaseGameManager::MODE_SANDBOX);
     $this->game = $factory->createGameManager();
     $skip_turn_rules = $this->game->getDisposition()->getOptionsStore()->retrieve(StandardRuleset::GAMEPLAY_ELEMENT_SKIPPED_TURNS);
     $skip_turn_rules->setValue(-1);

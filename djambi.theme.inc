@@ -1,6 +1,6 @@
 <?php
-use Djambi\GameManagers\BaseGameManager;
-use Djambi\GameManagers\GameManagerInterface;
+use Djambi\Enums\StatusEnum;
+use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Gameplay\Cell;
 use Djambi\Grids\BaseGrid;
 use Drupal\Component\Utility\Unicode;
@@ -11,7 +11,7 @@ use Drupal\djambi\Utils\GameUI;
 function template_preprocess_djambi_grid(&$variables) {
   /** @var Drupal8Player $current_player */
   $current_player = $variables['form']['#djambi_current_player'];
-  /** @var GameManagerInterface $game */
+  /** @var PlayableGameInterface $game */
   $game = $variables['form']['#djambi_game_manager'];
   if ($game->isPending()) {
     if ($current_player->isPlayingFaction($game->getBattlefield()->getPlayingFaction()->getControl())) {
@@ -84,7 +84,7 @@ function template_preprocess_djambi_grid(&$variables) {
   elseif ($game->isFinished()) {
     $variables['grid']['#attributes']['class'][] = 'is-finished';
   }
-  if ($game->getStatus() == BaseGameManager::STATUS_PENDING && !$current_player->getDisplaySetting(GameUI::SETTING_DISPLAY_CHOICES)) {
+  if ($game->getStatus() == StatusEnum::STATUS_PENDING && !$current_player->getDisplaySetting(GameUI::SETTING_DISPLAY_CHOICES)) {
     $variables['display_cells_class'] = 'is-minimized';
   }
   else {
@@ -168,7 +168,7 @@ function template_preprocess_djambi_piece(&$variables) {
 function template_preprocess_djambi_cell(&$variables) {
   /** @var Cell $cell */
   $cell = $variables['cell'];
-  /** @var GameManagerInterface $game */
+  /** @var PlayableGameInterface $game */
   $game = $variables['game'];
   $piece = array(
     '#theme' => 'djambi_piece',

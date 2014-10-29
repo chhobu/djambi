@@ -1,10 +1,10 @@
 <?php
 namespace Drupal\djambi\Form;
 
+use Djambi\Enums\StatusEnum;
 use Djambi\Exceptions\DisallowedActionException;
-use Djambi\Exceptions\Exception;
+use Djambi\Exceptions\DjambiBaseException;
 use Djambi\GameFactories\GameFactory;
-use Djambi\GameManagers\BaseGameManager;
 use Djambi\Gameplay\Faction;
 use Djambi\Moves\Move;
 use Djambi\Moves\MoveInteractionInterface;
@@ -29,8 +29,7 @@ class SandboxGameForm extends BaseGameForm {
    * @return $this
    */
   public function createGameManager() {
-    $game_factory = new GameFactory();
-    $game_factory->setMode(BaseGameManager::MODE_SANDBOX);
+    $game_factory = new GameFactory('\Djambi\GameManagers\SandboxGameManager');
     $game_factory->setId($this->getFormId());
     $game_factory->addPlayer($this->getCurrentPlayer());
     $this->getCurrentPlayer()->useSeat();
@@ -64,17 +63,17 @@ class SandboxGameForm extends BaseGameForm {
     }
 
     switch ($this->getGameManager()->getStatus()) {
-      case(BaseGameManager::STATUS_PENDING):
+      case(StatusEnum::STATUS_PENDING):
         $this->buildPendingGameInfosPanel($form);
         $this->buildFormGrid($form);
         break;
 
-      case(BaseGameManager::STATUS_DRAW_PROPOSAL):
+      case(StatusEnum::STATUS_DRAW_PROPOSAL):
         $this->buildPendingGameInfosPanel($form);
         $this->buildFormDrawProposal($form);
         break;
 
-      case(BaseGameManager::STATUS_FINISHED):
+      case(StatusEnum::STATUS_FINISHED):
         $this->buildFinalGameInfosPanel($form);
         $this->buildFormFinished($form);
         break;
@@ -345,7 +344,7 @@ class SandboxGameForm extends BaseGameForm {
       }
       $grid->getCurrentTurn()->getMove()->selectPiece($piece);
     }
-    catch (Exception $exception) {
+    catch (DjambiBaseException $exception) {
       $form_state->setErrorByName('cells', $this->t('@message Please choose a movable piece.',
         array('@message' => $exception->getMessage())));
     }
@@ -390,7 +389,7 @@ class SandboxGameForm extends BaseGameForm {
     catch (DisallowedActionException $exception) {
       $form_state->setErrorByName('cells', $this->t('You have selected an unreachable cell. Please choose a valid destination.'));
     }
-    catch (Exception $exception) {
+    catch (DjambiBaseException $exception) {
       $form_state->setErrorByName('cells', $this->t('Invalid destination detected. Please choose an empty cell.'));
     }
   }
@@ -438,7 +437,7 @@ class SandboxGameForm extends BaseGameForm {
       try {
         $move->getFirstInteraction()->executeChoice($grid->findCellByName($values['cells']));
       }
-      catch (Exception $exception) {
+      catch (DjambiBaseException $exception) {
         $form_state->setErrorByName('cells', $this->t('Invalid choice detected : @exception. Please select an other option.',
           array('@exception' => $exception->getMessage())));
       }

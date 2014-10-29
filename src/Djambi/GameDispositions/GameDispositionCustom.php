@@ -17,4 +17,5 @@ class GameDispositionCustom extends BaseGameDisposition {
     $this->setNbPlayers($nb_players);
     $this->useStandardRuleset();
   }
+
 }

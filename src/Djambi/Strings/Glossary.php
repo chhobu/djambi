@@ -80,6 +80,10 @@ class Glossary {
   const STATUS_DRAW_PROPOSAL_DESCRIPTION = "draw negociation";
   const STATUS_FINISHED_DESCRIPTION = "finished";
 
+  const DISPOSITION_2STD_DESCRIPTION = "2 players game on a 9x9 cells standard grid. Each player controls a vassalized extra side.";
+  const DISPOSITION_4STD_DESCRIPTION = "4 players game on a 9x9 cells standard grid.";
+  const DISPOSITION_3HEX_DESCRIPTION = "3 players game on an hexagonal grid.";
+
   /** @var Glossary */
   protected static $instance;
   protected $translaterHandler = 'strtr';

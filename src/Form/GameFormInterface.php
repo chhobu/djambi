@@ -9,7 +9,7 @@
 namespace Drupal\djambi\Form;
 
 
-use Djambi\GameManagers\GameManagerInterface;
+use Djambi\GameManagers\PlayableGameInterface;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Players\Drupal8Player;
 
@@ -26,7 +26,7 @@ interface GameFormInterface {
   public function resetGameManager();
 
   /**
-   * @return GameManagerInterface
+   * @return PlayableGameInterface
    */
   public function getGameManager();
 

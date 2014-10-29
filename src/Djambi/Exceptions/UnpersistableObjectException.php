@@ -9,4 +9,4 @@
 namespace Djambi\Exceptions;
 
 
-class UnpersistableObjectException extends Exception {}
+class UnpersistableObjectException extends DjambiBaseException {}

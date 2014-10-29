@@ -3,4 +3,4 @@
 namespace Djambi\Exceptions;
 
 
-class PlayerNotFoundException extends Exception {}
+class PlayerNotFoundException extends DjambiBaseException {}

@@ -9,8 +9,8 @@
 namespace Djambi\Tests;
 require_once 'bootstrap.php';
 
-use Djambi\GameManagers\BaseGameManager;
-use Djambi\GameManagers\GameManagerInterface;
+use Djambi\Enums\StatusEnum;
+use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Piece;
@@ -21,9 +21,9 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
 
   const CHECK_SAME_VALUE = '---auto---';
 
-  /** @var GameManagerInterface */
+  /** @var PlayableGameInterface */
   protected $game;
-  /** @var GlossaryTerm[]  */
+  /** @var GlossaryTerm[] */
   protected $log = array();
 
   protected function checkPossibleMoves(Piece $piece, $expected_moves) {
@@ -34,8 +34,10 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
   }
 
   protected function checkNewTurn($faction_id) {
-    $playing_faction_id = $this->game->getBattlefield()->getPlayingFaction()->getId();
-    $this->assertEquals(BaseGameManager::STATUS_PENDING, $this->game->getStatus());
+    $playing_faction_id = $this->game->getBattlefield()
+      ->getPlayingFaction()
+      ->getId();
+    $this->assertEquals(StatusEnum::STATUS_PENDING, $this->game->getStatus());
     $this->assertEquals($faction_id, $playing_faction_id, "Current playing faction is " . $playing_faction_id);
   }
 
@@ -47,13 +49,17 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
   protected function checkPosition($piece_id, $position) {
     $piece = $this->game->getBattlefield()->findPieceById($piece_id);
     $this->assertEquals($position, $piece->getPosition()->getName());
-    $occupant = $this->game->getBattlefield()->findCellByName($position)->getOccupant();
+    $occupant = $this->game->getBattlefield()
+      ->findCellByName($position)
+      ->getOccupant();
     $this->assertNotEquals(NULL, $occupant);
     $this->assertEquals($piece->getId(), $occupant->getId());
   }
 
   protected function checkEmptyCell($position) {
-    $this->assertEquals(NULL, $this->game->getBattlefield()->findCellByName($position)->getOccupant());
+    $this->assertEquals(NULL, $this->game->getBattlefield()
+        ->findCellByName($position)
+        ->getOccupant());
   }
 
   protected function checkGameStatus($status) {
@@ -62,15 +68,17 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
 
   protected function checkGameFinished($winner) {
     $grid = $this->game->getBattlefield();
-    $this->checkGameStatus(BaseGameManager::STATUS_FINISHED);
+    $this->checkGameStatus(StatusEnum::STATUS_FINISHED);
     $this->assertEquals(NULL, $grid->getPlayingFaction());
     $this->assertEquals(NULL, $grid->getCurrentTurn());
     if (!is_array($winner)) {
-      $this->assertEquals(Faction::STATUS_WINNER, $grid->findFactionById($winner)->getStatus());
+      $this->assertEquals(Faction::STATUS_WINNER, $grid->findFactionById($winner)
+          ->getStatus());
     }
     else {
       foreach ($winner as $faction_id) {
-        $this->assertEquals(Faction::STATUS_DRAW, $grid->findFactionById($faction_id)->getStatus());
+        $this->assertEquals(Faction::STATUS_DRAW, $grid->findFactionById($faction_id)
+            ->getStatus());
       }
     }
   }
@@ -78,13 +86,13 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
   /**
    * @param String $piece_id
    * @param String $destination
-   * @param array $expected_interactions
+   * @param array $target_interactions
    * @param bool $is_completed
    *
    * @throws \Djambi\Exceptions\DisallowedActionException
    * @throws \Djambi\Exceptions\IllogicMoveException
    */
-  protected function doMove($piece_id, $destination, $expected_interactions = array(), $is_completed = TRUE) {
+  protected function doMove($piece_id, $destination, $target_interactions = array(), $is_completed = TRUE) {
     $this->log = array();
     $grid = $this->game->getBattlefield();
     $piece = $grid->findPieceById($piece_id);
@@ -92,7 +100,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
     $move->selectPiece($piece);
     $move->executeChoice($grid->findCellByName($destination));
     $interactions = $move->getInteractions();
-    if (empty($expected_interactions)) {
+    if (empty($target_interactions)) {
       $this->assertEmpty($interactions, "The move trigger some interactions that were not expected");
     }
     else {
@@ -111,7 +119,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
         'pieces_selection',
         'message',
       );
-      foreach ($expected_interactions as $expected) {
+      foreach ($target_interactions as $expected) {
         foreach (array_keys($expected) as $key) {
           if (!in_array($key, $allowed_keys)) {
             $this->fail("Unexpected expected move result asertion : "
@@ -124,11 +132,13 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
           $this->assertInstanceOf($expected['type'], $interaction);
         }
         $possible_choices = array();
-        foreach ($interaction->findPossibleChoices()->getPossibleChoices() as $choice) {
+        foreach ($interaction->findPossibleChoices()
+                   ->getPossibleChoices() as $choice) {
           $possible_choices[] = $choice->getName();
         }
         if (!empty($expected['message'])) {
-          $this->assertEquals($expected['message'], $interaction->getMessage()->__toString());
+          $this->assertEquals($expected['message'], $interaction->getMessage()
+              ->__toString());
         }
         if (!empty($expected['pieces_selection'])) {
           $this->assertEquals($interaction->isDealingWithPiecesOnly(), $expected['pieces_selection']);
@@ -222,11 +232,13 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
             $actual_value = $actual_value->getName();
           }
           else {
-            $this->fail("Cannot compare object property \"" . $property .  "\" from class \"" . get_class($expected_value) . "\"");
+            $this->fail(sprintf("Cannot compare object property '%s' from class '%s'.",
+              $property, get_class($expected_value)));
           }
         }
       }
-      $this->assertEquals($expected_value, $actual_value, "Property \"" . $property . "\" from class \"" . get_class($object) . "\" fails persisting");
+      $this->assertEquals($expected_value, $actual_value, sprintf("Property '%s' from class '%s' fails persisting.",
+        $property, get_class($object)));
     }
   }
 
@@ -236,7 +248,7 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
         return;
       }
     }
-    $this->fail("String \"" . $string . "\" not found in log.");
+    $this->fail(sprintf("String '%s' not found in log.", $string));
   }
 
 }

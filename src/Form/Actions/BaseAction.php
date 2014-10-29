@@ -9,8 +9,8 @@
 namespace Drupal\djambi\Form\Actions;
 
 
-use Djambi\Exceptions\Exception;
-use Djambi\GameManagers\BaseGameManager;
+use Djambi\Enums\StatusEnum;
+use Djambi\Exceptions\DjambiBaseException;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\djambi\Form\BaseGameForm;
@@ -47,7 +47,7 @@ abstract class BaseAction implements ActionInterface  {
   }
 
   protected function isPrinted() {
-    return $this->form->getGameManager()->getStatus() == BaseGameManager::STATUS_PENDING;
+    return $this->form->getGameManager()->getStatus() == StatusEnum::STATUS_PENDING;
   }
 
   protected function isActive() {
@@ -131,7 +131,7 @@ abstract class BaseAction implements ActionInterface  {
     $this->classes[] = $class;
   }
 
-  protected function raiseError(FormStateInterface $form_state, Exception $exception) {
+  protected function raiseError(FormStateInterface $form_state, DjambiBaseException $exception) {
     $form_state->setErrorByName(static::ACTION_NAME, $this->t('Invalid action fired : @exception.', array(
       '@exception' => $exception->getMessage(),
     )));

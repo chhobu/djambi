@@ -21,8 +21,6 @@ abstract class BaseGameOption extends PersistantDjambiObject {
   private $choices;
   /* @var bool */
   private $configurable = TRUE;
-  /* @var array */
-  private $modes;
   /* @var mixed */
   private $default;
   /* @var mixed */
@@ -35,6 +33,8 @@ abstract class BaseGameOption extends PersistantDjambiObject {
   private $genericLabelArgs;
   /* @var bool */
   private $definedInConstructor = FALSE;
+  /* @var array */
+  private $conditions;
 
   public static function fromArray(array $array, array $context = array()) {
     if (!empty($array['definedFromConstructor'])) {
@@ -148,15 +148,6 @@ abstract class BaseGameOption extends PersistantDjambiObject {
     return $this->type;
   }
 
-  public function setModes($modes) {
-    $this->modes = $modes;
-    return $this;
-  }
-
-  public function getModes() {
-    return $this->modes;
-  }
-
   public function setTitle($title) {
     $this->title = $title;
     return $this;
@@ -227,6 +218,15 @@ abstract class BaseGameOption extends PersistantDjambiObject {
 
   public function setDefinedInConstructor($bool) {
     $this->definedInConstructor = $bool;
+    return $this;
+  }
+
+  public function getConditions() {
+    return $this->conditions;
+  }
+
+  public function addCondition($expression, $value) {
+    $this->conditions[] = array($expression, $value);
     return $this;
   }
 

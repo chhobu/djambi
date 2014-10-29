@@ -31,22 +31,22 @@ class DiplomatTest extends BaseDjambiTest {
   const MILITANT2_TEAM2_START_POSITION = 'C6';
 
   public function setUp() {
-    $disposition = GameDispositionsFactory::createNewCustomDisposition();
-    $disposition->setShape(BaseGrid::SHAPE_CARDINAL);
-    $disposition->setDimensions(7, 7);
-    $disposition->addSide(array(), Faction::STATUS_READY, array(
+    $disposition_builder = GameDispositionsFactory::initiateCustomDisposition();
+    $disposition_builder->setShape(BaseGrid::SHAPE_CARDINAL);
+    $disposition_builder->setDimensions(7, 7);
+    $disposition_builder->addSide(array(), Faction::STATUS_READY, array(
       new Leader(NULL, self::LEADER_TEAM1_START_POSITION),
       new Militant(NULL, self::MILITANT1_TEAM1_START_POSITION),
       new Diplomat(NULL, self::DIPLOMAT_TEAM1_START_POSITION),
     ));
-    $disposition->addSide(array(), Faction::STATUS_READY, array(
+    $disposition_builder->addSide(array(), Faction::STATUS_READY, array(
       new Leader(NULL, self::LEADER_TEAM2_START_POSITION),
       new Militant(1, self::MILITANT1_TEAM2_START_POSITION),
       new Militant(2, self::MILITANT2_TEAM2_START_POSITION),
     ));
-    $factory = new GameFactory();
-    $factory->setDisposition($disposition->deliverDisposition());
-    $this->game = $factory->createGameManager();
+    $game_builder = new GameFactory();
+    $game_builder->setDisposition($disposition_builder->deliverDisposition());
+    $this->game = $game_builder->createGameManager();
     $this->game->getBattlefield()->findPieceById('t2-M2')->setAlive(FALSE);
 
     $this->assertEquals('throne', $this->game->getBattlefield()->findCellByName(self::THRONE_POSITION)->getType());

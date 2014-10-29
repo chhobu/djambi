@@ -16,7 +16,7 @@ use Djambi\GameOptions\StandardRuleset;
 /**
  * Class DjambiGameDisposition
  */
-abstract class BaseGameDisposition extends PersistantDjambiObject  {
+abstract class BaseGameDisposition extends PersistantDjambiObject implements DispositionInterface {
   /** @var GridInterface $grid */
   private $grid;
   /** @var int $nb */

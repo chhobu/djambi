@@ -1,10 +1,10 @@
 <?php
 namespace Djambi\Tests\Persistance;
 
-use Djambi\GameManagers\BaseGameManager;
+use Djambi\Enums\StatusEnum;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\GameFactories\GameFactory;
-use Djambi\GameManagers\Signal;
+use Djambi\Polling\Signal;
 use Djambi\Players\HumanPlayer;
 use Djambi\Tests\BaseDjambiTest;
 
@@ -67,7 +67,6 @@ class PersistantDjambiObjectTest extends BaseDjambiTest {
     );
 
     $game_factory = new GameFactory();
-    $game_factory->setMode(BaseGameManager::MODE_SANDBOX);
     $game_factory->addPlayer($object1);
     $object5 = $game_factory->createGameManager();
     $object5->play();
@@ -77,8 +76,7 @@ class PersistantDjambiObjectTest extends BaseDjambiTest {
         'id' => self::CHECK_SAME_VALUE,
         'changed' => self::CHECK_SAME_VALUE,
         'begin' => self::CHECK_SAME_VALUE,
-        'mode' => BaseGameManager::MODE_SANDBOX,
-        'status' => BaseGameManager::STATUS_PENDING,
+        'status' => StatusEnum::STATUS_PENDING,
         'infos' => array(),
         'disposition' => $game_factory->getDisposition(),
         'battlefield' => $object5->getBattlefield(),

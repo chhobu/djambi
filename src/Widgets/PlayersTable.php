@@ -9,8 +9,8 @@
 namespace Drupal\djambi\Widgets;
 
 
-use Djambi\Exceptions\Exception;
-use Djambi\GameManagers\GameManagerInterface;
+use Djambi\Exceptions\InvalidArgument;
+use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Gameplay\Faction;
 use Djambi\Players\HumanPlayer;
 use Djambi\Strings\GlossaryTerm;
@@ -20,16 +20,16 @@ class PlayersTable extends BaseTable {
 
   public static function build($data) {
     if (!isset($data['game'], $data['current_player'])
-      || !$data['game'] instanceof GameManagerInterface
+      || !$data['game'] instanceof PlayableGameInterface
       || !$data['current_player'] instanceof HumanPlayer
     ) {
-      throw new Exception("Invalid data arguments for generating PlayersTable.");
+      throw new InvalidArgument("Invalid data arguments for generating PlayersTable.");
     }
     return parent::build($data);
   }
 
   /**
-   * @return GameManagerInterface
+   * @return PlayableGameInterface
    */
   protected function getGame() {
     return $this->data['game'];

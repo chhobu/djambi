@@ -1,7 +1,7 @@
 <?php
 namespace Djambi\GameOptions;
-
-use Djambi\GameManagers\BaseGameManager;
+use Djambi\GameManagers\MultiPlayerGameInterface;
+use Djambi\GameManagers\PlayableGameInterface;
 
 /**
  * Class DjambiGameOptionsFactoryStandardRuleset
@@ -27,7 +27,7 @@ class StandardRuleset extends GameOptionsStore {
       1 => 'OPTION3_YES',
       0 => 'OPTION3_NO',
     ));
-    $option3->setModes(array(BaseGameManager::MODE_FRIENDLY));
+    $option3->addCondition('isMultiplayerGame', TRUE);
 
     $rule1 = new GameplayElement($this, static::GAMEPLAY_ELEMENT_SKIPPED_TURNS, 'OPTION1', -1, 'select', array(
       0 => 'OPTION1_NEVER',
@@ -96,5 +96,9 @@ class StandardRuleset extends GameOptionsStore {
     ));
     $rule8->setDefinedInConstructor(TRUE);
 
+  }
+
+  public function isMultiplayerGame(PlayableGameInterface $game) {
+    return $game instanceof MultiPlayerGameInterface;
   }
 }

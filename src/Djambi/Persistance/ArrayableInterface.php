@@ -14,7 +14,6 @@ interface ArrayableInterface {
   public static function fromArray(array $array, array $context = array());
 
   /**
-   * @internal param bool $dry_run
    * @return array
    */
   public function toArray();

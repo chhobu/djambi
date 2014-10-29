@@ -8,4 +8,5 @@ class GameDisposition2mini extends BaseGameDisposition {
     $this->useStandardRuleset();
     $this->setNbPlayers(2);
   }
+
 }

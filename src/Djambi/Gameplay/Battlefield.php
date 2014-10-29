@@ -7,13 +7,13 @@
 
 namespace Djambi\Gameplay;
 
+use Djambi\Enums\StatusEnum;
 use Djambi\Exceptions\GameNotFoundException;
 use Djambi\Exceptions\GridInvalidException;
 use Djambi\Exceptions\CellNotFoundException;
 use Djambi\Exceptions\FactionNotFoundException;
 use Djambi\Exceptions\PieceNotFoundException;
-use Djambi\GameManagers\BaseGameManager;
-use Djambi\GameManagers\GameManagerInterface;
+use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Grids\BaseGrid;
 use Djambi\Persistance\PersistantDjambiObject;
@@ -28,7 +28,7 @@ use Djambi\Strings\GlossaryTerm;
  */
 class Battlefield extends PersistantDjambiObject implements BattlefieldInterface {
 
-  /* @var GameManagerInterface */
+  /* @var PlayableGameInterface */
   protected $gameManager;
   /** @var Cell[] */
   protected $cells = array();
@@ -76,7 +76,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     if (empty($context['gameManager'])) {
       throw new GameNotFoundException("Cannot load a battlefield without a game manager context !");
     }
-    /** @var GameManagerInterface $game */
+    /** @var PlayableGameInterface $game */
     $game = $context['gameManager'];
     $battlefield = new static($game);
     $battlefield->pastTurns = isset($array['pastTurns']) ? $array['pastTurns'] : array();
@@ -96,31 +96,35 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
 
   /**
    * Construction de l'objet DjambiBattlefield.
+
    *
-   * @param GameManagerInterface $gm
+*@param PlayableGameInterface $gm
    *   Objet de gestion du jeu
+
    *
-   * @return Battlefield
+*@return Battlefield
    *   Nouvel objet plateau de jeu
    */
-  protected function __construct(GameManagerInterface $gm) {
+  protected function __construct(PlayableGameInterface $gm) {
     $this->gameManager = $gm;
     $this->buildField();
   }
 
   /**
    * Crée une nouvelle grille de Djambi.
+
    *
-   * @param GameManagerInterface $game
+*@param PlayableGameInterface $game
    *   Objet de gestion de la partie
    * @param PlayerInterface[] $players
    *   Liste des joueurs
+
    *
-   * @throws GridInvalidException
+*@throws GridInvalidException
    * @return Battlefield
    *   Nouvelle grille de Djambi
    */
-  public static function createNewBattlefield(GameManagerInterface $game, $players) {
+  public static function createNewBattlefield(PlayableGameInterface $game, $players) {
     $battlefield = new self($game);
     $scheme = $game->getDisposition()->getGrid();
     $directions = $scheme->getDirections();
@@ -131,12 +135,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     foreach ($scheme_sides as $side) {
       if ($side['start_status'] == Faction::STATUS_READY) {
         /* @var HumanPlayer $player */
-        if ($game->getMode() == BaseGameManager::MODE_SANDBOX) {
-          $player = current($players);
-        }
-        else {
-          $player = array_shift($players);
-        }
+        $player = array_shift($players);
         if (empty($player)) {
           $side['start_status'] = Faction::STATUS_EMPTY_SLOT;
           $ready = FALSE;
@@ -227,7 +226,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
         $battlefield->findFactionById($controlled)->setControl($battlefield->findFactionById($controller), FALSE);
       }
     }
-    $game->setStatus($ready ? BaseGameManager::STATUS_PENDING : BaseGameManager::STATUS_RECRUITING);
+    $game->setStatus($ready ? StatusEnum::STATUS_PENDING : StatusEnum::STATUS_RECRUITING);
     return $battlefield;
   }
 
@@ -354,6 +353,10 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
 
   /**
    * Enregistre une nouvelle cellule sur la grille.
+   *
+   * @param Cell $cell
+   *
+   * @return $this
    */
   public function registerCell(Cell $cell) {
     $this->cells[$cell->getName()] = $cell;
@@ -432,7 +435,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     $last_turn->cancelCompletedTurn();
     $this->currentTurn = NULL;
     $this->playOrder = NULL;
-    $this->getGameManager()->save();
+    $this->getGameManager()->propagateChanges();
     $this->prepareTurn();
     return $this;
   }
@@ -459,13 +462,13 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
         $faction->setStatus(Faction::STATUS_DRAW)->setRanking($nb_living_factions);
       }
     }
-    $this->getGameManager()->setStatus(BaseGameManager::STATUS_FINISHED);
+    $this->getGameManager()->setStatus(StatusEnum::STATUS_FINISHED);
     $this->currentTurn->logEvent(new Event(new GlossaryTerm(Glossary::EVENT_THIS_IS_THE_END)));
     $this->pastTurns[] = $this->getCurrentTurn()->endsTurn()->toArray();
     $this->buildFinalRanking($nb_living_factions);
     $this->currentTurn = NULL;
     $this->playOrder = NULL;
-    $this->getGameManager()->save();
+    $this->getGameManager()->propagateChanges();
     return $this;
   }
 
@@ -484,7 +487,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
       $this->pastTurns[] = $this->getCurrentTurn()->endsTurn()->toArray();
       $this->currentTurn = NULL;
       $this->playOrder = NULL;
-      $this->getGameManager()->save();
+      $this->getGameManager()->propagateChanges();
       $this->prepareTurn();
     }
     return $this;
@@ -635,7 +638,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
     $scheme_size = count($this->factions) * 2;
     $turn_scheme = array();
     $events = array();
-    $peace_negociation = $this->getGameManager()->getStatus() == BaseGameManager::STATUS_DRAW_PROPOSAL;
+    $peace_negociation = $this->getGameManager()->getStatus() == StatusEnum::STATUS_DRAW_PROPOSAL;
     foreach ($this->factions as $faction) {
       if ($faction->isAlive() && $faction->getControl()->getId() == $faction->getId()) {
         $nb_factions++;

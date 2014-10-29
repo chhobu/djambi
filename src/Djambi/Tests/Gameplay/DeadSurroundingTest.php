@@ -37,7 +37,7 @@ class DeadSurroundingTest extends BaseDjambiTest {
   const THRONE_POSITION = 'D4';
 
   public function setup() {
-    $disposition = GameDispositionsFactory::createNewCustomDisposition();
+    $disposition = GameDispositionsFactory::initiateCustomDisposition();
     $disposition->setShape(BaseGrid::SHAPE_CARDINAL);
     $disposition->setDimensions(7, 7);
     $disposition->addSide(array(), Faction::STATUS_READY, array(

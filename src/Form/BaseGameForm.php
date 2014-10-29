@@ -9,7 +9,7 @@
 namespace Drupal\djambi\Form;
 
 
-use Djambi\GameManagers\GameManagerInterface;
+use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Grids\BaseGrid;
 use Djambi\Strings\Glossary;
 use Drupal\Core\Form\FormBase;
@@ -24,7 +24,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
   const GAME_ID_PREFIX = '';
   const FORM_WRAPPER = 'DjambiFormWrapper-';
 
-  /** @var GameManagerInterface */
+  /** @var PlayableGameInterface */
   protected $gameManager;
 
   /** @var Drupal8Player */
@@ -50,7 +50,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     return $form;
   }
 
-  public static function retrieve(Drupal8Player $player, GameManagerInterface $game_manager, ShortTempStore $store) {
+  public static function retrieve(Drupal8Player $player, PlayableGameInterface $game_manager, ShortTempStore $store) {
     $form = new static();
     $form->tmpStore = $store;
     $form->currentPlayer = $player;
@@ -100,18 +100,19 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
   }
 
   /**
-   * @return GameManagerInterface
+   * @return PlayableGameInterface
    */
   public function getGameManager() {
     return $this->gameManager;
   }
 
   /**
-   * @param GameManagerInterface $game_manager
+   * @param PlayableGameInterface $game_manager
+
    *
-   * @return $this
+*@return $this
    */
-  protected function setGameManager(GameManagerInterface $game_manager) {
+  protected function setGameManager(PlayableGameInterface $game_manager) {
     $this->gameManager = $game_manager;
     return $this;
   }

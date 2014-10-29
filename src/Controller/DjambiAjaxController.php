@@ -2,7 +2,7 @@
 namespace Drupal\djambi\Controller;
 
 use Djambi\Exceptions\GameNotFoundException;
-use Djambi\GameManagers\GameManagerInterface;
+use Djambi\GameManagers\PlayableGameInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Form\FormInterface;
 use Drupal\Core\Form\FormState;
@@ -13,7 +13,7 @@ use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
 class DjambiAjaxController extends ControllerBase {
-  /** @var GameManagerInterface */
+  /** @var PlayableGameInterface */
   protected $game_manager;
   /** @var  Drupal8Player */
   protected $current_player;

@@ -25,7 +25,7 @@ class MilitantTest extends BaseDjambiTest {
   const MILITANT1_TEAM2_START_POSITION = 'F2';
 
   public function setUp() {
-    $disposition = GameDispositionsFactory::createNewCustomDisposition();
+    $disposition = GameDispositionsFactory::initiateCustomDisposition();
     $disposition->setShape(BaseGrid::SHAPE_CARDINAL);
     $disposition->setDimensions(7, 7);
     $disposition->addSide(array(), Faction::STATUS_READY, array(

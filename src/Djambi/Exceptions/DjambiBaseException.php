@@ -5,4 +5,4 @@ namespace Djambi\Exceptions;
 /**
  * Class Exception
  */
-class Exception extends \Exception {}
+abstract class DjambiBaseException extends \Exception {}

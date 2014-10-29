@@ -9,9 +9,9 @@
 namespace Djambi\Tests\Gameplay;
 
 
+use Djambi\Enums\StatusEnum;
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
-use Djambi\GameManagers\BaseGameManager;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Faction;
 use Djambi\Tests\BaseDjambiTest;
@@ -20,7 +20,6 @@ class PeaceNegociationTest extends BaseDjambiTest {
   public function setUp() {
     $factory = new GameFactory();
     $factory->setDisposition(GameDispositionsFactory::useDisposition('4std'));
-    $factory->setMode(BaseGameManager::MODE_SANDBOX);
     $this->game = $factory->createGameManager();
   }
 
@@ -63,15 +62,15 @@ class PeaceNegociationTest extends BaseDjambiTest {
     $grid->getPlayingFaction()->callForADraw();
 
     $this->assertEquals('t2', $grid->getPlayingFaction()->getId());
-    $this->assertEquals(BaseGameManager::STATUS_DRAW_PROPOSAL, $this->game->getStatus());
+    $this->assertEquals(StatusEnum::STATUS_DRAW_PROPOSAL, $this->game->getStatus());
     $grid->getPlayingFaction()->acceptDraw();
 
     $this->assertEquals('t3', $grid->getPlayingFaction()->getId());
-    $this->assertEquals(BaseGameManager::STATUS_DRAW_PROPOSAL, $this->game->getStatus());
+    $this->assertEquals(StatusEnum::STATUS_DRAW_PROPOSAL, $this->game->getStatus());
     $grid->getPlayingFaction()->acceptDraw();
 
     $this->assertEquals('t4', $grid->getPlayingFaction()->getId());
-    $this->assertEquals(BaseGameManager::STATUS_DRAW_PROPOSAL, $this->game->getStatus());
+    $this->assertEquals(StatusEnum::STATUS_DRAW_PROPOSAL, $this->game->getStatus());
     $grid->getPlayingFaction()->rejectDraw();
 
     $this->checkNewTurn('t4');
@@ -116,7 +115,7 @@ class PeaceNegociationTest extends BaseDjambiTest {
     $grid->getPlayingFaction()->acceptDraw();
     $grid->cancelLastTurn();
     $this->assertEquals('t2', $grid->getPlayingFaction()->getId());
-    $this->assertEquals(BaseGameManager::STATUS_DRAW_PROPOSAL, $this->game->getStatus());
+    $this->assertEquals(StatusEnum::STATUS_DRAW_PROPOSAL, $this->game->getStatus());
     $this->assertEquals(Faction::DRAW_STATUS_UNDECIDED, $grid->getPlayingFaction()->getDrawStatus());
 
     $grid->cancelLastTurn();

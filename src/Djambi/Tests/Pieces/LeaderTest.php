@@ -27,7 +27,7 @@ class LeaderTest extends BaseDjambiTest {
   const MILITANT2_TEAM2_START_POSITION = 'C6';
 
   public function setUp() {
-    $disposition = GameDispositionsFactory::createNewCustomDisposition();
+    $disposition = GameDispositionsFactory::initiateCustomDisposition();
     $disposition->setShape(BaseGrid::SHAPE_CARDINAL);
     $disposition->setDimensions(7, 7);
     $disposition->addSide(array(), Faction::STATUS_READY, array(

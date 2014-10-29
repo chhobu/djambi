@@ -2,4 +2,4 @@
 
 namespace Djambi\Exceptions;
 
-class GameNotFoundException extends Exception {}
+class GameNotFoundException extends DjambiBaseException {}

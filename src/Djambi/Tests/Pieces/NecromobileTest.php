@@ -30,7 +30,7 @@ class NecromobileTest extends BaseDjambiTest {
   const MILITANT_DEAD_START_POSITION = 'C5';
 
   public function setUp() {
-    $disposition = GameDispositionsFactory::createNewCustomDisposition();
+    $disposition = GameDispositionsFactory::initiateCustomDisposition();
     $disposition->setShape(BaseGrid::SHAPE_CARDINAL);
     $disposition->setDimensions(7, 7);
     $disposition->addSide(array(), Faction::STATUS_READY, array(

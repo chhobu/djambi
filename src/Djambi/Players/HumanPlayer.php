@@ -1,7 +1,7 @@
 <?php
 namespace Djambi\Players;
 
-use Djambi\GameManagers\Signal;
+use Djambi\Polling\Signal;
 
 class HumanPlayer extends BasePlayer implements HumanPlayerInterface {
   /** @var bool */

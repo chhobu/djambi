@@ -1,66 +1,51 @@
 <?php
 namespace Djambi\GameManagers;
 
-use Djambi\Persistance\ArrayableInterface;
 use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\Gameplay\BattlefieldInterface;
-use Djambi\Gameplay\Faction;
 use Djambi\Players\PlayerInterface;
 
 /**
  * Interface GameManagerInterface
  */
-interface GameManagerInterface extends ArrayableInterface {
-
-  /**
-   * @param string $id
-   * @param string $mode
-   *
-   * @return GameManagerInterface
-   */
-  public static function load($id, $mode);
-
-  /**
-   * @return GameManagerInterface
-   */
-  public function save();
-
-  /**
-   * Lance les actions permettant de rendre une partie jouable.
-   * @return GameManagerInterface
-   */
-  public function play();
-
-  /**
-   * Recharge une partie.
-   * @return GameManagerInterface
-   */
-  public function reload();
+interface PlayableGameInterface {
 
   /**
    * Crée une partie.
    *
    * @param PlayerInterface[] $players
    * @param string $id
-   * @param string $mode
    * @param BaseGameDisposition $disposition
-   * @param string $battlefield_factory
+   * @param string $battlefield_class
    *
-   * @return GameManagerInterface
+   * @return PlayableGameInterface
    */
-  public static function createGame($players, $id, $mode, BaseGameDisposition $disposition, $battlefield_factory = NULL);
+  public static function create($players, $id, BaseGameDisposition $disposition, $battlefield_class = NULL);
 
   /**
-   * Supprime une partie.
+   * Lance les actions permettant de rendre une partie jouable.
+   *
+   * @return PlayableGameInterface
    */
-  public function delete();
+  public function play();
 
   /**
+   * Signale un changement à l'ensemble des joueurs.
+   *
+   * @return PlayableGameInterface
+   */
+  public function propagateChanges();
+
+  /**
+   * Renvoie le champ de bataille associé au jeu...
+   *
    * @return BattlefieldInterface
    */
   public function getBattlefield();
 
   /**
+   * Renvoie une information associée à la partie en cours.
+   *
    * @param string $info
    *
    * @return mixed
@@ -68,46 +53,32 @@ interface GameManagerInterface extends ArrayableInterface {
   public function getInfo($info);
 
   /**
+   * Associe une information à la partie en cours.
+   *
    * @param string $info
    * @param mixed $value
    *
-   * @return GameManagerInterface
+   * @return PlayableGameInterface
    */
   public function setInfo($info, $value);
 
   /**
    * Renvoie le timestamp de la dernière modification du jeu.
+   *
    * @return int
    */
   public function getChanged();
 
   /**
    * Renvoie le timestamp de la création du jeu.
+   *
    * @return int
    */
   public function getBegin();
 
   /**
-   * Exclut un joueur d'une partie.
-   *
-   * @param PlayerInterface $player
-   *
-   * @return GameManagerInterface
-   */
-  public function ejectPlayer(PlayerInterface $player);
-
-  /**
-   * Ajoute un joueur sur la partie en cours.
-   *
-   * @param PlayerInterface $player
-   * @param Faction $faction
-   *
-   * @return GameManagerInterface
-   */
-  public function addNewPlayer(PlayerInterface $player, Faction $faction);
-
-  /**
    * Renvoie le statut de la partie.
+   *
    * @return string
    */
   public function getStatus();
@@ -117,36 +88,34 @@ interface GameManagerInterface extends ArrayableInterface {
    *
    * @param string $status
    *
-   * @return GameManagerInterface
+   * @return PlayableGameInterface
    */
   public function setStatus($status);
 
   /**
-   * Renvoie le mode de jeu.
-   * @return string
-   */
-  public function getMode();
-
-  /**
    * Renvoie la disposition de la grille de jeu.
+   *
    * @return BaseGameDisposition
    */
   public function getDisposition();
 
   /**
    * Renvoie l'identifiant de la partie.
+   *
    * @return string
    */
   public function getId();
 
   /**
    * Détermine si une partie est en cours.
+   *
    * @return bool
    */
   public function isPending();
 
   /**
    * Détermine si une partie est terminée.
+   *
    * @return bool
    */
   public function isFinished();
@@ -155,7 +124,14 @@ interface GameManagerInterface extends ArrayableInterface {
    * Détermine si une partie n'est pas commencée.
    * @return bool
    */
-  public function isNotBegin();
+  public function isNew();
+
+  /**
+   * Détermine si les annulations d'action sont autorisées.
+   *
+   * @return bool
+   */
+  public function isCancelActionAllowed();
 
   /**
    * Récupère la valeur d'une option de jeu.
@@ -172,7 +148,7 @@ interface GameManagerInterface extends ArrayableInterface {
    * @param $option_key
    * @param $value
    *
-   * @return GameManagerInterface
+   * @return PlayableGameInterface
    */
   public function setOption($option_key, $value);
 

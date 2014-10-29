@@ -1,6 +1,6 @@
 <?php
 
-namespace Djambi\GameManagers;
+namespace Djambi\Polling;
 
 use Djambi\Exceptions\PlayerNotFoundException;
 use Djambi\Persistance\PersistantDjambiObject;

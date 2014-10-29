@@ -46,7 +46,7 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
   /**
    * @return GameDispositionsFactory
    */
-  public static function createNewCustomDisposition() {
+  public static function initiateCustomDisposition() {
     $factory = new static();
     return $factory;
   }
@@ -55,15 +55,18 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
    * Liste les dispositions de jeu publiques.
    *
    * @return array
-   *   Tableau associatif, contenant en clé le code de disposition,
-   *   en valeur, son nom d'affichage.
    */
   public static function listPublicDispositions() {
-    return array(
-      '2std' => '2STD_DESCRIPTION',
-      '3hex' => '3HEX_DESCRIPTION',
-      '4std' => '4STD_DESCRIPTION',
-    );
+    $dispositions = array();
+    $classes = get_declared_classes();
+    foreach($classes as $class_name) {
+      $implements = class_implements($class_name);
+      if(in_array('\Djambi\GameDispositions\DispositionInterface', $implements) &&
+        in_array('\Djambi\Interfaces\ExposedElementInterface', $implements)) {
+          $dispositions[$class_name] = call_user_func($class_name . '::getDescription');
+      }
+    }
+    return $dispositions;
   }
 
   /**
@@ -73,6 +76,7 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
    *   Tableau de clés / valeurs affiché dans une liste de type select
    */
   public static function listNbPlayersAvailable() {
+    // TODO : parcourir les classes concerner pour peupler le tableau
     return array(2 => 2, 3 => 3, 4 => 4);
   }
 

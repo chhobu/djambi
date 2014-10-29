@@ -3,7 +3,6 @@
 namespace Djambi\Persistance;
 
 use Djambi\Exceptions\UnpersistableObjectException;
-use Djambi\Exceptions;
 
 abstract class PersistantDjambiObject extends SerializableDjambiObject implements ArrayableInterface {
   /** @var array */
@@ -62,8 +61,6 @@ abstract class PersistantDjambiObject extends SerializableDjambiObject implement
   }
 
   /**
-   * @throws Exceptions\UnpersistableObjectException
-   * @internal param bool $dry_run
    * @return array
    */
   public function toArray() {

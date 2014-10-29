@@ -9,7 +9,7 @@
 namespace Drupal\djambi\Form\Actions;
 
 
-use Djambi\GameManagers\BaseGameManager;
+use Djambi\Enums\StatusEnum;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Form\BaseGameForm;
 
@@ -25,8 +25,8 @@ class Restart extends BaseAction {
 
   public function isPrinted() {
     return in_array($this->getForm()->getGameManager()->getStatus(),
-      array(BaseGameManager::STATUS_PENDING, BaseGameManager::STATUS_FINISHED))
-    && $this->getForm()->getGameManager()->getMode() == BaseGameManager::MODE_SANDBOX;
+      array(StatusEnum::STATUS_PENDING, StatusEnum::STATUS_FINISHED))
+    && $this->getForm()->getGameManager()->isCancelActionAllowed();
   }
 
   public function validate(&$form, FormStateInterface $form_state) {

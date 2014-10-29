@@ -3,23 +3,24 @@
 namespace Djambi\Gameplay;
 
 
-use Djambi\GameManagers\GameManagerInterface;
+use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Players\PlayerInterface;
 
 interface BattlefieldInterface {
 
   /**
-   * @return GameManagerInterface
+   * @return PlayableGameInterface
    */
   public function getGameManager();
 
   /**
-   * @param GameManagerInterface $game
+   * @param PlayableGameInterface $game
    * @param PlayerInterface[] $players
+
    *
-   * @return BattlefieldInterface
+*@return BattlefieldInterface
    */
-  public static function createNewBattlefield(GameManagerInterface $game, $players);
+  public static function createNewBattlefield(PlayableGameInterface $game, $players);
 
   /**
    * @return BattlefieldInterface
