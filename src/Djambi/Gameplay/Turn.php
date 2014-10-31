@@ -10,9 +10,13 @@ namespace Djambi\Gameplay;
 
 
 use Djambi\Moves\Move;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 
-class Turn extends PersistantDjambiObject {
+class Turn implements ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   /** @var int */
   protected $id;
   /** @var int */
@@ -46,7 +50,7 @@ class Turn extends PersistantDjambiObject {
     $this->addDependantObjects(array(
       'actingFaction' => 'id',
     ));
-    parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $array, array $context = array()) {

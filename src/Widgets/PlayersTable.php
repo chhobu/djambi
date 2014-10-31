@@ -9,7 +9,6 @@
 namespace Drupal\djambi\Widgets;
 
 
-use Djambi\Exceptions\InvalidArgument;
 use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Gameplay\Faction;
 use Djambi\Players\HumanPlayer;
@@ -23,7 +22,7 @@ class PlayersTable extends BaseTable {
       || !$data['game'] instanceof PlayableGameInterface
       || !$data['current_player'] instanceof HumanPlayer
     ) {
-      throw new InvalidArgument("Invalid data arguments for generating PlayersTable.");
+      throw new \InvalidArgumentException("Invalid data arguments for generating PlayersTable.");
     }
     return parent::build($data);
   }

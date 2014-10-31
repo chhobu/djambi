@@ -5,9 +5,13 @@ namespace Djambi\Moves;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Piece;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 
-abstract class BaseMoveInteraction extends PersistantDjambiObject implements MoveInteractionInterface {
+abstract class BaseMoveInteraction implements MoveInteractionInterface, ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   /** @var Piece */
   protected $selectedPiece;
   /** @var  Move */
@@ -26,7 +30,7 @@ abstract class BaseMoveInteraction extends PersistantDjambiObject implements Mov
       $refs['possibleChoices'] = 'name';
     }
     $this->addDependantObjects($refs);
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $array, array $context = array()) {

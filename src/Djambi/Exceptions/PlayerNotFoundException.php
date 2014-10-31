@@ -3,4 +3,4 @@
 namespace Djambi\Exceptions;
 
 
-class PlayerNotFoundException extends DjambiBaseException {}
+class PlayerNotFoundException extends \InvalidArgumentException implements DjambiExceptionInterface {}

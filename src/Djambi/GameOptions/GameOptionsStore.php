@@ -2,13 +2,17 @@
 namespace Djambi\GameOptions;
 
 use Djambi\Exceptions\GameOptionInvalidException;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 
-class GameOptionsStore extends PersistantDjambiObject {
+class GameOptionsStore implements ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   /**
    * @var array
    */
-  private $stores;
+  protected $stores;
 
   public function __construct() {
     $this->stores = array();
@@ -32,7 +36,7 @@ class GameOptionsStore extends PersistantDjambiObject {
 
   protected function prepareArrayConversion() {
     $this->addPersistantProperties(array('stores'));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public function addInStore(BaseGameOption $option) {

@@ -1,8 +1,6 @@
 <?php
 namespace Djambi\Grids;
 
-use Djambi\PieceDescriptions\BasePieceDescription;
-
 class CustomGrid extends BaseGrid {
 
   protected function __construct() {}
@@ -16,7 +14,7 @@ class CustomGrid extends BaseGrid {
       'specialCells',
       'sides',
     ));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $array, array $context = array()) {

@@ -1,4 +1,4 @@
 <?php
 namespace Djambi\Exceptions;
 
-class PlayerInvalidException extends DjambiBaseException {}
+class PlayerInvalidException extends \InvalidArgumentException implements DjambiExceptionInterface {}

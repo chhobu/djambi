@@ -9,7 +9,7 @@ class ComputerPlayer extends BasePlayer {
   const CLASS_NICKNAME = 'bot-';
 
   /* @var IAInterface $ia; */
-  private $ia;
+  protected $ia;
 
   public function __construct($id = NULL) {
     parent::__construct($id);

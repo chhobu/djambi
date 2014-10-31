@@ -2,4 +2,4 @@
 
 namespace Djambi\Exceptions;
 
-class GridInvalidException extends DjambiBaseException {}
+class GridInvalidException extends \InvalidArgumentException implements DjambiExceptionInterface {}

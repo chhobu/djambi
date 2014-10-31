@@ -9,10 +9,14 @@
 namespace Djambi\Gameplay;
 
 
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\Strings\GlossaryTerm;
 
-class Event extends PersistantDjambiObject {
+class Event implements ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   const LOG_LEVEL_MAJOR = 'major';
   const LOG_LEVEL_NORMAL = 'normal';
   const LOG_LEVEL_MINOR = 'minor';
@@ -36,7 +40,7 @@ class Event extends PersistantDjambiObject {
       $attributes[] = 'changes';
     }
     $this->addPersistantProperties($attributes);
-    parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $array, array $context = array()) {

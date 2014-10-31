@@ -9,9 +9,13 @@
 namespace Djambi\Strings;
 
 
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 
-class GlossaryTerm extends PersistantDjambiObject {
+class GlossaryTerm implements ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   protected $string;
   protected $args = array();
 
@@ -30,7 +34,7 @@ class GlossaryTerm extends PersistantDjambiObject {
       $save[] = 'args';
     }
     $this->addPersistantProperties($save);
-    parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $data, array $context = array()) {

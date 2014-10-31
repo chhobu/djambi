@@ -1,10 +1,20 @@
 <?php
+/**
+ * Created by PhpStorm.
+ * User: buchho
+ * Date: 31/10/14
+ * Time: 16:07
+ */
 
 namespace Djambi\Persistance;
 
+
 use Djambi\Exceptions\UnpersistableObjectException;
 
-abstract class PersistantDjambiObject extends SerializableDjambiObject implements ArrayableInterface {
+trait PersistantDjambiTrait {
+
+  private $unserializableProperties = array();
+
   /** @var array */
   private $persistantProperties = array();
   /** @var array */
@@ -55,15 +65,13 @@ abstract class PersistantDjambiObject extends SerializableDjambiObject implement
     return $this->getPersistantData();
   }
 
-  protected function prepareArrayConversion() {
-    $this->addPersistantProperties(array('className'));
-    return $this;
-  }
+  abstract protected function prepareArrayConversion();
 
   /**
    * @return array
    */
   public function toArray() {
+    $this->addPersistantProperties(array('className'));
     $this->prepareArrayConversion();
     foreach ($this->persistantProperties as $attribute => $valid) {
       if (!$valid) {
@@ -166,8 +174,20 @@ abstract class PersistantDjambiObject extends SerializableDjambiObject implement
       'dependantObjects',
       'persistantData',
       'persistantProperties',
+      'unserializableProperties',
     ));
-    return parent::prepareSerialization();
+    return $this;
   }
 
-}
+  protected function addUnserializableProperties(array $properties) {
+    $this->unserializableProperties = array_merge($this->unserializableProperties, $properties);
+    return $this;
+  }
+
+  public function __sleep() {
+    $this->prepareSerialization();
+    $keys = get_object_vars($this);
+    return array_diff(array_keys($keys), $this->unserializableProperties);
+  }
+
+} 

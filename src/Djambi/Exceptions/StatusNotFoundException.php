@@ -9,4 +9,4 @@
 namespace Djambi\Exceptions;
 
 
-class StatusNotFoundException extends DjambiBaseException {}
+class StatusNotFoundException extends \UnexpectedValueException implements DjambiExceptionInterface {}

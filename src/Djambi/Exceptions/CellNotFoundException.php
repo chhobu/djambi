@@ -2,4 +2,4 @@
 
 namespace Djambi\Exceptions;
 
-class CellNotFoundException extends DjambiBaseException {}
+class CellNotFoundException extends \OutOfBoundsException implements DjambiExceptionInterface {}

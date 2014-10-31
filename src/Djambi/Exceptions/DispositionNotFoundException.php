@@ -3,4 +3,4 @@
 namespace Djambi\Exceptions;
 
 
-class DispositionNotFoundException extends DjambiBaseException {}
+class DispositionNotFoundException extends \InvalidArgumentException implements DjambiExceptionInterface {}

@@ -7,9 +7,8 @@
 namespace Djambi\Gameplay;
 
 use Djambi\Exceptions\GridInvalidException;
-use Djambi\Persistance\SerializableDjambiObject;
 
-class Cell extends SerializableDjambiObject {
+class Cell {
   const TYPE_STANDARD = 'std';
   const TYPE_THRONE = 'throne';
   const TYPE_DISABLED = 'disabled';
@@ -165,9 +164,10 @@ class Cell extends SerializableDjambiObject {
     return $this->selectable;
   }
 
-  protected function prepareSerialization() {
-    $this->addUnserializableProperties(array('selectable'));
-    return parent::prepareSerialization();
+  public function __sleep() {
+    $keys = get_object_vars($this);
+    unset($keys['selectable']);
+    return array_keys($keys);
   }
 
 }

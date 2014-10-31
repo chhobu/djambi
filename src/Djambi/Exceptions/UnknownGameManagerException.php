@@ -9,4 +9,4 @@
 namespace Djambi\Exceptions;
 
 
-class UnknownGameManagerException extends DjambiBaseException {}
+class UnknownGameManagerException extends \BadFunctionCallException implements DjambiExceptionInterface {}

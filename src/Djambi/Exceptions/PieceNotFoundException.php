@@ -2,4 +2,4 @@
 
 namespace Djambi\Exceptions;
 
-class PieceNotFoundException extends DjambiBaseException {}
+class PieceNotFoundException extends \OutOfBoundsException implements DjambiExceptionInterface {}

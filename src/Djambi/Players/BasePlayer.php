@@ -10,20 +10,22 @@ use Djambi\Exceptions\PlayerNotFoundException;
 use Djambi\Exceptions\PlayerInvalidException;
 use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Gameplay\Faction;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 
 /**
  * Class DjambiPlayer
  */
-abstract class BasePlayer extends PersistantDjambiObject implements PlayerInterface {
+abstract class BasePlayer implements PlayerInterface, ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   const TYPE_HUMAN = 'human';
   const TYPE_COMPUTER = 'computer';
   const CLASS_NICKNAME = '';
 
   /* @var string $type */
   protected $type = self::TYPE_HUMAN;
-  /* @var string $className */
-  protected $className;
   /* @var string $id */
   protected $id;
   /* @var Faction $faction */
@@ -100,7 +102,7 @@ abstract class BasePlayer extends PersistantDjambiObject implements PlayerInterf
 
   protected function prepareArrayConversion() {
     $this->addPersistantProperties(array('id'));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public function isPlayingFaction(Faction $faction) {

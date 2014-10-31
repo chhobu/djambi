@@ -11,7 +11,8 @@ use Djambi\Moves\Manipulation;
 use Djambi\Moves\Move;
 use Djambi\Moves\Murder;
 use Djambi\Moves\Necromobility;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\PieceDescriptions\BasePieceDescription;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
@@ -19,7 +20,12 @@ use Djambi\Strings\GlossaryTerm;
 /**
  * Class DjambiPiece
  */
-class Piece extends PersistantDjambiObject {
+class Piece implements ArrayableInterface {
+
+  use PersistantDjambiTrait {
+    prepareSerialization as traitSerialization;
+  }
+
   /* @var string $id */
   protected $id;
   /* @var Faction $faction */
@@ -51,7 +57,7 @@ class Piece extends PersistantDjambiObject {
       'alive',
       'description',
     ));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $array, array $context = array()) {
@@ -315,7 +321,7 @@ class Piece extends PersistantDjambiObject {
 
   protected function prepareSerialization() {
     $this->addUnserializableProperties(array('selectable'));
-    return parent::prepareSerialization();
+    return $this->traitSerialization();
   }
 
 }

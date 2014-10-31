@@ -16,7 +16,8 @@ use Djambi\Exceptions\PieceNotFoundException;
 use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Grids\BaseGrid;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\PieceDescriptions\BasePieceDescription;
 use Djambi\Players\HumanPlayer;
 use Djambi\Players\PlayerInterface;
@@ -26,7 +27,9 @@ use Djambi\Strings\GlossaryTerm;
 /**
  * Class DjambiBattlefield
  */
-class Battlefield extends PersistantDjambiObject implements BattlefieldInterface {
+class Battlefield implements BattlefieldInterface, ArrayableInterface {
+
+  use PersistantDjambiTrait;
 
   /* @var PlayableGameInterface */
   protected $gameManager;
@@ -58,7 +61,7 @@ class Battlefield extends PersistantDjambiObject implements BattlefieldInterface
       'playOrder',
     ));
     $this->addDependantObjects(array('gameManager' => 'id'));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   /**

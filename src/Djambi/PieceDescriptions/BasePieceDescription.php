@@ -2,10 +2,14 @@
 namespace Djambi\PieceDescriptions;
 
 use Djambi\Exceptions\GridInvalidException;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\Strings\GlossaryTerm;
 
-abstract class BasePieceDescription extends PersistantDjambiObject {
+abstract class BasePieceDescription implements ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   /** @var string : type de pièce */
   protected $type;
   /** @var string : nom court de la pièce */
@@ -43,7 +47,7 @@ abstract class BasePieceDescription extends PersistantDjambiObject {
       'num',
       'startPosition',
     ));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $array, array $context = array()) {

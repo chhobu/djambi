@@ -9,4 +9,4 @@
 namespace Djambi\Exceptions;
 
 
-class UnpersistableObjectException extends DjambiBaseException {}
+class UnpersistableObjectException extends \InvalidArgumentException implements DjambiExceptionInterface {}

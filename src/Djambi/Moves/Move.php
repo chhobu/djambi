@@ -9,11 +9,15 @@ use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Event;
 use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Piece;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
-class Move extends PersistantDjambiObject {
+class Move implements ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   const PHASE_PIECE_SELECTION = 'piece_selection';
   const PHASE_PIECE_DESTINATION = 'piece_destination';
   const PHASE_PIECE_INTERACTIONS = 'move_interactions';
@@ -58,7 +62,7 @@ class Move extends PersistantDjambiObject {
       $persist[] = 'interactions';
     }
     $this->addPersistantProperties($persist);
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $array, array $context = array()) {

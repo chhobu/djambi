@@ -10,7 +10,8 @@ namespace Djambi\Grids;
 use Djambi\Exceptions\GridInvalidException;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\PieceDescriptions\Assassin;
 use Djambi\PieceDescriptions\BasePieceDescription;
 use Djambi\PieceDescriptions\Diplomat;
@@ -24,7 +25,9 @@ use Djambi\Strings\GlossaryTerm;
 /**
  * Class DjambiBattlefieldScheme
  */
-abstract class BaseGrid extends PersistantDjambiObject implements GridInterface {
+abstract class BaseGrid implements GridInterface, ArrayableInterface {
+  use PersistantDjambiTrait;
+
   const SHAPE_HEXAGONAL = 'hexagonal';
   const SHAPE_CARDINAL = 'cardinal';
 
@@ -54,6 +57,11 @@ abstract class BaseGrid extends PersistantDjambiObject implements GridInterface 
   public static function fromArray(array $array, array $context = array()) {
     return new static();
   }
+
+  protected function prepareArrayConversion() {
+    return $this;
+  }
+
 
   protected function useStandardPieces() {
     $this->addCommonPiece(new Leader(NULL, array('x' => 0, 'y' => 0)));

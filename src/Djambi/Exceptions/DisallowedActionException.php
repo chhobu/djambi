@@ -3,4 +3,4 @@
 namespace Djambi\Exceptions;
 
 
-class DisallowedActionException extends DjambiBaseException {}
+class DisallowedActionException extends \DomainException implements DjambiExceptionInterface {}

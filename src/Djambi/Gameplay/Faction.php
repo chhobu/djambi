@@ -10,7 +10,8 @@ namespace Djambi\Gameplay;
 use Djambi\Enums\StatusEnum;
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\GameOptions\StandardRuleset;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\Players\ComputerPlayer;
 use Djambi\Players\HumanPlayer;
 use Djambi\Players\HumanPlayerInterface;
@@ -21,7 +22,10 @@ use Djambi\Strings\GlossaryTerm;
 /**
  * Class DjambiPoliticalFaction
  */
-class Faction extends PersistantDjambiObject {
+class Faction implements ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   const DRAW_STATUS_ACCEPTED = 2;
   const DRAW_STATUS_PROPOSED = 1;
   const DRAW_STATUS_REJECTED = 0;
@@ -86,7 +90,7 @@ class Faction extends PersistantDjambiObject {
       'drawStatus',
       'pieces',
     ));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $array, array $context = array()) {

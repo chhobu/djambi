@@ -2,4 +2,4 @@
 
 namespace Djambi\Exceptions;
 
-class GameOptionInvalidException extends DjambiBaseException {}
+class GameOptionInvalidException extends \OutOfBoundsException implements DjambiExceptionInterface {}

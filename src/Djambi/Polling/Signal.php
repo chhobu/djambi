@@ -3,10 +3,14 @@
 namespace Djambi\Polling;
 
 use Djambi\Exceptions\PlayerNotFoundException;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\Players\HumanPlayerInterface;
 
-class Signal extends PersistantDjambiObject {
+class Signal implements ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   /** @var HumanPlayerInterface */
   protected $player;
   /** @var int */
@@ -30,7 +34,7 @@ class Signal extends PersistantDjambiObject {
   protected function prepareArrayConversion() {
     $this->addPersistantProperties(array('ip', 'time'));
     $this->addDependantObjects(array('player' => 'getId'));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function createSignal(HumanPlayerInterface $player, $ip) {

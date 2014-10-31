@@ -10,9 +10,12 @@ namespace Djambi\Gameplay;
 
 
 use Djambi\Persistance\ArrayableInterface;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\PersistantDjambiTrait;
 
-abstract class BaseChange extends PersistantDjambiObject {
+abstract class BaseChange implements ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   /** @var ArrayableInterface */
   protected $object;
   /** @var String */
@@ -31,7 +34,7 @@ abstract class BaseChange extends PersistantDjambiObject {
       'oldValue',
       'newValue',
     ));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $array, array $context = array()) {

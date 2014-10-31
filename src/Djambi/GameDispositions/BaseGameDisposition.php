@@ -5,24 +5,29 @@
  */
 
 namespace Djambi\GameDispositions;
+
 use Djambi\Grids\GridInterface;
 use Djambi\Grids\HexagonalGridWith3Sides;
 use Djambi\Grids\MiniGridWith2Sides;
 use Djambi\Grids\StandardGridWith4Sides;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
 use Djambi\GameOptions\GameOptionsStore;
 use Djambi\GameOptions\StandardRuleset;
+use Djambi\Persistance\PersistantDjambiTrait;
 
 /**
  * Class DjambiGameDisposition
  */
-abstract class BaseGameDisposition extends PersistantDjambiObject implements DispositionInterface {
+abstract class BaseGameDisposition implements DispositionInterface, ArrayableInterface {
+
+  use PersistantDjambiTrait;
+
   /** @var GridInterface $grid */
-  private $grid;
+  protected $grid;
   /** @var int $nb */
-  private $nbPlayers = 4;
+  protected $nbPlayers = 4;
   /** @var GameOptionsStore $optionsStore */
-  private $optionsStore;
+  protected $optionsStore;
 
   protected function prepareArrayConversion() {
     $this->addPersistantProperties(array(
@@ -30,7 +35,7 @@ abstract class BaseGameDisposition extends PersistantDjambiObject implements Dis
       'nbPlayers',
       'optionsStore',
     ));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $array, array $context = array()) {

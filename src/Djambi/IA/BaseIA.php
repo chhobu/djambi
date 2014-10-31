@@ -5,11 +5,11 @@ use Djambi\Players\ComputerPlayer;
 
 abstract class BaseIA implements IAInterface {
   /** @var string */
-  private $name;
+  protected $name;
   /** @var ComputerPlayer */
-  private $player;
+  protected $player;
   /** @var array */
-  private $settings = array();
+  protected $settings = array();
 
   protected function __construct(ComputerPlayer $player, $name = 'DefaultBot') {
     $this->player = $player;

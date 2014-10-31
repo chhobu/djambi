@@ -5,36 +5,43 @@
  */
 
 namespace Djambi\GameOptions;
-use Djambi\Exceptions\GameOptionInvalidException;
-use Djambi\Persistance\PersistantDjambiObject;
 
-abstract class BaseGameOption extends PersistantDjambiObject {
+use Djambi\Exceptions\GameOptionInvalidException;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
+
+abstract class BaseGameOption implements ArrayableInterface {
+
+  use PersistantDjambiTrait {
+    toArray as toTraitArray;
+  }
+
   /* @var string */
-  private $name;
+  protected $name;
   /* @var string */
-  private $title;
+  protected $title;
   /* @var string */
-  private $widget;
+  protected $widget;
   /* @var string */
-  private $type;
+  protected $type;
   /* @var array */
-  private $choices;
+  protected $choices;
   /* @var bool */
-  private $configurable = TRUE;
+  protected $configurable = TRUE;
   /* @var mixed */
-  private $default;
+  protected $default;
   /* @var mixed */
-  private $value;
+  protected $value;
   /* @var string */
-  private $cssClass;
+  protected $cssClass;
   /* @var string */
-  private $genericLabel;
+  protected $genericLabel;
   /* @var array */
-  private $genericLabelArgs;
+  protected $genericLabelArgs;
   /* @var bool */
-  private $definedInConstructor = FALSE;
+  protected $definedInConstructor = FALSE;
   /* @var array */
-  private $conditions;
+  protected $conditions;
 
   public static function fromArray(array $array, array $context = array()) {
     if (!empty($array['definedFromConstructor'])) {
@@ -71,14 +78,14 @@ abstract class BaseGameOption extends PersistantDjambiObject {
         'definedInConstructor',
       ));
     }
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public function toArray() {
     if ($this->isDefinedInConstructor() && $this->getValue() == $this->getDefault()) {
       return NULL;
     }
-    return parent::toArray();
+    return $this->toTraitArray();
   }
 
   /**

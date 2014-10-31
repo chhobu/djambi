@@ -2,4 +2,4 @@
 
 namespace Djambi\Exceptions;
 
-class FactionNotFoundException extends DjambiBaseException {}
+class FactionNotFoundException extends \OutOfBoundsException implements DjambiExceptionInterface {}

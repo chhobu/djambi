@@ -3,4 +3,4 @@
 namespace Djambi\Exceptions;
 
 
-class IllogicMoveException extends DjambiBaseException {}
+class IllogicMoveException extends \DomainException implements DjambiExceptionInterface {}

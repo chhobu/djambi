@@ -15,7 +15,8 @@ use Djambi\Exceptions\GridInvalidException;
 use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\Gameplay\Battlefield;
 use Djambi\Gameplay\BattlefieldInterface;
-use Djambi\Persistance\PersistantDjambiObject;
+use Djambi\Persistance\ArrayableInterface;
+use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\Players\HumanPlayer;
 use Djambi\Players\PlayerInterface;
 
@@ -23,7 +24,9 @@ use Djambi\Players\PlayerInterface;
  * Class DjambiGameManager
  * Gère la persistance des parties de Djambi.
  */
-abstract class BaseGameManager extends PersistantDjambiObject implements PlayableGameInterface {
+abstract class BaseGameManager implements PlayableGameInterface, ArrayableInterface {
+
+  use PersistantDjambiTrait;
 
   /** @var string */
   protected $id;
@@ -50,7 +53,7 @@ abstract class BaseGameManager extends PersistantDjambiObject implements Playabl
       'disposition',
       'battlefield',
     ));
-    return parent::prepareArrayConversion();
+    return $this;
   }
 
   public static function fromArray(array $data, array $context = array()) {
