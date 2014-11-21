@@ -8,11 +8,11 @@
 namespace Djambi\Gameplay;
 
 use Djambi\Enums\StatusEnum;
-use Djambi\Exceptions\GameNotFoundException;
-use Djambi\Exceptions\GridInvalidException;
-use Djambi\Exceptions\CellNotFoundException;
-use Djambi\Exceptions\FactionNotFoundException;
-use Djambi\Exceptions\PieceNotFoundException;
+use Djambi\GameManagers\Exceptions\GameNotFoundException;
+use Djambi\Grids\Exceptions\InvalidGridException;
+use Djambi\Gameplay\Exceptions\CellNotFoundException;
+use Djambi\Gameplay\Exceptions\FactionNotFoundException;
+use Djambi\Gameplay\Exceptions\PieceNotFoundException;
 use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Grids\BaseGrid;
@@ -50,7 +50,6 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
 
   /**
    * Préparation à l'enregistrement : transformation en tableau.
-   *
    * @return array
    */
   protected function prepareArrayConversion() {
@@ -71,8 +70,8 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
    * @param array $context
    *
    * @throws CellNotFoundException
-   * @throws FactionNotFoundException
-   * @throws GameNotFoundException
+   * @throws \Djambi\Gameplay\Exceptions\FactionNotFoundException
+   * @throws \Djambi\GameManagers\Exceptions\GameNotFoundException
    * @return Battlefield
    */
   public static function fromArray(array $array, array $context = array()) {
@@ -99,13 +98,11 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
 
   /**
    * Construction de l'objet DjambiBattlefield.
-
    *
-*@param PlayableGameInterface $gm
+   * @param PlayableGameInterface $gm
    *   Objet de gestion du jeu
-
    *
-*@return Battlefield
+   * @return Battlefield
    *   Nouvel objet plateau de jeu
    */
   protected function __construct(PlayableGameInterface $gm) {
@@ -115,15 +112,13 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
 
   /**
    * Crée une nouvelle grille de Djambi.
-
    *
-*@param PlayableGameInterface $game
+   * @param PlayableGameInterface $game
    *   Objet de gestion de la partie
    * @param PlayerInterface[] $players
    *   Liste des joueurs
-
    *
-*@throws GridInvalidException
+   * @throws InvalidGridException
    * @return Battlefield
    *   Nouvelle grille de Djambi
    */
@@ -181,7 +176,7 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
           }
         }
         if (empty($axis)) {
-          throw new GridInvalidException('Bad pieces start scheme.');
+          throw new InvalidGridException('Bad pieces start scheme.');
         }
         foreach ($scheme->getPieceScheme() as $piece_id => $piece) {
           $start_position = $piece->getStartPosition();
@@ -214,7 +209,10 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
         foreach ($side['specific_pieces'] as $key => $specific_piece_description) {
           if (!is_array($specific_piece_description->getStartPosition())) {
             $cell = $battlefield->findCellByName($specific_piece_description->getStartPosition());
-            $specific_start_position = array('x' => $cell->getX(), 'y' => $cell->getY());
+            $specific_start_position = array(
+              'x' => $cell->getX(),
+              'y' => $cell->getY()
+            );
           }
           else {
             $specific_start_position = $specific_piece_description->getStartPosition();
@@ -226,7 +224,8 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
     }
     if (!empty($controls)) {
       foreach ($controls as $controlled => $controller) {
-        $battlefield->findFactionById($controlled)->setControl($battlefield->findFactionById($controller), FALSE);
+        $battlefield->findFactionById($controlled)
+          ->setControl($battlefield->findFactionById($controller), FALSE);
       }
     }
     $game->setStatus($ready ? StatusEnum::STATUS_PENDING : StatusEnum::STATUS_RECRUITING);
@@ -235,7 +234,6 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
 
   /**
    * Génère les cellules d'une grille de Djambi.
-
    * @return Battlefield
    *   Grille de Djambi courante
    */
@@ -277,8 +275,7 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
           if ($neighbour->getType() != Cell::TYPE_DISABLED) {
             $cell->addNeighbour($neighbour, $d);
           }
-        }
-        catch (CellNotFoundException $e) {
+        } catch (CellNotFoundException $e) {
           continue;
         }
       }
@@ -316,7 +313,6 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
 
   /**
    * Renvoie l'objet faction actuellement en tour de jeu.
-
    * @return Faction
    *   Faction si trouvé, NULL sinon.
    */
@@ -390,7 +386,7 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
    * @param string $name
    *
    * @return Cell
-   * @throws CellNotFoundException
+   * @throws \Djambi\Gameplay\Exceptions\CellNotFoundException
    */
   public function findCellByName($name) {
     if (!isset($this->cells[$name])) {
@@ -507,10 +503,16 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
         if (!$control_leader) {
           $event = NULL;
           foreach ($faction->getPieces() as $piece) {
-            if ($piece->isAlive() && $piece->getDescription()->hasHabilityMustLive() && $piece->getFaction()->getId() == $faction->getId()) {
+            if ($piece->isAlive() && $piece->getDescription()
+                ->hasHabilityMustLive() && $piece->getFaction()
+                ->getId() == $faction->getId()
+            ) {
               $event = new Event(new GlossaryTerm(Glossary::EVENT_SURROUNDED, array('!piece_id' => $piece->getId())), Event::LOG_LEVEL_MAJOR);
-              if ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'never'
-                && $this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control') {
+              if ($this->getGameManager()
+                  ->getOption(StandardRuleset::RULE_COMEBACK) == 'never'
+                && $this->getGameManager()
+                  ->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control'
+              ) {
                 $event->executeChange(new PieceChange($piece, 'alive', TRUE, FALSE));
               }
               $this->getCurrentTurn()->logEvent($event);
@@ -524,8 +526,11 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
           $living_factions[] = $faction->getId();
         }
       }
-      elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'surrounded'
-        || ($this->getGameManager()->getOption(StandardRuleset::RULE_COMEBACK) == 'allowed' && empty($this->getRuler()))) {
+      elseif ($this->getGameManager()
+          ->getOption(StandardRuleset::RULE_COMEBACK) == 'surrounded'
+        || ($this->getGameManager()
+            ->getOption(StandardRuleset::RULE_COMEBACK) == 'allowed' && empty($this->getRuler()))
+      ) {
         if ($faction->getStatus() == Faction::STATUS_SURROUNDED) {
           $control_leader = $faction->checkLeaderFreedom();
           if ($control_leader) {
@@ -549,8 +554,11 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
           // lors de la prise de pouvoir, retrait de l'ancien chef.
           $pieces = $faction->getPieces();
           foreach ($pieces as $piece) {
-            if ($this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control'
-              && $piece->isAlive() && $piece->getDescription()->hasHabilityMustLive()) {
+            if ($this->getGameManager()
+                ->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control'
+              && $piece->isAlive() && $piece->getDescription()
+                ->hasHabilityMustLive()
+            ) {
               $event = new Event(new GlossaryTerm(Glossary::EVENT_ELIMINATION, array('!piece_id' => $piece)));
               $event->executeChange(new PieceChange($piece, 'alive', TRUE, FALSE));
               $this->getCurrentTurn()->logEvent($event);
@@ -561,7 +569,9 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
         }
       }
     }
-    elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_VASSALIZATION) != 'full_control') {
+    elseif ($this->getGameManager()
+        ->getOption(StandardRuleset::RULE_VASSALIZATION) != 'full_control'
+    ) {
       foreach ($this->getFactions() as $faction) {
         if (!$faction->isAlive()) {
           $allowed_statuses = array(
@@ -569,7 +579,9 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
             Faction::STATUS_WITHDRAW,
             Faction::STATUS_SURROUNDED,
           );
-          if (in_array($faction->getStatus(), $allowed_statuses) && $faction->getControl()->getId() != $faction->getId()) {
+          if (in_array($faction->getStatus(), $allowed_statuses) && $faction->getControl()
+              ->getId() != $faction->getId()
+          ) {
             $faction->setControl($faction);
           }
         }
@@ -641,16 +653,20 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
     $scheme_size = count($this->factions) * 2;
     $turn_scheme = array();
     $events = array();
-    $peace_negociation = $this->getGameManager()->getStatus() == StatusEnum::STATUS_DRAW_PROPOSAL;
+    $peace_negociation = $this->getGameManager()
+        ->getStatus() == StatusEnum::STATUS_DRAW_PROPOSAL;
     foreach ($this->factions as $faction) {
-      if ($faction->isAlive() && $faction->getControl()->getId() == $faction->getId()) {
+      if ($faction->isAlive() && $faction->getControl()
+          ->getId() == $faction->getId()
+      ) {
         $nb_factions++;
       }
       $turn_scheme[$faction->getStartOrder() * 2 - 1] = array(
         "side" => $faction->getId(),
         "type" => Cell::TYPE_STANDARD,
         "played" => FALSE,
-        "playable" => $faction->getControl()->getId() == $faction->getId() && (!$peace_negociation || $peace_negociation && $faction->getDrawStatus() == Faction::DRAW_STATUS_UNDECIDED),
+        "playable" => $faction->getControl()
+            ->getId() == $faction->getId() && (!$peace_negociation || $peace_negociation && $faction->getDrawStatus() == Faction::DRAW_STATUS_UNDECIDED),
         "alive" => $faction->isAlive(),
         "new_round" => FALSE,
       );
@@ -685,7 +701,8 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
     $this->findRuler();
     if (!empty($this->ruler)) {
       if ($nb_factions > 2) {
-        $ruler_key = $this->findFactionById($this->ruler)->getStartOrder() * 2 - 2;
+        $ruler_key = $this->findFactionById($this->ruler)
+            ->getStartOrder() * 2 - 2;
         while (isset($turn_scheme[$ruler_key])) {
           if ($turn_scheme[$ruler_key]['alive']) {
             $turn_scheme[$ruler_key]['exclude'][] = $this->ruler;
@@ -693,7 +710,8 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
           }
           $ruler_key = $ruler_key - 2;
         }
-        $ruler_key = $this->findFactionById($this->ruler)->getStartOrder() * 2 - 2 + $scheme_size;
+        $ruler_key = $this->findFactionById($this->ruler)
+            ->getStartOrder() * 2 - 2 + $scheme_size;
         while (isset($turn_scheme[$ruler_key])) {
           if ($turn_scheme[$ruler_key]['alive'] && $turn_scheme[$ruler_key]['side'] != $this->ruler) {
             $turn_scheme[$ruler_key]['exclude'][] = $this->ruler;
@@ -734,8 +752,11 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
             // après avoir tué un chef ennemi
             continue;
           }
-          elseif ((isset($last_turn['move']['destination']) && $this->findCellByName($last_turn['move']['destination'])->getType() == Cell::TYPE_THRONE)
-          || (isset($last_turn['move']['origin']) && $this->findCellByName($last_turn['move']['origin'])->getType() == Cell::TYPE_THRONE)) {
+          elseif ((isset($last_turn['move']['destination']) && $this->findCellByName($last_turn['move']['destination'])
+                ->getType() == Cell::TYPE_THRONE)
+            || (isset($last_turn['move']['origin']) && $this->findCellByName($last_turn['move']['origin'])
+                ->getType() == Cell::TYPE_THRONE)
+          ) {
             // Un camp ne peut pas jouer immédiatement après avoir
             // acquis ou quitté le pouvoir
             continue;
@@ -789,7 +810,10 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
         $can_move = TRUE;
       }
     }
-    if (!$can_move && $this->getPlayingFaction()->getSkippedTurns() == $this->getGameManager()->getOption(StandardRuleset::GAMEPLAY_ELEMENT_SKIPPED_TURNS)) {
+    if (!$can_move && $this->getPlayingFaction()
+        ->getSkippedTurns() == $this->getGameManager()
+        ->getOption(StandardRuleset::GAMEPLAY_ELEMENT_SKIPPED_TURNS)
+    ) {
       $this->getPlayingFaction()->withdraw();
     }
     return $this;
@@ -802,7 +826,9 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
     $nb_alive = 0;
     /* @var $faction Faction */
     foreach ($this->getFactions() as $faction) {
-      if ($faction->isAlive() && $faction->getControl()->getId() == $faction->getId()) {
+      if ($faction->isAlive() && $faction->getControl()
+          ->getId() == $faction->getId()
+      ) {
         $nb_alive++;
       }
     }
@@ -823,7 +849,10 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
   public function findNeighbourCells(Cell $cell, $use_diagonals = TRUE) {
     $next_positions = array();
     foreach ($cell->getNeighbours() as $direction_key => $neighbour) {
-      $direction = $this->getGameManager()->getDisposition()->getGrid()->getDirection($direction_key);
+      $direction = $this->getGameManager()
+        ->getDisposition()
+        ->getGrid()
+        ->getDirection($direction_key);
       if ($use_diagonals || !$direction['diagonal']) {
         $next_positions[] = array(
           'x' => $neighbour->getX(),
@@ -871,7 +900,8 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
           }
           // Un leader mort peut être placé au pouvoir si variante activée :
           elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_EXTRA_INTERACTIONS) == 'extended' && $murder
-            && $piece->getDescription()->hasHabilityAccessThrone()) {
+            && $piece->getDescription()->hasHabilityAccessThrone()
+          ) {
             $freecells[$key] = $cell;
           }
         }
@@ -892,7 +922,8 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
           if (!empty($event['changes'])) {
             foreach ($event['changes'] as $change) {
               if ($change['className'] == 'Djambi\\Gameplay\\FactionChange' && $change['change'] == 'alive'
-                  && $change['newValue'] === FALSE && !isset($eliminations[$change['object']])) {
+                && $change['newValue'] === FALSE && !isset($eliminations[$change['object']])
+              ) {
                 $eliminations[$change['object']] = $turn['id'];
               }
             }

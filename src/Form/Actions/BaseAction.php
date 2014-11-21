@@ -10,7 +10,6 @@ namespace Drupal\djambi\Form\Actions;
 
 
 use Djambi\Enums\StatusEnum;
-use Djambi\Exceptions\DjambiBaseException;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\Core\StringTranslation\StringTranslationTrait;
 use Drupal\djambi\Form\BaseGameForm;
@@ -39,10 +38,7 @@ abstract class BaseAction implements ActionInterface  {
       $this->addClass('button--' . static::ACTION_NAME);
     }
     $this->submit = array('::submitForm');
-    $this->validate = array(
-      '::validateForm',
-      array($this, 'validate'),
-    );
+    $this->validate = array('::validateForm', array($this, 'validate'));
     $this->addValidateField('turn_id');
   }
 
@@ -131,7 +127,7 @@ abstract class BaseAction implements ActionInterface  {
     $this->classes[] = $class;
   }
 
-  protected function raiseError(FormStateInterface $form_state, DjambiBaseException $exception) {
+  protected function raiseError(FormStateInterface $form_state, \Exception $exception) {
     $form_state->setErrorByName(static::ACTION_NAME, $this->t('Invalid action fired : @exception.', array(
       '@exception' => $exception->getMessage(),
     )));

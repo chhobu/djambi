@@ -1,0 +1,9 @@
+play djambi sandbox game:
+  title: 'Play Djambi sandbox game'
+  description: 'Play a single player Djambi sandbox game.'
+create multiplayer djambi game:
+  title: 'Create Djambi multiplayer game'
+  description: 'Create a new Djambi online game with other human players.'
+join multiplayer djambi game:
+  title: 'Join an existing Djambi mutliplayer game'
+  description: 'Join a Djambi multiplayer game created by another player.'

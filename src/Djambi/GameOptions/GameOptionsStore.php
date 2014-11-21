@@ -1,7 +1,7 @@
 <?php
 namespace Djambi\GameOptions;
 
-use Djambi\Exceptions\GameOptionInvalidException;
+use Djambi\GameOptions\Exceptions\GameOptionInvalidException;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
 
@@ -46,11 +46,15 @@ class GameOptionsStore implements ArrayableInterface {
 
   /**
    * Récupère une option à partir de son nom et de son type.
-   *
-   * @param string $name
+
+
+*
+*@param string $name
    * @param string $type
-   *
-   * @throws \Djambi\Exceptions\GameOptionInvalidException
+
+
+*
+*@throws \Djambi\GameOptions\Exceptions\GameOptionInvalidException
    * @return BaseGameOption
    */
   public function retrieve($name, $type = NULL) {

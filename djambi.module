@@ -2,26 +2,6 @@
 \Drupal::service('class_loader')->add('Djambi', array(__DIR__ . '/src'));
 
 /**
- * Implements hook_permission().
- */
-function djambi_permission() {
-  return array(
-    'play djambi sandbox game' => array(
-      'title' => t('Play Djambi sandbox game'),
-      'description' => t('Play a single player Djambi sandbox game.'),
-    ),
-    'create multiplayer djambi game' => array(
-      'title' => t('Create Djambi multiplayer game'),
-      'description' => t('Create a new Djambi online game with other human players.')
-    ),
-    'join multiplayer djambi game' => array(
-      'title' => t('Join an existing Djambi mutliplayer game'),
-      'description' => t("Join a Djambi multiplayer game created by another player."),
-    ),
-  );
-}
-
-/**
  * Implements hook_theme().
  */
 function djambi_theme() {
@@ -90,6 +70,6 @@ function djambi_theme() {
 function djambi_help($route_name) {
   switch($route_name) {
     case('djambi.sandbox'):
-      return '<p>' . t("Welcome to Djambi training area. You can play here a Djambi game where you control successively all sides : this way,  you will be able to learn Djambi basic rules, experiment new tactics or play with (future ex-)friends in a hot chair mode.") . '</p>';
+      return '<p>' . t("Welcome to Djambi dojo room. You can play here a Djambi game where you control successively all sides to learn Djambi basic rules, to experiment new tactics or to play with (future ex-)friends in a hot chair mode.") . '</p>';
   }
 }

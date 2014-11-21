@@ -6,8 +6,8 @@
 
 namespace Djambi\Players;
 
-use Djambi\Exceptions\PlayerNotFoundException;
-use Djambi\Exceptions\PlayerInvalidException;
+use Djambi\Players\Exceptions\PlayerNotFoundException;
+use Djambi\Players\Exceptions\PlayerInvalidException;
 use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Gameplay\Faction;
 use Djambi\Persistance\ArrayableInterface;
@@ -83,12 +83,16 @@ abstract class BasePlayer implements PlayerInterface, ArrayableInterface {
 
   /**
    * Récupère un objet de type DjambiPlayer à partir d'un tableau de données.
-   *
-   * @param array $data
+
+
+*
+*@param array $data
    *   Tableau de données
    * @param array $context
-   *
-   * @throws \Djambi\Exceptions\PlayerNotFoundException
+
+
+*
+*@throws \Djambi\Players\Exceptions\PlayerNotFoundException
    * @return BasePlayer
    *   Joueur de Djambi
    */

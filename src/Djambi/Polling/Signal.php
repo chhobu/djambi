@@ -2,7 +2,7 @@
 
 namespace Djambi\Polling;
 
-use Djambi\Exceptions\PlayerNotFoundException;
+use Djambi\Players\Exceptions\PlayerNotFoundException;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\Players\HumanPlayerInterface;

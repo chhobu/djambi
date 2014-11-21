@@ -2,7 +2,7 @@
 namespace Djambi\Players;
 
 use Djambi\IA\DummyIA;
-use Djambi\Exceptions\PlayerInvalidException;
+use Djambi\Players\Exceptions\PlayerInvalidException;
 use Djambi\IA\IAInterface;
 
 class ComputerPlayer extends BasePlayer {

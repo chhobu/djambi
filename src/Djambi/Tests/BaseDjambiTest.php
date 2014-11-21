@@ -88,9 +88,6 @@ abstract class BaseDjambiTest extends \PHPUnit_Framework_TestCase {
    * @param String $destination
    * @param array $target_interactions
    * @param bool $is_completed
-   *
-   * @throws \Djambi\Exceptions\DisallowedActionException
-   * @throws \Djambi\Exceptions\IllogicMoveException
    */
   protected function doMove($piece_id, $destination, $target_interactions = array(), $is_completed = TRUE) {
     $this->log = array();

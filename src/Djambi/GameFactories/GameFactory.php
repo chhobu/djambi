@@ -3,7 +3,7 @@
 namespace Djambi\GameFactories;
 
 
-use Djambi\Exceptions\UnknownGameManagerException;
+use Djambi\GameManagers\Exceptions\UnknownGameManagerException;
 use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameManagers\PlayableGameInterface;
@@ -99,8 +99,7 @@ class GameFactory implements GameFactoryInterface {
 
   /**
    * Instancie une nouvelle partie.
-
-   * @throws \Djambi\Exceptions\DjambiBaseException
+   * @throws UnknownGameManagerException
    * @return PlayableGameInterface
    */
   public function createGameManager() {

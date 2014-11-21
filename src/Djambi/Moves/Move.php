@@ -3,7 +3,7 @@
 namespace Djambi\Moves;
 
 use Djambi\Exceptions\DisallowedActionException;
-use Djambi\Exceptions\IllogicMoveException;
+use Djambi\Moves\Exceptions\IllogicMoveException;
 use Djambi\Gameplay\BattlefieldInterface;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Event;

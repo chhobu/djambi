@@ -6,7 +6,7 @@
 
 namespace Djambi\GameOptions;
 
-use Djambi\Exceptions\GameOptionInvalidException;
+use Djambi\GameOptions\Exceptions\GameOptionInvalidException;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
 

@@ -3,7 +3,7 @@ namespace Drupal\djambi\Form;
 
 use Djambi\Enums\StatusEnum;
 use Djambi\Exceptions\DisallowedActionException;
-use Djambi\Exceptions\DjambiBaseException;
+use Djambi\Exceptions\DjambiExceptionInterface;
 use Djambi\GameFactories\GameFactory;
 use Djambi\Gameplay\Faction;
 use Djambi\Moves\Move;
@@ -344,7 +344,7 @@ class SandboxGameForm extends BaseGameForm {
       }
       $grid->getCurrentTurn()->getMove()->selectPiece($piece);
     }
-    catch (DjambiBaseException $exception) {
+    catch (DjambiExceptionInterface $exception) {
       $form_state->setErrorByName('cells', $this->t('@message Please choose a movable piece.',
         array('@message' => $exception->getMessage())));
     }
@@ -389,7 +389,7 @@ class SandboxGameForm extends BaseGameForm {
     catch (DisallowedActionException $exception) {
       $form_state->setErrorByName('cells', $this->t('You have selected an unreachable cell. Please choose a valid destination.'));
     }
-    catch (DjambiBaseException $exception) {
+    catch (DjambiExceptionInterface $exception) {
       $form_state->setErrorByName('cells', $this->t('Invalid destination detected. Please choose an empty cell.'));
     }
   }
@@ -437,7 +437,7 @@ class SandboxGameForm extends BaseGameForm {
       try {
         $move->getFirstInteraction()->executeChoice($grid->findCellByName($values['cells']));
       }
-      catch (DjambiBaseException $exception) {
+      catch (DjambiExceptionInterface $exception) {
         $form_state->setErrorByName('cells', $this->t('Invalid choice detected : @exception. Please select an other option.',
           array('@exception' => $exception->getMessage())));
       }

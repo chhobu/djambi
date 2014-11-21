@@ -9,9 +9,8 @@ namespace Djambi\GameManagers;
 
 use Djambi\Enums\Status;
 use Djambi\Enums\StatusEnum;
-use Djambi\Exceptions\GameNotFoundException;
-use Djambi\Exceptions\GameOptionInvalidException;
-use Djambi\Exceptions\GridInvalidException;
+use Djambi\GameManagers\Exceptions\GameNotFoundException;
+use Djambi\GameOptions\Exceptions\GameOptionInvalidException;
 use Djambi\GameDispositions\BaseGameDisposition;
 use Djambi\Gameplay\Battlefield;
 use Djambi\Gameplay\BattlefieldInterface;
@@ -101,7 +100,6 @@ abstract class BaseGameManager implements PlayableGameInterface, ArrayableInterf
    * @param BaseGameDisposition $disposition
    * @param String $battlefield_class
    *
-   * @throws GridInvalidException
    * @return static
    */
   public static function create($players, $id, BaseGameDisposition $disposition, $battlefield_class = NULL) {

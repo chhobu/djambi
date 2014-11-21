@@ -1,7 +1,7 @@
 <?php
 namespace Drupal\djambi\Players;
 
-use Djambi\Exceptions\PlayerInvalidException;
+use Djambi\Players\Exceptions\PlayerInvalidException;
 use Djambi\Players\HumanPlayer;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\djambi\Utils\GameUI;

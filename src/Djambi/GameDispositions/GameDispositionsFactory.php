@@ -1,7 +1,7 @@
 <?php
 namespace Djambi\GameDispositions;
 
-use Djambi\Exceptions\DispositionNotFoundException;
+use Djambi\GameDispositions\Exceptions\DispositionNotFoundException;
 use Djambi\Gameplay\Faction;
 use Djambi\Grids\GridInterface;
 use Djambi\PieceDescriptions\BasePieceDescription;
@@ -20,13 +20,17 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
 
   /**
    * Charge une disposition de jeu.
-   *
-   * @param string $code
+
+
+*
+*@param string $code
    *   Code de la disposition (par exemple : 3hex)
    * @param array $scheme_settings
    *   Tableau associatif contenant les options de la disposition
-   *
-   * @throws \Djambi\Exceptions\DispositionNotFoundException
+
+
+*
+*@throws \Djambi\GameDispositions\Exceptions\DispositionNotFoundException
    * @return BaseGameDisposition
    *   Objet étendant la classe abstraite DjambiGameDisposition
    */

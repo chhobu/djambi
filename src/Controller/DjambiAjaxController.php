@@ -1,7 +1,7 @@
 <?php
 namespace Drupal\djambi\Controller;
 
-use Djambi\Exceptions\GameNotFoundException;
+use Djambi\GameManagers\Exceptions\GameNotFoundException;
 use Djambi\GameManagers\PlayableGameInterface;
 use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Form\FormInterface;

@@ -9,7 +9,7 @@
 namespace Djambi\Persistance;
 
 
-use Djambi\Exceptions\UnpersistableObjectException;
+use Djambi\Persistance\Exceptions\UnpersistableObjectException;
 
 trait PersistantDjambiTrait {
 

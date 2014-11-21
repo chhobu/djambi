@@ -9,7 +9,7 @@ djambi.sandbox:
 djambi.ajax:
   path: '/djambi/ajax'
   defaults:
-    _content: '\Drupal\djambi\Controller\DjambiAjaxController::content'
+    _controller: '\Drupal\djambi\Controller\DjambiAjaxController::content'
   options:
     _theme: ajax_base_page
   requirements:

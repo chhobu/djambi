@@ -9,7 +9,6 @@
 namespace Djambi\Enums;
 
 
-use Djambi\Exceptions\StatusNotFoundException;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
