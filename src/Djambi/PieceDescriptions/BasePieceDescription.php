@@ -1,7 +1,7 @@
 <?php
 namespace Djambi\PieceDescriptions;
 
-use Djambi\Exceptions\GridInvalidException;
+use Djambi\Grids\Exceptions\InvalidGridException;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\Strings\GlossaryTerm;
@@ -84,7 +84,7 @@ abstract class BasePieceDescription implements ArrayableInterface {
 
   protected function setStartPosition($position) {
     if (!is_array($position) || !isset($position['x']) || !isset($position['y'])) {
-      throw new GridInvalidException("Invalid start position for piece " . $this->getShortname());
+      throw new InvalidGridException("Invalid start position for piece " . $this->getShortname());
     }
     $this->startPosition = $position;
     return $this;

@@ -15,8 +15,8 @@ use Djambi\Strings\Glossary;
 use Drupal\Core\Form\FormBase;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Players\Drupal8Player;
-use Drupal\djambi\Services\ShortTempStore;
 use Drupal\djambi\Utils\GameUI;
+use Drupal\user\TempStore;
 use Symfony\Component\DependencyInjection\ContainerInterface;
 
 abstract class BaseGameForm extends FormBase implements GameFormInterface {
@@ -30,7 +30,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
   /** @var Drupal8Player */
   protected $currentPlayer;
 
-  /** @var ShortTempStore */
+  /** @var TempStore */
   protected $tmpStore;
 
   /**
@@ -46,11 +46,11 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     // Gestion de l'utilisateur courant
     $form->currentPlayer = Drupal8Player::fromCurrentUser($form->currentUser(), $form->getRequest());
     // Utilisation d'un objet de type KeyValueStore
-    $form->tmpStore = $container->get('djambi.shorttempstore')->get('djambi', $form->getCurrentPlayer()->getId());
+    $form->tmpStore = $container->get('djambi.tempstore')->getDjambiCollection($form->getCurrentPlayer()->getId());
     return $form;
   }
 
-  public static function retrieve(Drupal8Player $player, PlayableGameInterface $game_manager, ShortTempStore $store) {
+  public static function retrieve(Drupal8Player $player, PlayableGameInterface $game_manager, TempStore $store) {
     $form = new static();
     $form->tmpStore = $store;
     $form->currentPlayer = $player;
@@ -134,7 +134,6 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
   }
 
   protected function updateStoredGameManager() {
-    $this->getTmpStore()->setExpire(60 * 60);
     $this->getTmpStore()->set($this->getFormId(), $this->getGameManager());
   }
 
@@ -176,7 +175,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     $this->updateStoredGameManager();
   }
 
-  protected function buildFormDisplaySettings(&$form, FormStateInterface $form_state) {
+  protected function buildFormDisplaySettings(&$form) {
     $settings = $this->getCurrentPlayer()->getDisplaySettings();
     if (!empty($_SESSION['djambi']['extend_display_fieldset'])) {
       $open = TRUE;

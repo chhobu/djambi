@@ -67,9 +67,22 @@ function djambi_theme() {
   );
 }
 
+/**
+ *  Implements hook_help().
+ */
 function djambi_help($route_name) {
   switch($route_name) {
     case('djambi.sandbox'):
       return '<p>' . t("Welcome to Djambi dojo room. You can play here a Djambi game where you control successively all sides to learn Djambi basic rules, to experiment new tactics or to play with (future ex-)friends in a hot chair mode.") . '</p>';
+  }
+}
+
+
+/**
+ *  Implements hook_cron().
+ */
+function djambi_cron() {
+  if (\Drupal::service('djambi.tempstore') instanceof \Drupal\djambi\Services\DjambiTempStoreFactory) {
+    \Drupal::service('djambi.tempstore')->garbageCollection();
   }
 }

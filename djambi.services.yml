@@ -1,6 +1,9 @@
 services:
-  djambi.shorttempstore:
-    class: Drupal\djambi\Services\ShortTempStoreFactory
-    tags:
-      - { name: needs_destruction }
-    arguments: ['@serialization.phpserialize', '@database', '@lock']
+  djambi.tempstore:
+    class: Drupal\djambi\Services\DjambiTempStoreFactory
+    arguments: ['@serialization.phpigbinaryserialize', '@database', '@lock', '%djambi.tempstore.expire%']
+  serialization.phpigbinaryserialize:
+      class: Drupal\djambi\Services\PhpIgbinarySerialize
+
+parameters:
+  djambi.tempstore.expire: 3600

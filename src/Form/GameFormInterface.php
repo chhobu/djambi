@@ -46,4 +46,10 @@ interface GameFormInterface {
   public function submitDisplaySettings(array $form, FormStateInterface $form_state);
 
   public function submitResetDisplaySettings(array $form, FormStateInterface $form_state);
+
+  public function validatePieceDestination(array &$form, FormStateInterface $form_state);
+
+  public function validateInteractionChoice(&$form, FormStateInterface $form_state);
+
+  public function validatePieceSelection(array &$form, FormStateInterface $form_state);
 }

@@ -11,6 +11,7 @@ namespace Djambi\Gameplay;
 
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
+use Djambi\Strings\GlossaryTerm;
 
 abstract class BaseChange implements ArrayableInterface {
 
@@ -24,6 +25,8 @@ abstract class BaseChange implements ArrayableInterface {
   protected $oldValue;
   /** @var mixed */
   protected $newValue;
+  /** @var GlossaryTerm */
+  protected $description;
 
   protected function prepareArrayConversion() {
     $this->addDependantObjects(array(
@@ -33,6 +36,7 @@ abstract class BaseChange implements ArrayableInterface {
       'change',
       'oldValue',
       'newValue',
+      'description',
     ));
     return $this;
   }
@@ -53,11 +57,12 @@ abstract class BaseChange implements ArrayableInterface {
     return call_user_func($array['className'] . '::fromArray', $array, $context);
   }
 
-  public function __construct(ArrayableInterface $object, $change, $old_value, $new_value) {
+  public function __construct(ArrayableInterface $object, $change, $old_value, $new_value, GlossaryTerm $description = NULL) {
     $this->object = $object;
     $this->change = $change;
     $this->oldValue = $old_value;
     $this->newValue = $new_value;
+    $this->description = $description;
   }
 
   public function getObject() {
@@ -74,6 +79,10 @@ abstract class BaseChange implements ArrayableInterface {
 
   public function getNewValue() {
     return $this->newValue;
+  }
+
+  public function getDescription() {
+    return $this->description;
   }
 
   public function execute() {

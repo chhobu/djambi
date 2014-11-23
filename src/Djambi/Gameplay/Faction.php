@@ -12,8 +12,6 @@ use Djambi\Exceptions\DisallowedActionException;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
-use Djambi\Players\ComputerPlayer;
-use Djambi\Players\HumanPlayer;
 use Djambi\Players\HumanPlayerInterface;
 use Djambi\Players\PlayerInterface;
 use Djambi\Strings\Glossary;
@@ -355,7 +353,13 @@ class Faction implements ArrayableInterface {
       $event = new Event(new GlossaryTerm(Glossary::EVENT_FACTION_GAME_OVER,
         array('faction_id' => $this->getId())), Event::LOG_LEVEL_MAJOR);
       $event->logChange(new FactionChange($this, 'alive', TRUE, FALSE));
-      $event->logChange(new FactionChange($this, 'status', $this->getStatus(), $user_status));
+      if ($user_status == self::STATUS_WITHDRAW) {
+        $description = new GlossaryTerm(Glossary::CHANGE_WITHDRAWED);
+      }
+      else {
+        $description = NULL;
+      }
+      $event->logChange(new FactionChange($this, 'status', $this->getStatus(), $user_status, $description));
       $this->getBattlefield()->getCurrentTurn()->logEvent($event);
     }
     $this->setStatus($user_status);
@@ -377,7 +381,7 @@ class Faction implements ArrayableInterface {
   }
 
   /**
-   * @return HumanPlayer|ComputerPlayer
+   * @return PlayerInterface
    */
   public function getPlayer() {
     return $this->player;
@@ -443,7 +447,8 @@ class Faction implements ArrayableInterface {
       '!faction_id' => $this->getId(),
       '!nb' => $this->getSkippedTurns(),
     )), Event::LOG_LEVEL_NORMAL);
-    $event->logChange(new FactionChange($this, 'skippedTurns', $this->getSkippedTurns() - 1, $this->getSkippedTurns()));
+    $event->logChange(new FactionChange($this, 'skippedTurns', $this->getSkippedTurns() - 1, $this->getSkippedTurns(),
+      new GlossaryTerm(Glossary::CHANGE_TURN_SKIPPED)));
     $this->getBattlefield()->getCurrentTurn()->logEvent($event);
     $this->getBattlefield()->changeTurn();
     return $this;
@@ -481,7 +486,8 @@ class Faction implements ArrayableInterface {
     )));
     $event->logChange(new FactionChange($this, 'lastDrawProposal', $old_draw_value, $this->getLastDrawProposal()));
     $this->setDrawStatus(self::DRAW_STATUS_PROPOSED);
-    $event->logChange(new FactionChange($this, 'drawStatus', NULL, static::DRAW_STATUS_PROPOSED));
+    $event->logChange(new FactionChange($this, 'drawStatus', NULL, static::DRAW_STATUS_PROPOSED,
+      new GlossaryTerm(Glossary::CHANGE_DRAW_PROPOSED)));
     foreach ($this->getBattlefield()->getFactions() as $faction) {
       if ($faction->isAlive() && $faction->getId() != $this->getId() && $faction->isSelfControlled()) {
         $faction->setDrawStatus(static::DRAW_STATUS_UNDECIDED);
@@ -502,7 +508,8 @@ class Faction implements ArrayableInterface {
       '!faction_id' => $this->getId(),
     )));
     $this->setDrawStatus(self::DRAW_STATUS_ACCEPTED);
-    $event->logChange(new FactionChange($this, 'drawStatus', self::DRAW_STATUS_UNDECIDED, self::DRAW_STATUS_ACCEPTED));
+    $event->logChange(new FactionChange($this, 'drawStatus', self::DRAW_STATUS_UNDECIDED, self::DRAW_STATUS_ACCEPTED,
+      new GlossaryTerm(Glossary::CHANGE_DRAW_ACCEPTED)));
     $this->getBattlefield()->getCurrentTurn()->logEvent($event);
     $factions = $this->getBattlefield()->getFactions();
     $alive_factions = array();
@@ -535,7 +542,8 @@ class Faction implements ArrayableInterface {
     $factions = $this->getBattlefield()->getFactions();
     foreach ($factions as $faction) {
       $this->getBattlefield()->findFactionById($faction->getId())->setDrawStatus(NULL);
-      $event->logChange(new FactionChange($faction, 'drawStatus', static::DRAW_STATUS_UNDECIDED, NULL));
+      $event->logChange(new FactionChange($faction, 'drawStatus', static::DRAW_STATUS_UNDECIDED, NULL,
+        new GlossaryTerm(Glossary::CHANGE_DRAW_REJECTED)));
     }
     $this->getBattlefield()->getCurrentTurn()->logEvent($event);
     $this->getBattlefield()->prepareTurn(TRUE);

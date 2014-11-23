@@ -79,7 +79,7 @@ class SandboxGameForm extends BaseGameForm {
         break;
     }
 
-    $this->buildFormDisplaySettings($form, $form_state);
+    $this->buildFormDisplaySettings($form);
 
     return $form;
   }
@@ -198,34 +198,12 @@ class SandboxGameForm extends BaseGameForm {
       return NULL;
     }
     $last_moves = array();
-    $past_turns = $this->getGameManager()->getBattlefield()->getPastTurns();
+    $battlefield = $this->getGameManager()->getBattlefield();
+    $past_turns = $battlefield->getPastTurns();
     krsort($past_turns);
     foreach ($past_turns as $turn) {
       if ($current_round == $turn['round'] || ($current_round - 1 == $turn['round'] && $current_play_order <= $turn['playOrderKey'])) {
-        $submoves = array();
-        if (!empty($turn['events'])) {
-          foreach ($turn['events'] as $event) {
-            if (!empty($event['changes'])) {
-              foreach ($event['changes'] as $change) {
-                if ($change['change'] == 'lastDrawProposal') {
-                  $submoves[] = $this->t('ask for a draw...');
-                }
-                elseif ($change['change'] == 'drawStatus' && $change['newValue'] == Faction::DRAW_STATUS_ACCEPTED) {
-                  $submoves[] = $this->t('draw accepted');
-                }
-                elseif ($change['change'] == 'drawStatus' && $change['newValue'] == Faction::DRAW_STATUS_REJECTED) {
-                  $submoves[] = $this->t('draw rejected');
-                }
-                if ($change['change'] == 'status' && $change['newValue'] == Faction::STATUS_WITHDRAW) {
-                  $submoves[] = $this->t('withdrawal !');
-                }
-                if ($change['change'] == 'skippedTurns') {
-                  $submoves[] = $this->t('turn skipped...');
-                }
-              }
-            }
-          }
-        }
+        $submoves = $this->addSubmovesDescriptions($turn);
         if (!empty($turn['move'])) {
           Move::log($submoves, $turn);
         }
@@ -237,11 +215,8 @@ class SandboxGameForm extends BaseGameForm {
         $move = array(
           '#theme' => 'djambi_last_move_item',
           '#time' => \Drupal::service('date.formatter')->format($turn['end'], 'time'),
-          '#side' => GameUI::printFactionFullName($this->getGameManager()
-            ->getBattlefield()
-            ->findFactionById($turn['actingFaction'])
-          ),
-          '#description' => drupal_render($submoves_markup),
+          '#side' => GameUI::printFactionFullName($battlefield->findFactionById($turn['actingFaction'])),
+          '#description' => \Drupal::service('renderer')->render($submoves_markup),
         );
         $last_moves[] = array(
           '#wrapper_attributes' => array('class' => array('djambi-last-move-item')),
@@ -252,7 +227,24 @@ class SandboxGameForm extends BaseGameForm {
     return $last_moves;
   }
 
+  protected function addSubmovesDescriptions($turn) {
+    $submoves = array();
+    if (!empty($turn['events'])) {
+      foreach ($turn['events'] as $event) {
+        if (!empty($event['changes'])) {
+          foreach ($event['changes'] as $change) {
+            if (!empty($change['description'])) {
+              $submoves[] = GlossaryTerm::fromArray($change['description']);
+            }
+          }
+        }
+      }
+    }
+    return $submoves;
+  }
+
   public function validateForm(array &$form, FormStateInterface $form_state) {
+    parent::validateForm($form, $form_state);
     $current_turn = $this->getGameManager()->getBattlefield()->getCurrentTurn();
     $current_turn_id = !empty($current_turn) ? $current_turn->getId() : NULL;
     $input = $form_state->getUserInput();
@@ -448,7 +440,7 @@ class SandboxGameForm extends BaseGameForm {
     }
   }
 
-  public function buildFormDrawProposal(array &$grid_form) {
+  protected function buildFormDrawProposal(array &$grid_form) {
     $peacemonger_faction = NULL;
     $accepted_factions = array();
     $undecided_factions = array();
@@ -486,7 +478,7 @@ class SandboxGameForm extends BaseGameForm {
     DrawAccept::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
   }
 
-  public function buildFormFinished(array &$grid_form) {
+  protected function buildFormFinished(array &$grid_form) {
     $grid_form['actions'] = array('#type' => 'actions');
     Restart::addButton($this, $grid_form['actions'], $this->getAjaxSettings());
   }

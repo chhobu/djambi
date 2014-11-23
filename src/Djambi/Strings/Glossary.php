@@ -84,6 +84,12 @@ class Glossary {
   const DISPOSITION_4STD_DESCRIPTION = "4 players game on a 9x9 cells standard grid.";
   const DISPOSITION_3HEX_DESCRIPTION = "3 players game on an hexagonal grid.";
 
+  const CHANGE_DRAW_REJECTED = 'draw rejected';
+  const CHANGE_DRAW_ACCEPTED = 'draw accepted';
+  const CHANGE_DRAW_PROPOSED = 'ask for a draw...';
+  const CHANGE_TURN_SKIPPED = 'turn skipped...';
+  const CHANGE_WITHDRAWED = 'withdrawal !';
+
   /** @var Glossary */
   protected static $instance;
   protected $translaterHandler = 'strtr';
