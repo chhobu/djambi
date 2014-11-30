@@ -32,4 +32,9 @@ class Restart extends BaseAction {
   public function validate(&$form, FormStateInterface $form_state) {
     $this->getForm()->resetGameManager();
   }
+
+  protected function isActive() {
+    return !empty($this->getForm()->getGameManager()->getBattlefield()->getPastTurns());
+  }
+
 }
