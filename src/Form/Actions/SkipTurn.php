@@ -23,23 +23,25 @@ class SkipTurn extends BaseAction {
     parent::__construct($form);
   }
 
+  protected function getSkippedTurnsRule() {
+    return $this->getForm()->getGameManager()->getOption(StandardRuleset::GAMEPLAY_ELEMENT_SKIPPED_TURNS);
+  }
+
   protected function isPrinted() {
-    $rule_skip_turn = $this->getForm()->getGameManager()->getOption(StandardRuleset::GAMEPLAY_ELEMENT_SKIPPED_TURNS);
-    return $rule_skip_turn != 0 && parent::isPrinted();
+    return $this->getSkippedTurnsRule() != 0 && parent::isPrinted();
   }
 
   protected function isActive() {
     $grid = $this->getForm()->getGameManager()->getBattlefield();
     $can_skip = $grid->getPlayingFaction()->canSkipTurn();
-    $rule_skip_turn = $this->getForm()->getGameManager()->getOption(StandardRuleset::GAMEPLAY_ELEMENT_SKIPPED_TURNS);
     if (!$grid->getPlayingFaction()->canSkipTurn()) {
       $label = $this->t('You cannot skip turns anymore');
     }
-    elseif ($rule_skip_turn == -1) {
+    elseif ($this->getSkippedTurnsRule() == -1) {
       $label = $this->t('Skip turn');
     }
     else {
-      $label = $this->formatPlural($rule_skip_turn - $grid->getPlayingFaction()->getSkippedTurns(),
+      $label = $this->formatPlural($this->getSkippedTurnsRule() - $grid->getPlayingFaction()->getSkippedTurns(),
         'Skip turn (only 1 allowed)', 'Skip turn (still @count allowed)');
     }
     $this->setTitle($label);

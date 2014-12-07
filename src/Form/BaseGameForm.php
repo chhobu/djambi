@@ -206,7 +206,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
       $setting3 = GameUI::SETTING_DISPLAY_CHOICES;
       $form['display'][$setting3] = array(
         '#type' => 'checkbox',
-        '#title' => t('Display all avalaible choices below the grid'),
+        '#title' => t('Display all available choices below the grid'),
         '#default_value' => $settings[$setting3],
       );
     }

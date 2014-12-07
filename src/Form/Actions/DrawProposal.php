@@ -20,22 +20,23 @@ class DrawProposal extends BaseAction {
 
   protected function __construct(BaseGameForm $form) {
     $this->addClass('button--secondary');
-
     parent::__construct($form);
   }
 
+  protected function getDrawDelayFromRules() {
+    return $this->getForm()->getGameManager()->getOption(StandardRuleset::GAMEPLAY_ELEMENT_DRAW_DELAY);
+  }
+
   protected function isPrinted() {
-    $game = $this->getForm()->getGameManager();
-    $rule_draw_delay = $game->getOption(StandardRuleset::GAMEPLAY_ELEMENT_DRAW_DELAY);
-    return $rule_draw_delay > -1 && parent::isPrinted();
+    return $this->getDrawDelayFromRules() > -1 && parent::isPrinted();
   }
 
   protected function isActive() {
-    $game = $this->getForm()->getGameManager();
-    $rule_draw_delay = $game->getOption(StandardRuleset::GAMEPLAY_ELEMENT_DRAW_DELAY);
-    $active = $game->getBattlefield()->getPlayingFaction()->canCallForADraw();
+    $battlefield = $this->getForm()->getGameManager()->getBattlefield();
+    $active = $battlefield->getPlayingFaction()->canCallForADraw();
     if (!$active) {
-      $this->setTitle($this->formatPlural($rule_draw_delay + $game->getBattlefield()->getPlayingFaction()->getLastDrawProposal() - $game->getBattlefield()->getCurrentTurn()->getRound(),
+      $this->setTitle($this->formatPlural($this->getDrawDelayFromRules()
+        + $battlefield->getPlayingFaction()->getLastDrawProposal() - $battlefield->getCurrentTurn()->getRound(),
         'You cannot ask for a draw until next round', 'You cannot ask for a draw until @count rounds'));
     }
     else {
