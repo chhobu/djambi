@@ -46,7 +46,7 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     // Gestion de l'utilisateur courant
     $form->currentPlayer = Drupal8Player::fromCurrentUser($form->currentUser(), $form->getRequest());
     // Utilisation d'un objet de type KeyValueStore
-    $form->tmpStore = $container->get('djambi.tempstore')->getDjambiCollection($form->getCurrentPlayer()->getId());
+    $form->tmpStore = $container->get('djambi.tempstore')->get('djambi', $form->getCurrentPlayer()->getId());
     return $form;
   }
 

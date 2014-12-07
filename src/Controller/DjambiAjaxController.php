@@ -7,8 +7,8 @@ use Drupal\Core\Controller\ControllerBase;
 use Drupal\Core\Form\FormInterface;
 use Drupal\Core\Form\FormState;
 use Drupal\djambi\Players\Drupal8Player;
-use Drupal\djambi\Services\DjambiTempStoreFactory;
 use Drupal\user\TempStore;
+use Drupal\user\TempStoreFactory;
 use Symfony\Component\HttpFoundation\Request;
 use Symfony\Component\HttpKernel\Exception\HttpException;
 
@@ -38,10 +38,10 @@ class DjambiAjaxController extends ControllerBase {
 
   protected function retrieveGameManager(Request $request) {
     $stored_game_key = $request->request->get('form_id');
-    /** @var DjambiTempStoreFactory $tmp_store_factory */
+    /** @var TempStoreFactory $tmp_store_factory */
     $tmp_store_factory = \Drupal::service('djambi.tempstore');
     $this->current_player = Drupal8Player::fromCurrentUser($this->currentUser(), $request);
-    $this->store = $tmp_store_factory->getDjambiCollection($this->current_player->getId());
+    $this->store = $tmp_store_factory->get('djambi', $this->current_player->getId());
     $this->game_manager = $this->store->get($stored_game_key);
     if (empty($this->game_manager)) {
       throw new GameNotFoundException();
