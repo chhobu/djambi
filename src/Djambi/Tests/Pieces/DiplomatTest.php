@@ -10,14 +10,14 @@ namespace Djambi\Tests\Pieces;
 
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
-use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Turn;
-use Djambi\Grids\BaseGrid;
+use Djambi\Grids\GridInterface;
 use Djambi\Moves\Manipulation;
 use Djambi\Moves\Move;
 use Djambi\PieceDescriptions\Diplomat;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
+use Djambi\PieceDescriptions\PiecesContainer;
 use Djambi\Tests\BaseDjambiTest;
 
 class DiplomatTest extends BaseDjambiTest {
@@ -32,18 +32,21 @@ class DiplomatTest extends BaseDjambiTest {
 
   public function setUp() {
     $disposition_builder = GameDispositionsFactory::initiateCustomDisposition();
-    $disposition_builder->setShape(BaseGrid::SHAPE_CARDINAL);
+    $disposition_builder->setShape(GridInterface::SHAPE_CARDINAL);
     $disposition_builder->setDimensions(7, 7);
-    $disposition_builder->addSide(array(), Faction::STATUS_READY, array(
-      new Leader(NULL, self::LEADER_TEAM1_START_POSITION),
-      new Militant(NULL, self::MILITANT1_TEAM1_START_POSITION),
-      new Diplomat(NULL, self::DIPLOMAT_TEAM1_START_POSITION),
-    ));
-    $disposition_builder->addSide(array(), Faction::STATUS_READY, array(
-      new Leader(NULL, self::LEADER_TEAM2_START_POSITION),
-      new Militant(1, self::MILITANT1_TEAM2_START_POSITION),
-      new Militant(2, self::MILITANT2_TEAM2_START_POSITION),
-    ));
+
+    $container_t1 = new PiecesContainer();
+    $container_t1->addPiece(new Leader(self::LEADER_TEAM1_START_POSITION));
+    $container_t1->addPiece(new Militant(self::MILITANT1_TEAM1_START_POSITION));
+    $container_t1->addPiece(new Diplomat(self::DIPLOMAT_TEAM1_START_POSITION));
+    $disposition_builder->addSide($container_t1);
+
+    $container_t2 = new PiecesContainer();
+    $container_t2->addPiece(new Leader(self::LEADER_TEAM2_START_POSITION));
+    $container_t2->addPiece(new Militant(self::MILITANT1_TEAM2_START_POSITION));
+    $container_t2->addPiece(new Militant(self::MILITANT2_TEAM2_START_POSITION));
+    $disposition_builder->addSide($container_t2);
+
     $game_builder = new GameFactory();
     $game_builder->setDisposition($disposition_builder->deliverDisposition());
     $this->game = $game_builder->createGameManager();

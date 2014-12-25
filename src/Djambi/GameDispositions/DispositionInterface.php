@@ -17,7 +17,7 @@ interface DispositionInterface {
   /**
    * @return int
    */
-  public function getNbPlayers();
+  public static function getNbPlayers();
 
   /**
    * @return GridInterface

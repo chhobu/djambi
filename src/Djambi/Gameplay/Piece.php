@@ -13,7 +13,10 @@ use Djambi\Moves\Murder;
 use Djambi\Moves\Necromobility;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
-use Djambi\PieceDescriptions\BasePieceDescription;
+use Djambi\PieceDescriptions\Habilities\HabilityAccessThrone;
+use Djambi\PieceDescriptions\Habilities\RestrictionMove;
+use Djambi\PieceDescriptions\Habilities\RestrictionMustLive;
+use Djambi\PieceDescriptions\PieceInterface;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
@@ -28,6 +31,8 @@ class Piece implements ArrayableInterface {
 
   /* @var string $id */
   protected $id;
+  /* @var int $num */
+  protected $num;
   /* @var Faction $faction */
   protected $faction;
   /* @var string $originalFactionId */
@@ -40,7 +45,7 @@ class Piece implements ArrayableInterface {
   protected $movable = FALSE;
   /* @var Cell[] $allowableMoves */
   protected $allowableMoves = array();
-  /* @var BasePieceDescription $description */
+  /* @var PieceInterface $description */
   protected $description;
   /* @var bool $selectable */
   protected $selectable = FALSE;
@@ -52,10 +57,10 @@ class Piece implements ArrayableInterface {
       'allowableMoves' => 'name',
     ));
     $this->addPersistantProperties(array(
-      'id',
       'originalFactionId',
       'alive',
       'description',
+      'num',
     ));
     return $this;
   }
@@ -65,7 +70,7 @@ class Piece implements ArrayableInterface {
     $faction = $context['faction'];
     $description = call_user_func($array['description']['className'] . '::fromArray', $array['description'], $context);
     $cell = $faction->getBattlefield()->findCellByName($array['position']);
-    $piece = new static($description, $faction, $array['originalFactionId'], $cell, $array['alive']);
+    $piece = new static($description, $faction, $array['originalFactionId'], $array['num'], $cell, $array['alive']);
     if (!empty($array['allowableMoves'])) {
       foreach ($array['allowableMoves'] as $direction => $cell) {
         $piece->allowableMoves[$direction] = $faction->getBattlefield()->findCellByName($cell);
@@ -74,11 +79,12 @@ class Piece implements ArrayableInterface {
     return $piece;
   }
 
-  public function __construct(BasePieceDescription $piece, Faction $faction, $original_faction_id, Cell $position, $alive) {
-    $this->setDescription($piece);
+  public function __construct(PieceInterface $piece, Faction $faction, $original_faction_id, $num, Cell $position, $alive) {
+    $this->description = $piece;
+    $this->originalFactionId = $original_faction_id;
+    $this->num = $num;
+    $this->id = $original_faction_id . '-' . $piece->getShortname() . $num;
     $this->setFaction($faction);
-    $this->setOriginalFactionId($original_faction_id);
-    $this->setId($faction->getId() . '-' . $piece->getShortname());
     $this->setAlive($alive);
     $this->setPosition($position);
   }
@@ -87,18 +93,12 @@ class Piece implements ArrayableInterface {
     return $this->id;
   }
 
-  protected function setId($id) {
-    $this->id = $id;
-    return $this;
+  public function getNum() {
+    return $this->num;
   }
 
   public function getDescription() {
     return $this->description;
-  }
-
-  protected function setDescription(BasePieceDescription $description) {
-    $this->description = $description;
-    return $this;
   }
 
   public function getFaction() {
@@ -120,11 +120,6 @@ class Piece implements ArrayableInterface {
 
   public function getOriginalFactionId() {
     return $this->originalFactionId;
-  }
-
-  public function setOriginalFactionId($id) {
-    $this->originalFactionId = $id;
-    return $this;
   }
 
   public function getPosition() {
@@ -206,34 +201,30 @@ class Piece implements ArrayableInterface {
           $obstacle = FALSE;
           $next_cell = $cell;
           for ($i = 2; $obstacle == FALSE; $i++) {
-            $limited_move = $this->getDescription()->hasHabilityLimitedMove();
-            if ($limited_move && $i > $limited_move) {
-              $obstacle = TRUE;
+            $description = $this->getDescription();
+            if ($description instanceof RestrictionMove && $i > $description->getMaximumMove()) {
+              break;
             }
-            else {
-              $neighbours = $next_cell->getNeighbours();
-              if (!isset($neighbours[$direction])) {
-                $obstacle = TRUE;
+            $neighbours = $next_cell->getNeighbours();
+            if (!isset($neighbours[$direction])) {
+              break;
+            }
+            $next_cell = $neighbours[$direction];
+            $test = $this->checkAvailableMove($next_cell, $allow_interactions, !empty($force_empty_position) && $next_cell->getName() == $force_empty_position);
+            if ($test) {
+              if (!in_array($next_cell, $next_cases)) {
+                $next_cases[$direction . $i] = $next_cell;
               }
               else {
-                $next_cell = $neighbours[$direction];
-                $test = $this->checkAvailableMove($next_cell, $allow_interactions, !empty($force_empty_position) && $next_cell->getName() == $force_empty_position);
-                if ($test) {
-                  if (!in_array($next_cell, $next_cases)) {
-                    $next_cases[$direction . $i] = $next_cell;
-                  }
-                  else {
-                    $obstacle = TRUE;
-                  }
-                }
-                $next_cell_occupant = $next_cell->getOccupant();
-                if (!empty($next_cell_occupant)) {
-                  $obstacle = TRUE;
-                }
+                $obstacle = TRUE;
               }
             }
+            $next_cell_occupant = $next_cell->getOccupant();
+            if (!empty($next_cell_occupant)) {
+              $obstacle = TRUE;
+            }
           }
-          if ($cell->getType() == Cell::TYPE_THRONE && !$this->getDescription()->hasHabilityAccessThrone()) {
+          if ($cell->getType() == Cell::TYPE_THRONE && !$this->getDescription() instanceof HabilityAccessThrone) {
             unset($next_cases[$direction]);
           }
         }
@@ -254,7 +245,7 @@ class Piece implements ArrayableInterface {
     $old_position = $this->getPosition();
     $this->setPosition($destination);
     $trigerred_events = array();
-    if ($this->getDescription()->hasHabilityMustLive()) {
+    if ($this->getDescription() instanceof RestrictionMustLive) {
       $main_event = new Event(new GlossaryTerm(Glossary::EVENT_LEADER_KILLED, array(
         '!faction_id' => $this->getFaction()->getId(),
         '!piece_id' => $this->getId(),
@@ -291,7 +282,7 @@ class Piece implements ArrayableInterface {
     $move_ok = FALSE;
     $occupant = $cell->getOccupant();
     if ($force_empty || empty($occupant)) {
-      if ($cell->getType() != Cell::TYPE_THRONE || $this->getDescription()->hasHabilityAccessThrone()) {
+      if ($cell->getType() != Cell::TYPE_THRONE || $this->getDescription() instanceof HabilityAccessThrone) {
         $move_ok = TRUE;
       }
     }

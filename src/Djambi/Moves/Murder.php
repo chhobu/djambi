@@ -7,6 +7,10 @@ use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Event;
 use Djambi\Gameplay\Piece;
+use Djambi\PieceDescriptions\Habilities\HabilityAccessThrone;
+use Djambi\PieceDescriptions\Habilities\HabilityKillByAttack;
+use Djambi\PieceDescriptions\Habilities\HabilityKillRuler;
+use Djambi\PieceDescriptions\Habilities\RestrictionSignature;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
@@ -15,13 +19,13 @@ class Murder extends BaseMoveInteraction implements MoveInteractionInterface {
   public static function isTriggerable(Move $move, Piece $target = NULL, $allow_interactions = TRUE) {
     $piece = $move->getSelectedPiece();
     if (!empty($target) && static::checkMurderingPossibility($piece, $target, $allow_interactions)) {
-      if (!$piece->getDescription()->hasHabilitySignature()) {
+      if (!$piece->getDescription() instanceof RestrictionSignature) {
         $move->triggerInteraction(new self($move, $target));
         return TRUE;
       }
       else {
         $move->triggerKill($target, $piece->getPosition());
-        if ($piece->getPosition()->getType() == Cell::TYPE_THRONE && !$piece->getDescription()->hasHabilityAccessThrone()) {
+        if ($piece->getPosition()->getType() == Cell::TYPE_THRONE && !$piece->getDescription() instanceof HabilityAccessThrone) {
           $event = new Event(new GlossaryTerm(Glossary::EVENT_ASSASSIN_GOLDEN_MOVE, array(
             '!piece_id' => $piece->getId(),
           )));
@@ -35,14 +39,14 @@ class Murder extends BaseMoveInteraction implements MoveInteractionInterface {
 
   public static function checkMurderingPossibility(Piece $piece, Piece $occupant, $allow_interactions) {
     $can_attack = FALSE;
-    if ($occupant->isAlive() && $piece->getDescription()->hasHabilityKillByAttack()) {
+    if ($occupant->isAlive() && $piece->getDescription() instanceof HabilityKillByAttack) {
       if (!$allow_interactions) {
         $extra_interactions = static::allowExtraInteractions($piece);
-        if (!$extra_interactions || !$occupant->getDescription()->hasHabilityAccessThrone()) {
+        if (!$extra_interactions || !$occupant->getDescription() instanceof HabilityAccessThrone) {
           return FALSE;
         }
       }
-      if (!$piece->getDescription()->hasHabilityKillThroneLeader() && $occupant->getPosition()->getType() == Cell::TYPE_THRONE) {
+      if (!$piece->getDescription() instanceof HabilityKillRuler && $occupant->getPosition()->getType() == Cell::TYPE_THRONE) {
         $can_attack = FALSE;
       }
       else {

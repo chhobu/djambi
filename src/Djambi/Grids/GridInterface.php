@@ -4,23 +4,25 @@ namespace Djambi\Grids;
 
 
 use Djambi\Gameplay\Faction;
-use Djambi\PieceDescriptions\BasePieceDescription;
+use Djambi\PieceDescriptions\PiecesContainerInterface;
 
 interface GridInterface {
+
+  const SHAPE_HEXAGONAL = 'hexagonal';
+  const SHAPE_CARDINAL = 'cardinal';
 
   /**
    * Ajoute une faction dans la grille.
    *
-   * @param array $start_origin
+   * @param PiecesContainerInterface $container
+   * @param mixed $start_origin
    *   Point d'origine du chef de la faction
    * @param string $start_status
    *   Statut de départ de la faction
-   * @param BasePieceDescription[] $specific_pieces
-   *   Liste de pièces spécifiques au camp
    *
    * @return GridInterface
    */
-  public function addSide(array $start_origin = NULL, $start_status = Faction::STATUS_READY, $specific_pieces = array());
+  public function addSide(PiecesContainerInterface $container, $start_origin = NULL, $start_status = Faction::STATUS_READY);
 
   /**
    * @param $side_order
@@ -37,13 +39,6 @@ interface GridInterface {
    * @return GridInterface
    */
   public function addSpecialCell($type, $location);
-
-  /**
-   * @param BasePieceDescription $piece
-   *
-   * @return GridInterface
-   */
-  public function addCommonPiece(BasePieceDescription $piece);
 
   /**
    * @param $shape
@@ -86,7 +81,7 @@ interface GridInterface {
   public function getShape();
 
   /**
-   * @return BasePieceDescription[]
+   * @return PiecesContainerInterface;
    */
   public function getPieceScheme();
 

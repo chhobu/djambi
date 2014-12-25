@@ -8,11 +8,15 @@ use Djambi\Strings\GlossaryTerm;
 
 class GameDisposition3hex extends BaseGameDisposition implements ExposedElementInterface {
   public function __construct() {
-    $this->useHexagonalGrid()->setNbPlayers(3)->useStandardRuleset();
+    $this->useHexagonalGrid()->useStandardRuleset();
   }
 
   public static function getDescription() {
     return new GlossaryTerm(Glossary::DISPOSITION_3HEX_DESCRIPTION);
+  }
+
+  public static function getNbPlayers() {
+    return 3;
   }
 
 }

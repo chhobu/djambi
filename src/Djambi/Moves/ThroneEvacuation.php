@@ -4,13 +4,14 @@ namespace Djambi\Moves;
 
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Piece;
+use Djambi\PieceDescriptions\Habilities\HabilityAccessThrone;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
 class ThroneEvacuation extends BaseMoveInteraction implements MoveInteractionInterface {
 
   public static function isTriggerable(Move $move, Piece $target = NULL, $allow_interactions = TRUE) {
-    if (!$move->getSelectedPiece()->getDescription()->hasHabilityAccessThrone() && $move->getDestination()->getType() == Cell::TYPE_THRONE) {
+    if (!$move->getSelectedPiece()->getDescription() instanceof HabilityAccessThrone && $move->getDestination()->getType() == Cell::TYPE_THRONE) {
       $move->triggerInteraction(new self($move));
     }
     return TRUE;

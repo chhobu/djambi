@@ -9,18 +9,15 @@ namespace Djambi\Gameplay;
 
 use Djambi\Enums\StatusEnum;
 use Djambi\GameManagers\Exceptions\GameNotFoundException;
-use Djambi\Grids\Exceptions\InvalidGridException;
 use Djambi\Gameplay\Exceptions\CellNotFoundException;
 use Djambi\Gameplay\Exceptions\FactionNotFoundException;
 use Djambi\Gameplay\Exceptions\PieceNotFoundException;
 use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\GameOptions\StandardRuleset;
-use Djambi\Grids\BaseGrid;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
-use Djambi\PieceDescriptions\BasePieceDescription;
-use Djambi\Players\HumanPlayer;
-use Djambi\Players\PlayerInterface;
+use Djambi\PieceDescriptions\Habilities\HabilityAccessThrone;
+use Djambi\PieceDescriptions\Habilities\RestrictionMustLive;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
@@ -99,137 +96,15 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
   /**
    * Construction de l'objet DjambiBattlefield.
    *
-   * @param PlayableGameInterface $gm
+   * @param PlayableGameInterface $game
    *   Objet de gestion du jeu
    *
    * @return Battlefield
    *   Nouvel objet plateau de jeu
    */
-  protected function __construct(PlayableGameInterface $gm) {
-    $this->gameManager = $gm;
+  public function __construct(PlayableGameInterface $game) {
+    $this->gameManager = $game;
     $this->buildField();
-  }
-
-  /**
-   * Crée une nouvelle grille de Djambi.
-   *
-   * @param PlayableGameInterface $game
-   *   Objet de gestion de la partie
-   * @param PlayerInterface[] $players
-   *   Liste des joueurs
-   *
-   * @throws InvalidGridException
-   * @return Battlefield
-   *   Nouvelle grille de Djambi
-   */
-  public static function createNewBattlefield(PlayableGameInterface $game, $players) {
-    $battlefield = new self($game);
-    $scheme = $game->getDisposition()->getGrid();
-    $directions = $scheme->getDirections();
-    $scheme_sides = $scheme->getSides();
-    // Construction des factions :
-    $ready = TRUE;
-    $controls = array();
-    foreach ($scheme_sides as $side) {
-      if ($side['start_status'] == Faction::STATUS_READY) {
-        /* @var HumanPlayer $player */
-        $player = array_shift($players);
-        if (empty($player)) {
-          $side['start_status'] = Faction::STATUS_EMPTY_SLOT;
-          $ready = FALSE;
-        }
-      }
-      else {
-        $player = NULL;
-      }
-      $faction = new Faction($battlefield, $side['id'],
-        $side['name'], $side['class'], $side['start_order'], $player);
-      $faction->setStatus($side['start_status']);
-      if (isset($side['control'])) {
-        $controls[$faction->getId()] = $side['control'];
-      }
-      $battlefield->factions[$side['id']] = $faction;
-      // Placement des pièces communes :
-      $start_order = $faction->getStartOrder();
-      $leader_position = current(array_slice($scheme_sides, $start_order - 1, 1));
-      if (!empty($leader_position['placement']) && $leader_position['placement'] == BaseGrid::PIECE_PLACEMENT_RELATIVE) {
-        $start_scheme = array();
-        $axis = NULL;
-        foreach ($directions as $orientation => $direction) {
-          $next_cell = $battlefield->findCell($leader_position['x'], $leader_position['y']);
-          $continue = TRUE;
-          while ($continue) {
-            if ($next_cell->getType() == Cell::TYPE_THRONE) {
-              $axis = $orientation;
-              break;
-            }
-            $neighbours = $next_cell->getNeighbours();
-            if (isset($neighbours[$orientation])) {
-              $next_cell = $neighbours[$orientation];
-            }
-            else {
-              $continue = FALSE;
-            }
-          }
-          if (!empty($axis)) {
-            break;
-          }
-        }
-        if (empty($axis)) {
-          throw new InvalidGridException('Bad pieces start scheme.');
-        }
-        foreach ($scheme->getPieceScheme() as $piece_id => $piece) {
-          $start_position = $piece->getStartPosition();
-          $starting_cell = $battlefield->findCell($leader_position['x'], $leader_position['y']);
-          for ($i = 0; $i < $start_position['y']; $i++) {
-            $neighbours = $starting_cell->getNeighbours();
-            $starting_cell = $neighbours[$axis];
-          }
-          if ($start_position['x'] > 0) {
-            $new_axis = $directions[$axis]['right'];
-          }
-          else {
-            $new_axis = $directions[$axis]['left'];
-          }
-          for ($i = 0; $i < abs($start_position['x']); $i++) {
-            $neighbours = $starting_cell->getNeighbours();
-            $starting_cell = $neighbours[$new_axis];
-          }
-          $start_scheme[$piece_id] = array(
-            'x' => $starting_cell->getX(),
-            'y' => $starting_cell->getY(),
-          );
-        }
-        $faction->createPieces($scheme->getPieceScheme(), $start_scheme);
-      }
-      // Placement des pièces spécifiques
-      if (!empty($side['specific_pieces'])) {
-        $specific_start_positions = array();
-        /* @var BasePieceDescription $specific_piece_description */
-        foreach ($side['specific_pieces'] as $key => $specific_piece_description) {
-          if (!is_array($specific_piece_description->getStartPosition())) {
-            $cell = $battlefield->findCellByName($specific_piece_description->getStartPosition());
-            $specific_start_position = array(
-              'x' => $cell->getX(),
-              'y' => $cell->getY()
-            );
-          }
-          else {
-            $specific_start_position = $specific_piece_description->getStartPosition();
-          }
-          $specific_start_positions[$key] = $specific_start_position;
-        }
-        $faction->createPieces($side['specific_pieces'], $specific_start_positions);
-      }
-    }
-    if (!empty($controls)) {
-      foreach ($controls as $controlled => $controller) {
-        $battlefield->findFactionById($controlled)
-          ->setControl($battlefield->findFactionById($controller), FALSE);
-      }
-    }
-    $game->setStatus($ready ? StatusEnum::STATUS_PENDING : StatusEnum::STATUS_RECRUITING);
-    return $battlefield;
   }
 
   /**
@@ -284,6 +159,11 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
     return $this;
   }
 
+  public function addFaction(Faction $faction) {
+    $this->factions[$faction->getId()] = $faction;
+    return $this;
+  }
+
   /**
    * @return Faction[]
    */
@@ -334,11 +214,11 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
    *   Renvoie la pièce associée.
    */
   public function findPieceById($piece_id) {
-    list($faction_id, $piece_description_id) = explode("-", $piece_id, 2);
+    list($faction_id) = explode("-", $piece_id, 2);
     $faction = $this->findFactionById($faction_id);
     $pieces = $faction->getPieces();
-    if (isset($pieces[$piece_description_id])) {
-      return $pieces[$piece_description_id];
+    if (isset($pieces[$piece_id])) {
+      return $pieces[$piece_id];
     }
     else {
       throw new PieceNotFoundException(new GlossaryTerm(Glossary::EXCEPTION_PIECE_NOT_FOUND,
@@ -458,7 +338,8 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
       $this->currentTurn->logEvent(new Event(new GlossaryTerm(Glossary::EVENT_DRAW), Event::LOG_LEVEL_MAJOR));
       foreach ($living_factions as $faction_id) {
         $faction = $this->findFactionById($faction_id);
-        $faction->setStatus(Faction::STATUS_DRAW)->setRanking($nb_living_factions);
+        $faction->setStatus(Faction::STATUS_DRAW)
+          ->setRanking($nb_living_factions);
       }
     }
     $this->getGameManager()->setStatus(StatusEnum::STATUS_FINISHED);
@@ -503,9 +384,8 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
         if (!$control_leader) {
           $event = NULL;
           foreach ($faction->getPieces() as $piece) {
-            if ($piece->isAlive() && $piece->getDescription()
-                ->hasHabilityMustLive() && $piece->getFaction()
-                ->getId() == $faction->getId()
+            if ($piece->isAlive() && $piece->getDescription() instanceof RestrictionMustLive
+              && $piece->getFaction()->getId() == $faction->getId()
             ) {
               $event = new Event(new GlossaryTerm(Glossary::EVENT_SURROUNDED, array('!piece_id' => $piece->getId())), Event::LOG_LEVEL_MAJOR);
               if ($this->getGameManager()
@@ -556,8 +436,7 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
           foreach ($pieces as $piece) {
             if ($this->getGameManager()
                 ->getOption(StandardRuleset::RULE_VASSALIZATION) == 'full_control'
-              && $piece->isAlive() && $piece->getDescription()
-                ->hasHabilityMustLive()
+              && $piece->isAlive() && $piece->getDescription() instanceof RestrictionMustLive
             ) {
               $event = new Event(new GlossaryTerm(Glossary::EVENT_ELIMINATION, array('!piece_id' => $piece)));
               $event->executeChange(new PieceChange($piece, 'alive', TRUE, FALSE));
@@ -895,12 +774,13 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
       if (empty($occupant) && (!is_null($exclude_cell) || $exclude_cell->getName() != $key)) {
         if ($cell->getType() == Cell::TYPE_THRONE) {
           // Un leader peut être manipulé au pouvoir dans tous les cas :
-          if ($piece->getDescription()->hasHabilityAccessThrone() && $piece->isAlive() && $keep_alive) {
+          if ($piece->getDescription() instanceof HabilityAccessThrone && $piece->isAlive() && $keep_alive) {
             $freecells[$key] = $cell;
           }
           // Un leader mort peut être placé au pouvoir si variante activée :
-          elseif ($this->getGameManager()->getOption(StandardRuleset::RULE_EXTRA_INTERACTIONS) == 'extended' && $murder
-            && $piece->getDescription()->hasHabilityAccessThrone()
+          elseif ($this->getGameManager()
+              ->getOption(StandardRuleset::RULE_EXTRA_INTERACTIONS) == 'extended' && $murder
+            && $piece->getDescription() instanceof HabilityAccessThrone
           ) {
             $freecells[$key] = $cell;
           }

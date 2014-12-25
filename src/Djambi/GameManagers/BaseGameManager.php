@@ -9,10 +9,11 @@ namespace Djambi\GameManagers;
 
 use Djambi\Enums\Status;
 use Djambi\Enums\StatusEnum;
+use Djambi\GameDispositions\DispositionInterface;
 use Djambi\GameManagers\Exceptions\GameNotFoundException;
 use Djambi\GameOptions\Exceptions\GameOptionInvalidException;
 use Djambi\GameDispositions\BaseGameDisposition;
-use Djambi\Gameplay\Battlefield;
+use Djambi\Gameplay\BattlefieldInitializer;
 use Djambi\Gameplay\BattlefieldInterface;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
@@ -29,7 +30,7 @@ abstract class BaseGameManager implements PlayableGameInterface, ArrayableInterf
 
   /** @var string */
   protected $id;
-  /** @var Battlefield $battlefield */
+  /** @var BattlefieldInterface $battlefield */
   protected $battlefield;
   /** @var int $changed */
   protected $changed;
@@ -97,22 +98,21 @@ abstract class BaseGameManager implements PlayableGameInterface, ArrayableInterf
    *
    * @param PlayerInterface[] $players
    * @param string $id
-   * @param BaseGameDisposition $disposition
+   * @param DispositionInterface $disposition
    * @param String $battlefield_class
    *
    * @return static
    */
-  public static function create($players, $id, BaseGameDisposition $disposition, $battlefield_class = NULL) {
+  public static function create($players, $id, DispositionInterface $disposition, $battlefield_class = NULL) {
     /* @var BaseGameManager $game */
     $game = new static($id);
     $game->setDisposition($disposition);
     $game->addDefaultPlayers($players);
     if (is_null($battlefield_class) || $battlefield_class == '\Djambi\Gameplay\Battlefield') {
-      $grid = Battlefield::createNewBattlefield($game, $players);
+      $grid = BattlefieldInitializer::createNewBattlefield($game, $players);
     }
     else {
-      $grid = call_user_func_array($battlefield_class . '::createNewBattlefield',
-        array($game, $players));
+      $grid = new $battlefield_class($game);
       $game->setInfo('battlefield_class', $battlefield_class);
     }
     $game->setBattlefield($grid);
@@ -143,7 +143,7 @@ abstract class BaseGameManager implements PlayableGameInterface, ArrayableInterf
     return $this;
   }
 
-  protected function setDisposition(BaseGameDisposition $disposition) {
+  protected function setDisposition(DispositionInterface $disposition) {
     $this->disposition = $disposition;
     return $this;
   }

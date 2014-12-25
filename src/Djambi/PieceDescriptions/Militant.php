@@ -1,15 +1,18 @@
 <?php
 namespace Djambi\PieceDescriptions;
 
+use Djambi\PieceDescriptions\Habilities\HabilityKillByAttack;
+use Djambi\PieceDescriptions\Habilities\RestrictionMove;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
-class Militant extends BasePieceDescription {
-  public function __construct($num, $start_position) {
-    $this->setHabilities(array(
-      self::HABILITY_LIMITED_MOVE => 2,
-      self::HABILITY_KILL_BY_ATTACK => TRUE,
-    ));
-    $this->describePiece('militant', 'M', new GlossaryTerm(Glossary::PIECE_MILITANT), $num, $start_position, 1);
+class Militant extends BasePieceDescription implements HabilityKillByAttack, RestrictionMove {
+  public function __construct($start_position) {
+    $this->describePiece('militant', 'M', new GlossaryTerm(Glossary::PIECE_MILITANT), $start_position);
   }
+
+  public function getMaximumMove() {
+    return 2;
+  }
+
 }

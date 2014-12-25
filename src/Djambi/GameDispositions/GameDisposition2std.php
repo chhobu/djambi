@@ -11,7 +11,6 @@ use Djambi\Strings\GlossaryTerm;
 class GameDisposition2std extends BaseGameDisposition implements ExposedElementInterface {
   public function __construct() {
     $this->useStandardGrid()
-      ->setNbPlayers(2)
       ->useStandardRuleset();
     $this->getGrid()
       ->alterSide(2, array('start_status' => Faction::STATUS_VASSALIZED, 'control' => 't1'))
@@ -20,6 +19,10 @@ class GameDisposition2std extends BaseGameDisposition implements ExposedElementI
 
   public static function getDescription() {
     return new GlossaryTerm(Glossary::DISPOSITION_2STD_DESCRIPTION);
+  }
+
+  public static function getNbPlayers() {
+    return 2;
   }
 
 }

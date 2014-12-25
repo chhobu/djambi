@@ -11,11 +11,6 @@ class ComputerPlayer extends BasePlayer {
   /* @var IAInterface $ia; */
   protected $ia;
 
-  public function __construct($id = NULL) {
-    parent::__construct($id);
-    $this->setType(self::TYPE_COMPUTER);
-  }
-
   public function getIa() {
     if (is_null($this->ia)) {
       $this->ia = DummyIA::instanciate($this);

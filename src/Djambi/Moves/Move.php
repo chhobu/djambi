@@ -11,6 +11,8 @@ use Djambi\Gameplay\Faction;
 use Djambi\Gameplay\Piece;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
+use Djambi\PieceDescriptions\Habilities\HabilityAccessThrone;
+use Djambi\PieceDescriptions\Habilities\RestrictionSignature;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
@@ -302,7 +304,7 @@ class Move implements ArrayableInterface {
     }
     if ($move_ok) {
       ThroneEvacuation::isTriggerable($this);
-      if ($this->getSelectedPiece()->getDescription()->hasHabilityAccessThrone()) {
+      if ($this->getSelectedPiece()->getDescription() instanceof HabilityAccessThrone) {
         if ($this->getDestination()->getType() == Cell::TYPE_THRONE) {
           $this->triggerEvent(new Event(new GlossaryTerm(Glossary::EVENT_THRONE_ACCESS, array(
             '!piece_id' => $this->getSelectedPiece()->getId(),
@@ -334,7 +336,7 @@ class Move implements ArrayableInterface {
     }
     foreach ($this->kills as $victim) {
       $victim->setAlive(TRUE);
-      if ($this->getSelectedPiece()->getDescription()->hasHabilitySignature()) {
+      if ($this->getSelectedPiece()->getDescription() instanceof RestrictionSignature) {
         $victim->setPosition($this->getDestination());
       }
     }

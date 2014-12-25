@@ -1,15 +1,16 @@
 <?php
 namespace Djambi\PieceDescriptions;
 
+use Djambi\PieceDescriptions\Habilities\HabilityKillByProximity;
+use Djambi\PieceDescriptions\Habilities\HabilityKillRuler;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
-class Reporter extends BasePieceDescription {
-  public function __construct($num, $start_position) {
-    $this->setHabilities(array(
-      self::HABILITY_KILL_BY_PROXIMITY => TRUE,
-      self::HABILITY_KILL_THRONE_LEADER => TRUE,
-    ));
-    $this->describePiece('reporter', 'R', new GlossaryTerm(Glossary::PIECE_REPORTER), $num, $start_position, 3);
+class Reporter extends BasePieceDescription implements HabilityKillByProximity, HabilityKillRuler {
+
+  const PIECE_VALUE = 3;
+
+  public function __construct($start_position) {
+    $this->describePiece('reporter', 'R', new GlossaryTerm(Glossary::PIECE_REPORTER), $start_position);
   }
 }

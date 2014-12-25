@@ -4,7 +4,7 @@ namespace Djambi\GameDispositions;
 use Djambi\GameDispositions\Exceptions\DispositionNotFoundException;
 use Djambi\Gameplay\Faction;
 use Djambi\Grids\GridInterface;
-use Djambi\PieceDescriptions\BasePieceDescription;
+use Djambi\PieceDescriptions\PiecesContainerInterface;
 
 /**
  * Class DjambiGameDispostionFactory
@@ -20,17 +20,13 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
 
   /**
    * Charge une disposition de jeu.
-
-
-*
-*@param string $code
+   *
+   * @param string $code
    *   Code de la disposition (par exemple : 3hex)
    * @param array $scheme_settings
    *   Tableau associatif contenant les options de la disposition
-
-
-*
-*@throws \Djambi\GameDispositions\Exceptions\DispositionNotFoundException
+   *
+   * @throws \Djambi\GameDispositions\Exceptions\DispositionNotFoundException
    * @return BaseGameDisposition
    *   Objet étendant la classe abstraite DjambiGameDisposition
    */
@@ -80,8 +76,17 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
    *   Tableau de clés / valeurs affiché dans une liste de type select
    */
   public static function listNbPlayersAvailable() {
-    // TODO : parcourir les classes concerner pour peupler le tableau
-    return array(2 => 2, 3 => 3, 4 => 4);
+    $nb_players = array();
+    $classes = get_declared_classes();
+    foreach($classes as $class_name) {
+      $implements = class_implements($class_name);
+      if(in_array('\Djambi\GameDispositions\DispositionInterface', $implements) &&
+        in_array('\Djambi\Interfaces\ExposedElementInterface', $implements)) {
+        $nb_current = call_user_func($class_name . '::getNbPlayers');
+        $nb_players[$nb_current] = $nb_current;
+      }
+    }
+    return $nb_players;
   }
 
   protected function getSettings() {
@@ -117,34 +122,21 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
   /**
    * Ajoute une faction dans la grille.
    *
-   * @param array $start_position
+   * @param PiecesContainerInterface $container
+   *   Liste de pièces spécifiques au camp
+   * @param mixed $start_position
    * @param string $start_status
    *   Statut de départ de la faction
-   * @param BasePieceDescription[] $specific_pieces
-   *   Liste de pièces spécifiques au camp
    *
    * @return GridInterface
    */
-  public function addSide(array $start_position = NULL, $start_status = Faction::STATUS_READY, $specific_pieces = array()) {
+  public function addSide(PiecesContainerInterface $container, $start_position = NULL, $start_status = Faction::STATUS_READY) {
     $sides = isset($this->settings['sides']) ? $this->settings['sides'] : array();
-    $side = array(
-      'start_position' => $start_position,
-      'start_status' => $start_status,
-    );
-    if (!empty($specific_pieces)) {
-      foreach ($specific_pieces as $key => $piece) {
-        $side['specific_pieces'][$key] = $piece->toArray();
-      }
-    }
+    $side['start_status'] = $start_status;
+    $side['start_position'] = $start_position;
+    $side['pieces'] = $container;
     $sides[] = $side;
     $this->addSetting('sides', $sides);
-    return $this;
-  }
-
-  public function addCommonPiece(BasePieceDescription $piece) {
-    $pieces = isset($this->settings['pieceScheme']) ? $this->settings['pieceScheme'] : array();
-    $pieces[] = $piece->toArray();
-    $this->addSetting('pieceScheme', $pieces);
     return $this;
   }
 

@@ -7,6 +7,7 @@ use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Piece;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
+use Djambi\PieceDescriptions\Habilities\HabilityAccessThrone;
 
 abstract class BaseMoveInteraction implements MoveInteractionInterface, ArrayableInterface {
 
@@ -121,7 +122,7 @@ abstract class BaseMoveInteraction implements MoveInteractionInterface, Arrayabl
     // Vérifie si la pièce dispose d'un droit d'interaction supplémentaire
     // lors d'une évacuation de trône :
     if ($selected->getFaction()->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_EXTRA_INTERACTIONS) == 'extended') {
-      if ($selected->getPosition()->getType() == Cell::TYPE_THRONE && !empty($target) && $target->getDescription()->hasHabilityAccessThrone()) {
+      if ($selected->getPosition()->getType() == Cell::TYPE_THRONE && !empty($target) && $target->getDescription() instanceof HabilityAccessThrone) {
         $extra_interaction = TRUE;
       }
     }

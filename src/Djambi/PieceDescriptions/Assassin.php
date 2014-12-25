@@ -1,16 +1,16 @@
 <?php
 namespace Djambi\PieceDescriptions;
 
+use Djambi\PieceDescriptions\Habilities\HabilityKillByAttack;
+use Djambi\PieceDescriptions\Habilities\HabilityKillRuler;
+use Djambi\PieceDescriptions\Habilities\RestrictionSignature;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
-class Assassin extends BasePieceDescription {
-  public function __construct($num, $start_position) {
-    $this->setHabilities(array(
-      self::HABILITY_KILL_BY_ATTACK => TRUE,
-      self::HABILITY_KILL_THRONE_LEADER => TRUE,
-      self::HABILITY_SIGNATURE => TRUE,
-    ));
-    $this->describePiece('assassin', 'A', new GlossaryTerm(Glossary::PIECE_ASSASSIN), $num, $start_position, 2);
+class Assassin extends BasePieceDescription implements HabilityKillByAttack, RestrictionSignature, HabilityKillRuler  {
+  const PIECE_VALUE = 2;
+
+  public function __construct($start_position) {
+    $this->describePiece('assassin', 'A', new GlossaryTerm(Glossary::PIECE_ASSASSIN), $start_position);
   }
 }

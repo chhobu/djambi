@@ -7,7 +7,6 @@ class CustomGrid extends BaseGrid {
 
   protected function prepareArrayConversion() {
     $this->addDependantObjects(array(
-      'pieceScheme',
       'shape',
       'rows',
       'cols',
@@ -32,24 +31,9 @@ class CustomGrid extends BaseGrid {
     else {
       $grid->useStandardGrid($rows, $cols);
     }
-    if (!isset($array['pieceScheme'])) {
-      $grid->useStandardPieces();
-    }
-    else {
-      foreach ($array['pieceScheme'] as $piece_data) {
-        $piece = call_user_func($piece_data['className'] . '::fromArray', $piece_data);
-        $grid->addCommonPiece($piece);
-      }
-    }
     if (!empty($array['sides'])) {
       foreach ($array['sides'] as $side) {
-        $pieces = array();
-        if (!empty($side['specific_pieces'])) {
-          foreach ($side['specific_pieces'] as $data) {
-            $pieces[] = call_user_func($data['className'] . '::fromArray', $data);
-          }
-        }
-        $grid->addSide($side['start_position'], $side['start_status'], $pieces);
+        $grid->addSide($side['pieces'], $side['start_position'], $side['start_status']);
       }
     }
     return $grid;

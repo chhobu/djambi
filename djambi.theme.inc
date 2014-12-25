@@ -2,7 +2,8 @@
 use Djambi\Enums\StatusEnum;
 use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Gameplay\Cell;
-use Djambi\Grids\BaseGrid;
+use Djambi\Grids\GridInterface;
+use Djambi\Moves\Murder;
 use Drupal\Component\Utility\Unicode;
 use Drupal\Core\Template\Attribute;
 use Drupal\djambi\Players\Drupal8Player;
@@ -45,7 +46,7 @@ function template_preprocess_djambi_grid(&$variables) {
       ),
     );
   }
-  if ($game->getDisposition()->getGrid()->getShape() == BaseGrid::SHAPE_HEXAGONAL) {
+  if ($game->getDisposition()->getGrid()->getShape() == GridInterface::SHAPE_HEXAGONAL) {
     $grid_theme_function = 'djambi_hexagonal_grid';
   }
   else {
@@ -63,11 +64,11 @@ function template_preprocess_djambi_grid(&$variables) {
   if ($current_player->getDisplaySetting(GameUI::SETTING_HIGHLIGHT_CELLS)) {
     $variables['grid']['#attributes']['class'][] = 'is-with-highlighted-cells';
   }
-  if ($game->getDisposition()->getGrid()->getShape() == BaseGrid::SHAPE_HEXAGONAL &&
+  if ($game->getDisposition()->getGrid()->getShape() == GridInterface::SHAPE_HEXAGONAL &&
     !$current_player->getDisplaySetting(GameUI::SETTING_DISPLAY_CELL_NAME_HEXAGONAL)) {
     $variables['grid']['#attributes']['class'][] = 'djambi-grid--no-cell-names';
   }
-  elseif ($game->getDisposition()->getGrid()->getShape() == BaseGrid::SHAPE_CARDINAL &&
+  elseif ($game->getDisposition()->getGrid()->getShape() == GridInterface::SHAPE_CARDINAL &&
     !$current_player->getDisplaySetting(GameUI::SETTING_DISPLAY_CELL_NAME_CARDINAL)) {
     $variables['grid']['#attributes']['class'][] = 'djambi-grid--no-cell-names';
   }
@@ -115,7 +116,7 @@ function theme_djambi_cardinal_grid($variables) {
     '#caption' => $caption,
     '#attributes' => $variables['attributes'],
   );
-  return drupal_render($table);
+  return Drupal::service('renderer')->render($table);
 }
 
 function template_preprocess_djambi_piece(&$variables) {
@@ -132,7 +133,7 @@ function template_preprocess_djambi_piece(&$variables) {
       }
       elseif (!empty($move) && !empty($move->getFirstInteraction()) && $move->getFirstInteraction()->getSelectedPiece()->getId() == $piece->getId()) {
         $attributes['class'][] = 'is-positionnable';
-        if ($move->getFirstInteraction() instanceof \Djambi\Moves\Murder) {
+        if ($move->getFirstInteraction() instanceof Murder) {
           $attributes['class'][] = 'is-dead';
         }
       }
@@ -154,7 +155,7 @@ function template_preprocess_djambi_piece(&$variables) {
       $attributes['class'][] = 'is-' . $piece->getFaction()->getClass() . '-origin';
       $variables['piece_short_name'] = $piece->getId();
       $variables['piece_full_name'] = $attributes['title'] = GameUI::printPieceFullName($piece, FALSE);
-      $attributes['data-piece-type'] = $piece->getDescription()->getGenericSymbol();
+      $attributes['data-piece-type'] = $piece->getDescription()->getShortname();
     }
     else {
       $attributes['class'][] = 'is-dead';

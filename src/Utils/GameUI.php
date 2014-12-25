@@ -45,7 +45,7 @@ class GameUI {
       '#html' => $html,
       '#display_dead_name' => $display_dead_name,
     );
-    return drupal_render($elements);
+    return \Drupal::service('renderer')->render($elements);
   }
 
   public static function printFactionFullName(Faction $faction, $html = TRUE) {
@@ -54,7 +54,7 @@ class GameUI {
       '#faction' => $faction,
       '#html' => $html,
     );
-    return drupal_render($elements);
+    return \Drupal::service('renderer')->render($elements);
   }
 
   public static function printPieceLog(Piece $piece, $dead = FALSE) {
@@ -63,7 +63,7 @@ class GameUI {
       '#piece' => $piece,
       '#dead' => $dead,
     );
-    return drupal_render($elements);
+    return \Drupal::service('renderer')->render($elements);
   }
 
 }

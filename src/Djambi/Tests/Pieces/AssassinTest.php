@@ -11,10 +11,11 @@ namespace Djambi\Tests\Pieces;
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
 use Djambi\Gameplay\Faction;
-use Djambi\Grids\BaseGrid;
+use Djambi\Grids\GridInterface;
 use Djambi\PieceDescriptions\Assassin;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
+use Djambi\PieceDescriptions\PiecesContainer;
 use Djambi\Tests\BaseDjambiTest;
 
 class AssassinTest extends BaseDjambiTest {
@@ -27,18 +28,21 @@ class AssassinTest extends BaseDjambiTest {
 
   public function setUp() {
     $disposition = GameDispositionsFactory::initiateCustomDisposition();
-    $disposition->setShape(BaseGrid::SHAPE_CARDINAL);
+    $disposition->setShape(GridInterface::SHAPE_CARDINAL);
     $disposition->setDimensions(7, 7);
-    $disposition->addSide(array(), Faction::STATUS_READY, array(
-      new Leader(NULL, 'A7'),
-      new Militant(1, self::MILITANT1_TEAM1_START_POSITION),
-      new Assassin(NULL, self::ASSASSIN_TEAM1_START_POSITION),
-    ));
-    $disposition->addSide(array(), Faction::STATUS_READY, array(
-      new Leader(NULL, self::LEADER_TEAM2_START_POSITION),
-      new Militant(1, self::MILITANT1_TEAM2_START_POSITION),
-      new Militant(2, 'C6'),
-    ));
+
+    $container_t1 = new PiecesContainer();
+    $container_t1->addPiece(new Leader('A7'))
+      ->addPiece(new Militant(self::MILITANT1_TEAM1_START_POSITION))
+      ->addPiece(new Assassin(self::ASSASSIN_TEAM1_START_POSITION));
+    $disposition->addSide($container_t1);
+
+    $container_t2 = new PiecesContainer();
+    $container_t2->addPiece(new Leader(self::LEADER_TEAM2_START_POSITION))
+      ->addPiece(new Militant(self::MILITANT1_TEAM2_START_POSITION))
+      ->addPiece(new Militant('C6'));
+    $disposition->addSide($container_t2);
+
     $factory = new GameFactory();
     $factory->setDisposition($disposition->deliverDisposition());
     $this->game = $factory->createGameManager();

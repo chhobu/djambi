@@ -8,6 +8,8 @@ use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Event;
 use Djambi\Gameplay\Piece;
+use Djambi\PieceDescriptions\Habilities\HabilityAccessThrone;
+use Djambi\PieceDescriptions\Habilities\HabilityMoveLivingPieces;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
@@ -40,9 +42,9 @@ class Manipulation extends BaseMoveInteraction implements MoveInteractionInterfa
 
   public static function checkManipulatingPossibility(Piece $piece, Piece $occupant, $allow_interactions) {
     $can_manipulate = FALSE;
-    if ($occupant->isAlive() && $piece->getDescription()->hasHabilityMoveLivingPieces()) {
+    if ($occupant->isAlive() && $piece->getDescription() instanceof HabilityMoveLivingPieces) {
       if (!$allow_interactions && (!static::allowExtraInteractions($piece) || $piece->getPosition()->getType() != Cell::TYPE_THRONE
-        || !$occupant->getDescription()->hasHabilityAccessThrone())) {
+        || !$occupant->getDescription() instanceof HabilityAccessThrone)) {
         return FALSE;
       }
       $manipulation_rule = $piece->getBattlefield()->getGameManager()->getOption(StandardRuleset::RULE_DIPLOMACY);

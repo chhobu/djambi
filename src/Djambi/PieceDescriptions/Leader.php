@@ -1,17 +1,17 @@
 <?php
 namespace Djambi\PieceDescriptions;
 
+use Djambi\PieceDescriptions\Habilities\HabilityAccessThrone;
+use Djambi\PieceDescriptions\Habilities\HabilityKillByAttack;
+use Djambi\PieceDescriptions\Habilities\HabilityKillRuler;
+use Djambi\PieceDescriptions\Habilities\RestrictionMustLive;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
-class Leader extends BasePieceDescription {
-  public function __construct($num, $start_position) {
-    $this->setHabilities(array(
-      self::HABILITY_MUST_LIVE => TRUE,
-      self::HABILITY_KILL_BY_ATTACK => TRUE,
-      self::HABILITY_KILL_THRONE_LEADER => TRUE,
-      self::HABILITY_ACCESS_THRONE => TRUE,
-    ));
-    $this->describePiece('leader', 'L', new GlossaryTerm(Glossary::PIECE_LEADER), $num, $start_position, 10);
+class Leader extends BasePieceDescription implements RestrictionMustLive, HabilityKillByAttack, HabilityKillRuler, HabilityAccessThrone {
+  const PIECE_VALUE = 10;
+
+  public function __construct($start_position) {
+    $this->describePiece('leader', 'L', new GlossaryTerm(Glossary::PIECE_LEADER), $start_position);
   }
 }

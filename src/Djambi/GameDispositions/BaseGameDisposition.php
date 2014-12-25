@@ -24,8 +24,6 @@ abstract class BaseGameDisposition implements DispositionInterface, ArrayableInt
 
   /** @var GridInterface $grid */
   protected $grid;
-  /** @var int $nb */
-  protected $nbPlayers = 4;
   /** @var GameOptionsStore $optionsStore */
   protected $optionsStore;
 
@@ -42,10 +40,6 @@ abstract class BaseGameDisposition implements DispositionInterface, ArrayableInt
     return new static();
   }
 
-  public function getNbPlayers() {
-    return $this->nbPlayers;
-  }
-
   /**
    * @return GridInterface
    */
@@ -54,11 +48,6 @@ abstract class BaseGameDisposition implements DispositionInterface, ArrayableInt
       $this->useStandardGrid();
     }
     return $this->grid;
-  }
-
-  public function setNbPlayers($nb_players) {
-    $this->nbPlayers = $nb_players;
-    return $this;
   }
 
   public function setGrid(GridInterface $scheme) {

@@ -7,6 +7,7 @@ use Djambi\Exceptions\DisallowedActionException;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Piece;
+use Djambi\PieceDescriptions\Habilities\HabilityKillByProximity;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
@@ -14,7 +15,7 @@ class Reportage extends BaseMoveInteraction implements MoveInteractionInterface 
 
   public static function isTriggerable(Move $move, Piece $target = NULL, $allow_interactions = TRUE) {
     $piece = $move->getSelectedPiece();
-    if ($piece->getDescription()->hasHabilityKillByProximity() && $allow_interactions) {
+    if ($piece->getDescription() instanceof HabilityKillByProximity && $allow_interactions) {
       $grid = $piece->getFaction()->getBattlefield();
       $next_cells = $grid->findNeighbourCells($move->getDestination(), FALSE);
       $victims = array();

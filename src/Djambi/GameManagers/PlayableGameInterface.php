@@ -1,7 +1,7 @@
 <?php
 namespace Djambi\GameManagers;
 
-use Djambi\GameDispositions\BaseGameDisposition;
+use Djambi\GameDispositions\DispositionInterface;
 use Djambi\Gameplay\BattlefieldInterface;
 use Djambi\Players\PlayerInterface;
 
@@ -15,12 +15,12 @@ interface PlayableGameInterface {
    *
    * @param PlayerInterface[] $players
    * @param string $id
-   * @param BaseGameDisposition $disposition
+   * @param DispositionInterface $disposition
    * @param string $battlefield_class
    *
    * @return PlayableGameInterface
    */
-  public static function create($players, $id, BaseGameDisposition $disposition, $battlefield_class = NULL);
+  public static function create($players, $id, DispositionInterface $disposition, $battlefield_class = NULL);
 
   /**
    * Lance les actions permettant de rendre une partie jouable.
@@ -95,7 +95,7 @@ interface PlayableGameInterface {
   /**
    * Renvoie la disposition de la grille de jeu.
    *
-   * @return BaseGameDisposition
+   * @return DispositionInterface
    */
   public function getDisposition();
 

@@ -12,10 +12,11 @@ namespace Gameplay;
 use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
 use Djambi\Gameplay\Faction;
-use Djambi\Grids\BaseGrid;
+use Djambi\Grids\GridInterface;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
 use Djambi\PieceDescriptions\Necromobile;
+use Djambi\PieceDescriptions\PiecesContainer;
 use Djambi\Tests\BaseDjambiTest;
 
 class DeadSurroundingTest extends BaseDjambiTest {
@@ -38,26 +39,29 @@ class DeadSurroundingTest extends BaseDjambiTest {
 
   public function setup() {
     $disposition = GameDispositionsFactory::initiateCustomDisposition();
-    $disposition->setShape(BaseGrid::SHAPE_CARDINAL);
+    $disposition->setShape(GridInterface::SHAPE_CARDINAL);
     $disposition->setDimensions(7, 7);
-    $disposition->addSide(array(), Faction::STATUS_READY, array(
-      new Leader(NULL, self::LEADER_TEAM1_START_POSITION),
-      new Militant(1, self::MILITANT1_TEAM1_START_POSITION),
-      new Militant(2, self::MILITANT2_TEAM1_START_POSITION),
-      new Necromobile(NULL, self::NECROMOBILE_TEAM1_START_POSITION),
-    ));
-    $disposition->addSide(array(), Faction::STATUS_READY, array(
-      new Leader(NULL, self::LEADER_TEAM2_START_POSITION),
-      new Militant(1, self::MILITANT1_TEAM2_START_POSITION),
-      new Militant(2, self::MILITANT2_TEAM2_START_POSITION),
-      new Necromobile(NULL, self::NECROMOBILE_TEAM2_START_POSITION),
-    ));
-    $disposition->addSide(array(), Faction::STATUS_READY, array(
-      new Leader(NULL, self::LEADER_TEAM3_START_POSITION),
-    ));
-    $disposition->addSide(array(), Faction::STATUS_READY, array(
-      new Leader(NULL, self::LEADER_TEAM4_START_POSITION),
-    ));
+
+    $container_t1 = new PiecesContainer();
+    $disposition->addSide($container_t1->addPiece(new Leader(self::LEADER_TEAM1_START_POSITION))
+      ->addPiece(new Militant(self::MILITANT1_TEAM1_START_POSITION))
+      ->addPiece(new Militant(self::MILITANT2_TEAM1_START_POSITION))
+      ->addPiece(new Necromobile(self::NECROMOBILE_TEAM1_START_POSITION))
+    );
+
+    $container_t2 = new PiecesContainer();
+    $disposition->addSide($container_t2->addPiece(new Leader(self::LEADER_TEAM2_START_POSITION))
+      ->addPiece(new Militant(self::MILITANT1_TEAM2_START_POSITION))
+      ->addPiece(new Militant(self::MILITANT2_TEAM2_START_POSITION))
+      ->addPiece(new Necromobile(self::NECROMOBILE_TEAM2_START_POSITION))
+    );
+
+    $container_t3 = new PiecesContainer();
+    $disposition->addSide($container_t3->addPiece(new Leader(self::LEADER_TEAM3_START_POSITION)));
+
+    $container_t4 = new PiecesContainer();
+    $disposition->addSide($container_t4->addPiece(new Leader(self::LEADER_TEAM4_START_POSITION)));
+
     $factory = new GameFactory();
     $factory->setDisposition($disposition->deliverDisposition());
     $this->game = $factory->createGameManager();

@@ -6,7 +6,7 @@
 
 namespace Djambi\Gameplay;
 
-use Djambi\Exceptions\GridInvalidException;
+use Djambi\Grids\Exceptions\InvalidGridException;
 
 class Cell {
   const TYPE_STANDARD = 'std';
@@ -108,7 +108,7 @@ class Cell {
    * @param string $type
    *   Type de cellule. Par défaut : std (standard).
    *
-   * @throws GridInvalidException
+   * @throws InvalidGridException
    * @return $this
    */
   public function setType($type) {
@@ -116,7 +116,7 @@ class Cell {
       $this->type = $type;
     }
     else {
-      throw new GridInvalidException("Unimplemented cell type : " . $type);
+      throw new InvalidGridException("Unimplemented cell type : " . $type);
     }
     return $this;
   }

@@ -3,10 +3,10 @@
 {%- endif %}
 {% if display_dead_name == false and piece.isAlive() == false -%}
   {{- 'a dead piece'|t -}}
-{% elseif piece.description.num is empty -%}
-  {{- '@side @piece'|t({ '@side': piece.faction.name, '@piece': piece.description.genericName }) -}}
+{% elseif piece.num is empty -%}
+  {{- '@side @piece'|t({ '@side': piece.faction.name, '@piece': piece.description.longName }) -}}
 {% else -%}
-  {{- '@side @piece #@num'|t({ '@side': piece.faction.name, '@piece': piece.description.genericName, '@num': piece.description.num }) -}}
+  {{- '@side @piece #@num'|t({ '@side': piece.faction.name, '@piece': piece.description.longName, '@num': piece.num }) -}}
 {% endif %}
 {% if html -%}
   </span>

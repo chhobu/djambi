@@ -6,6 +6,7 @@ use Djambi\Exceptions\DisallowedActionException;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Event;
 use Djambi\Gameplay\Piece;
+use Djambi\PieceDescriptions\Habilities\HabilityMoveDeadPieces;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
 
@@ -20,7 +21,7 @@ class Necromobility extends BaseMoveInteraction implements MoveInteractionInterf
   }
 
   public static function checkNecromobilityPossibility(Piece $piece, Piece $target, $allow_interactions) {
-    return $allow_interactions && !$target->isAlive() && $piece->getDescription()->hasHabilityMoveDeadPieces();
+    return $allow_interactions && !$target->isAlive() && $piece->getDescription() instanceof HabilityMoveDeadPieces;
   }
 
   public function findPossibleChoices() {

@@ -6,30 +6,42 @@ use Djambi\PieceDescriptions\Assassin;
 use Djambi\PieceDescriptions\Diplomat;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
+use Djambi\PieceDescriptions\PieceInterface;
+use Djambi\PieceDescriptions\PiecesContainer;
 use Djambi\PieceDescriptions\Reporter;
 
 
 class MiniGridWith2Sides extends BaseGrid {
-  public function __construct($settings = NULL) {
+
+  /** @var PieceInterface */
+  protected $surprise_piece;
+
+  public function __construct($surprise_piece = NULL) {
     $this->useStandardGrid(7, 7);
-    $this->addCommonPiece(new Leader(NULL, array('x' => 0, 'y' => 0)));
-    $this->addCommonPiece(new Militant(1, array('x' => 1, 'y' => 0)));
-    $this->addCommonPiece(new Militant(2, array('x' => -1, 'y' => 0)));
-    if (isset($settings['surprise_piece'])) {
-      $surprise = $settings['surprise_piece'];
-    }
-    else {
-      $surprise_location = array('x' => 0, 'y' => 1);
+    $container = new PiecesContainer();
+    $container->addPiece(new Leader(array('x' => 0, 'y' => 0, 'relative' => TRUE)))
+      ->addPiece(new Militant(array('x' => 1, 'y' => 0, 'relative' => TRUE)))
+      ->addPiece(new Militant(array('x' => -1, 'y' => 0, 'relative' => TRUE)));
+    if (empty($surprise_piece)) {
+      $surprise_location = array('x' => 0, 'y' => 1, 'relative' => TRUE);
       $surprises = array(
-        new Assassin(NULL, $surprise_location),
-        new Reporter(NULL, $surprise_location),
-        new Diplomat(NULL, $surprise_location),
+        new Assassin($surprise_location),
+        new Reporter($surprise_location),
+        new Diplomat($surprise_location),
       );
-      $surprise = $surprises[array_rand($surprises)];
-      $settings['surprise_piece'] = $surprise;
+      $surprise_piece = $surprises[array_rand($surprises)];
     }
-    $this->addCommonPiece($surprise);
-    $this->addSide(array('x' => 1, 'y' => 7));
-    $this->addSide(array('x' => 7, 'y' => 1));
+    $container->addPiece($surprise_piece);
+    $this->addSide($container, array('x' => 1, 'y' => 7));
+    $this->addSide($container, array('x' => 7, 'y' => 1));
+  }
+
+  public static function fromArray(array $array, array $context = array()) {
+    return new static($array['surprise_piece']);
+  }
+
+  protected function prepareArrayConversion() {
+    $this->addPersistantProperties(array('surprise_piece'));
+    return $this;
   }
 }

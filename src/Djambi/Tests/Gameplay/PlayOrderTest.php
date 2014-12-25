@@ -13,9 +13,9 @@ use Djambi\GameDispositions\GameDispositionsFactory;
 use Djambi\GameFactories\GameFactory;
 use Djambi\GameOptions\StandardRuleset;
 use Djambi\Gameplay\Cell;
-use Djambi\Gameplay\Faction;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
+use Djambi\PieceDescriptions\PiecesContainer;
 use Djambi\Tests\BaseDjambiTest;
 
 class PlayOrderTest extends BaseDjambiTest {
@@ -25,22 +25,26 @@ class PlayOrderTest extends BaseDjambiTest {
   public function setUp() {
     $disposition = GameDispositionsFactory::initiateCustomDisposition();
     $disposition->setDimensions(5, 5);
-    $disposition->addSide(NULL, Faction::STATUS_READY, array(
-       new Leader(NULL, 'A5'),
-       new Militant(NULL, 'B3'),
-    ));
-    $disposition->addSide(NULL, Faction::STATUS_READY, array(
-      new Leader(NULL, 'E5'),
-      new Militant(NULL, 'C4'),
-    ));
-    $disposition->addSide(NULL, Faction::STATUS_READY, array(
-      new Leader(NULL, 'E1'),
-      new Militant(NULL, 'D3'),
-    ));
-    $disposition->addSide(NULL, Faction::STATUS_READY, array(
-      new Leader(NULL, 'A1'),
-      new Militant(NULL, 'C2'),
-    ));
+
+    $container_t1 = new PiecesContainer();
+    $disposition->addSide($container_t1->addPiece(new Leader('A5'))
+      ->addPiece(new Militant('B3'))
+    );
+
+    $container_t2 = new PiecesContainer();
+    $disposition->addSide($container_t2->addPiece(new Leader('E5'))
+      ->addPiece(new Militant('C4'))
+    );
+
+    $container_t3 = new PiecesContainer();
+    $disposition->addSide($container_t3->addPiece(new Leader('E1'))
+      ->addPiece(new Militant('D3'))
+    );
+
+    $container_t4 = new PiecesContainer();
+    $disposition->addSide($container_t4->addPiece(new Leader('A1'))
+      ->addPiece(new Militant('C2'))
+    );
 
     $factory = new GameFactory();
     $factory->setDisposition($disposition->deliverDisposition());

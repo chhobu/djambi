@@ -7,17 +7,18 @@
  */
 
 namespace Djambi\Grids;
-use Djambi\Exceptions\GridInvalidException;
+use Djambi\Grids\Exceptions\InvalidGridException;
 use Djambi\Gameplay\Cell;
 use Djambi\Gameplay\Faction;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
 use Djambi\PieceDescriptions\Assassin;
-use Djambi\PieceDescriptions\BasePieceDescription;
 use Djambi\PieceDescriptions\Diplomat;
 use Djambi\PieceDescriptions\Leader;
 use Djambi\PieceDescriptions\Militant;
 use Djambi\PieceDescriptions\Necromobile;
+use Djambi\PieceDescriptions\PiecesContainer;
+use Djambi\PieceDescriptions\PiecesContainerInterface;
 use Djambi\PieceDescriptions\Reporter;
 use Djambi\Strings\Glossary;
 use Djambi\Strings\GlossaryTerm;
@@ -28,18 +29,12 @@ use Djambi\Strings\GlossaryTerm;
 abstract class BaseGrid implements GridInterface, ArrayableInterface {
   use PersistantDjambiTrait;
 
-  const SHAPE_HEXAGONAL = 'hexagonal';
-  const SHAPE_CARDINAL = 'cardinal';
-
-  const PIECE_PLACEMENT_RELATIVE = 'leader-relative';
-  const PIECE_PLACEMENT_SPECIFIC_ONLY = 'specific';
-
   /* @var array $allowableDispotions */
   protected $allowableShapes = array(
     self::SHAPE_CARDINAL,
     self::SHAPE_HEXAGONAL,
   );
-  /* @var BasePieceDescription[] $pieceScheme */
+  /* @var PiecesContainer $pieceScheme */
   protected $pieceScheme = array();
   /* @var string $disposition */
   protected $shape = self::SHAPE_CARDINAL;
@@ -62,17 +57,18 @@ abstract class BaseGrid implements GridInterface, ArrayableInterface {
     return $this;
   }
 
-
   protected function useStandardPieces() {
-    $this->addCommonPiece(new Leader(NULL, array('x' => 0, 'y' => 0)));
-    $this->addCommonPiece(new Diplomat(NULL, array('x' => 0, 'y' => 1)));
-    $this->addCommonPiece(new Reporter(NULL, array('x' => -1, 'y' => 0)));
-    $this->addCommonPiece(new Assassin(NULL, array('x' => 1, 'y' => 0)));
-    $this->addCommonPiece(new Necromobile(NULL, array('x' => 0, 'y' => 2)));
-    $this->addCommonPiece(new Militant(1, array('x' => -2, 'y' => 0)));
-    $this->addCommonPiece(new Militant(2, array('x' => 2, 'y' => 0)));
-    $this->addCommonPiece(new Militant(3, array('x' => -1, 'y' => 1)));
-    $this->addCommonPiece(new Militant(4, array('x' => 1, 'y' => 1)));
+    $container = new PiecesContainer();
+    $container->addPiece(new Leader(array('x' => 0, 'y' => 0, 'relative' => TRUE)));
+    $container->addPiece(new Diplomat(array('x' => 0, 'y' => 1, 'relative' => TRUE)));
+    $container->addPiece(new Reporter(array('x' => -1, 'y' => 0, 'relative' => TRUE)));
+    $container->addPiece(new Assassin(array('x' => 1, 'y' => 0, 'relative' => TRUE)));
+    $container->addPiece(new Necromobile(array('x' => 0, 'y' => 2, 'relative' => TRUE)));
+    $container->addPiece(new Militant(array('x' => -2, 'y' => 0, 'relative' => TRUE)));
+    $container->addPiece(new Militant(array('x' => 2, 'y' => 0, 'relative' => TRUE)));
+    $container->addPiece(new Militant(array('x' => -1, 'y' => 1, 'relative' => TRUE)));
+    $container->addPiece(new Militant(array('x' => 1, 'y' => 1, 'relative' => TRUE)));
+    $this->pieceScheme = $container;
   }
 
   protected function useStandardGrid($cols = 9, $rows = 9) {
@@ -251,7 +247,7 @@ abstract class BaseGrid implements GridInterface, ArrayableInterface {
 
   public function setShape($shape) {
     if (!in_array($shape, $this->allowableShapes)) {
-      throw new GridInvalidException('Unknown disposition');
+      throw new InvalidGridException('Unknown disposition');
     }
     else {
       $this->shape = $shape;
@@ -270,10 +266,10 @@ abstract class BaseGrid implements GridInterface, ArrayableInterface {
 
   protected function setRows($nb) {
     if ($nb <= 0) {
-      throw new GridInvalidException('Not enough rows');
+      throw new InvalidGridException('Not enough rows');
     }
     elseif ($nb > 26) {
-      throw new GridInvalidException('Too many rows');
+      throw new InvalidGridException('Too many rows');
     }
     else {
       $this->rows = $nb;
@@ -286,10 +282,10 @@ abstract class BaseGrid implements GridInterface, ArrayableInterface {
 
   protected function setCols($nb) {
     if ($nb <= 0) {
-      throw new GridInvalidException('Not enough columns');
+      throw new InvalidGridException('Not enough columns');
     }
     elseif ($nb > 26) {
-      throw new GridInvalidException('Too many colums');
+      throw new InvalidGridException('Too many colums');
     }
     else {
       $this->cols = $nb;
@@ -298,10 +294,6 @@ abstract class BaseGrid implements GridInterface, ArrayableInterface {
 
   public function getCols() {
     return $this->cols;
-  }
-
-  public function addCommonPiece(BasePieceDescription $piece) {
-    $this->pieceScheme[$piece->getShortname()] = $piece;
   }
 
   public function getPieceScheme() {
@@ -340,22 +332,17 @@ abstract class BaseGrid implements GridInterface, ArrayableInterface {
           return $faction;
         }
       }
-      throw new GridInvalidException("Undescribed faction : #" . $order);
+      throw new InvalidGridException("Undescribed faction : #" . $order);
     }
     return $factions;
   }
 
-  public function addSide(array $start_origin = NULL, $start_status = Faction::STATUS_READY, $specific_pieces = array()) {
+  public function addSide(PiecesContainerInterface $container, $start_origin = NULL, $start_status = Faction::STATUS_READY) {
     $nb_sides = count($this->sides) + 1;
-    if (!is_null($start_origin) && isset($start_origin['x']) && isset($start_origin['y'])) {
-      $start_origin['placement'] = self::PIECE_PLACEMENT_RELATIVE;
-    }
-    else {
-      $start_origin['placement'] = self::PIECE_PLACEMENT_SPECIFIC_ONLY;
-    }
-    $side_info = array_merge(static::getSidesInfos($nb_sides), $start_origin);
+    $side_info = array_merge(static::getSidesInfos($nb_sides), is_array($start_origin) ? $start_origin : array());
     $side_info['start_status'] = $start_status;
-    $side_info['specific_pieces'] = $specific_pieces;
+    $side_info['start_origin'] = $start_origin;
+    $side_info['pieces'] = $container;
     $this->sides[$side_info['id']] = $side_info;
   }
 
@@ -394,7 +381,7 @@ abstract class BaseGrid implements GridInterface, ArrayableInterface {
   public function getDirection($orientation) {
     $directions = $this->getDirections();
     if (!isset($directions[$orientation])) {
-      throw new GridInvalidException('Unknown direction.');
+      throw new InvalidGridException('Unknown direction.');
     }
     return $directions[$orientation];
   }

@@ -7,7 +7,6 @@
 namespace Djambi\Players;
 
 use Djambi\Players\Exceptions\PlayerNotFoundException;
-use Djambi\Players\Exceptions\PlayerInvalidException;
 use Djambi\GameManagers\PlayableGameInterface;
 use Djambi\Gameplay\Faction;
 use Djambi\Persistance\ArrayableInterface;
@@ -20,12 +19,8 @@ abstract class BasePlayer implements PlayerInterface, ArrayableInterface {
 
   use PersistantDjambiTrait;
 
-  const TYPE_HUMAN = 'human';
-  const TYPE_COMPUTER = 'computer';
   const CLASS_NICKNAME = '';
 
-  /* @var string $type */
-  protected $type = self::TYPE_HUMAN;
   /* @var string $id */
   protected $id;
   /* @var Faction $faction */
@@ -66,33 +61,17 @@ abstract class BasePlayer implements PlayerInterface, ArrayableInterface {
   }
 
   public function isHuman() {
-    return $this->type == self::TYPE_HUMAN;
-  }
-
-  protected function setType($type) {
-    switch ($type) {
-      case (self::TYPE_COMPUTER):
-      case (self::TYPE_HUMAN):
-        $this->type = $type;
-        break;
-
-      default:
-        throw new PlayerInvalidException("Invalid player type : " . $type);
-    }
+    return $this instanceof HumanPlayerInterface;
   }
 
   /**
    * Récupère un objet de type DjambiPlayer à partir d'un tableau de données.
-
-
-*
-*@param array $data
+   *
+   * @param array $data
    *   Tableau de données
    * @param array $context
-
-
-*
-*@throws \Djambi\Players\Exceptions\PlayerNotFoundException
+   *
+   * @throws \Djambi\Players\Exceptions\PlayerNotFoundException
    * @return BasePlayer
    *   Joueur de Djambi
    */
@@ -110,8 +89,9 @@ abstract class BasePlayer implements PlayerInterface, ArrayableInterface {
   }
 
   public function isPlayingFaction(Faction $faction) {
-    if (!is_null($faction->getPlayer()) && $faction->getPlayer()->getClassName() == $this->getClassName()
-    && $faction->getPlayer()->getId() == $this->getId()) {
+    if (!is_null($faction->getPlayer()) && (get_class($faction->getPlayer()) == get_class($this))
+      && $faction->getPlayer()->getId() == $this->getId()
+    ) {
       return TRUE;
     }
     return FALSE;

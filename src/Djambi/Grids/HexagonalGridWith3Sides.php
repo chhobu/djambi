@@ -28,8 +28,8 @@ class HexagonalGridWith3Sides extends BaseGrid {
     $this->addSpecialCell(Cell::TYPE_DISABLED, array('x' => 2, 'y' => 9));
     $this->addSpecialCell(Cell::TYPE_DISABLED, array('x' => 8, 'y' => 9));
     $this->addSpecialCell(Cell::TYPE_DISABLED, array('x' => 9, 'y' => 9));
-    $this->addSide(array('x' => 1, 'y' => 5));
-    $this->addSide(array('x' => 7, 'y' => 9));
-    $this->addSide(array('x' => 7, 'y' => 1));
+    $this->addSide($this->pieceScheme, array('x' => 1, 'y' => 5));
+    $this->addSide($this->pieceScheme, array('x' => 7, 'y' => 9));
+    $this->addSide($this->pieceScheme, array('x' => 7, 'y' => 1));
   }
 }

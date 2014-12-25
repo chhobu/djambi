@@ -10,8 +10,12 @@ namespace Djambi\Gameplay;
 use Djambi\Enums\StatusEnum;
 use Djambi\Exceptions\DisallowedActionException;
 use Djambi\GameOptions\StandardRuleset;
+use Djambi\Grids\Exceptions\InvalidGridException;
 use Djambi\Persistance\ArrayableInterface;
 use Djambi\Persistance\PersistantDjambiTrait;
+use Djambi\PieceDescriptions\Habilities\HabilityMoveDeadPieces;
+use Djambi\PieceDescriptions\Habilities\RestrictionMustLive;
+use Djambi\PieceDescriptions\PieceInterface;
 use Djambi\Players\HumanPlayerInterface;
 use Djambi\Players\PlayerInterface;
 use Djambi\Strings\Glossary;
@@ -123,7 +127,7 @@ class Faction implements ArrayableInterface {
     }
     // Définition des pièces
     $context['faction'] = $faction;
-    foreach ($array['pieces'] as $flat_piece) {
+    foreach ($array['pieces'] as $id => $flat_piece) {
       $piece = call_user_func($flat_piece['className'] . '::fromArray', $flat_piece, $context);
       $faction->addPiece($piece);
     }
@@ -311,10 +315,9 @@ class Faction implements ArrayableInterface {
           new GlossaryTerm(Glossary::EVENT_CHANGING_SIDE, array(
             '!faction_id1' => $this->getId(),
             '!faction_id2' => $faction->getId(),
-            '!controlled' => $existing_faction->getId(),
           )), Event::LOG_LEVEL_NORMAL
         );
-        $event->logChange(new FactionChange($existing_faction, 'controlId', $this->getId(), $faction->getId()));
+        $event->logChange(new FactionChange($this, 'controlId', $this->getId(), $faction->getId()));
         $this->getBattlefield()->getCurrentTurn()->logEvent($event);
       }
       else {
@@ -324,7 +327,7 @@ class Faction implements ArrayableInterface {
             'faction_id2' => $old_control->getId(),
           )), Event::LOG_LEVEL_NORMAL
         );
-        $event->logChange(new FactionChange($existing_faction, 'controlId', $old_control->getId(), $this->getId()));
+        $event->logChange(new FactionChange($this, 'controlId', $old_control->getId(), $this->getId()));
         $this->getBattlefield()->getCurrentTurn()->logEvent($event);
       }
     }
@@ -411,22 +414,26 @@ class Faction implements ArrayableInterface {
     return $this;
   }
 
-  public function createPieces($pieces_scheme, $start_scheme) {
-    foreach ($pieces_scheme as $key => $piece_description) {
-      $alive = TRUE;
-      if (!isset($start_scheme[$key])) {
-        continue;
-      }
-      $original_faction_id = $this->getId();
-      $start_cell = $this->getBattlefield()->findCell($start_scheme[$key]['x'], $start_scheme[$key]['y']);
-      $piece = new Piece($piece_description, $this, $original_faction_id, $start_cell, $alive);
-      $this->addPiece($piece);
+  public function createPiece(PieceInterface $piece_description, Cell $start_cell) {
+    if (!is_null($start_cell->getOccupant())) {
+      throw new InvalidGridException(sprintf("Attempt to place a piece %s in cell %s which is already occupied by piece %s !",
+        $start_cell->getName(), $piece_description->getShortname(), $start_cell->getOccupant()->getId()));
     }
+    $container = $piece_description->getContainer();
+    $num = '';
+    if (!empty($container)) {
+      $siblings = $container->getPiecesByType($piece_description->getType());
+      if (count($siblings) > 1) {
+        $num = array_search($piece_description, $siblings) + 1;
+      }
+    }
+    $piece = new Piece($piece_description, $this, $this->getId(), $num, $start_cell, TRUE);
+    $this->addPiece($piece);
     return $this;
   }
 
   protected function addPiece(Piece $piece) {
-    $this->pieces[$piece->getDescription()->getShortname()] = $piece;
+    $this->pieces[$piece->getId()] = $piece;
     return $this;
   }
 
@@ -558,12 +565,12 @@ class Faction implements ArrayableInterface {
     foreach ($pieces as $piece) {
       if ($piece->isAlive()) {
         // Contrôle 1 : chef vivant ?
-        if ($piece->getDescription()->hasHabilityMustLive() && $piece->getFaction()->getId() == $this->getId()) {
+        if ($piece->getDescription() instanceof RestrictionMustLive && $piece->getFaction()->getId() == $this->getId()) {
           $control_leader = TRUE;
           $leaders[] = $piece;
         }
         // Contrôle 2 : nécromobile vivant ?
-        if ($piece->getDescription()->hasHabilityMoveDeadPieces()) {
+        if ($piece->getDescription() instanceof HabilityMoveDeadPieces) {
           $has_necromobile = TRUE;
         }
       }
