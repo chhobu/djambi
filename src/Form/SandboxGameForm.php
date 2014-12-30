@@ -129,16 +129,18 @@ class SandboxGameForm extends BaseGameForm {
       'description' => GameUI::printFactionFullName($game->getBattlefield()->getPlayingFaction()),
       'attributes' => array('class' => array('djambi-infos__playing-now')),
     );
-    $playing_next_markup = array(
-      '#theme' => 'item_list',
-      '#items' => $playing_next,
-      '#list_type' => 'ol',
-    );
-    $descriptions[] = array(
-      'term' => t('Playing next :'),
-      'description' => $playing_next_markup,
-      'attributes' => array('class' => array('djambi-infos__playing-next')),
-    );
+    if (!empty($playing_next)) {
+      $playing_next_markup = array(
+        '#theme' => 'item_list',
+        '#items' => $playing_next,
+        '#list_type' => 'ol',
+      );
+      $descriptions[] = array(
+        'term' => t('Playing next :'),
+        'description' => $playing_next_markup,
+        'attributes' => array('class' => array('djambi-infos__playing-next')),
+      );
+    }
     $last_moves = $this->buildLastMovesPanel($game->getBattlefield()->getCurrentTurn()->getRound(),
       $game->getBattlefield()->getCurrentTurn()->getPlayOrderKey());
     if (!empty($last_moves)) {
@@ -444,6 +446,7 @@ class SandboxGameForm extends BaseGameForm {
     $peacemonger_faction = NULL;
     $accepted_factions = array();
     $undecided_factions = array();
+    $grid_form['cells'] = array('#type' => 'container');
     foreach ($this->getGameManager()->getBattlefield()->getFactions() as $faction) {
       if ($faction->getDrawStatus() == Faction::DRAW_STATUS_PROPOSED) {
         $peacemonger_faction = GameUI::printFactionFullName($faction);
@@ -456,19 +459,26 @@ class SandboxGameForm extends BaseGameForm {
         $undecided_factions[] = GameUI::printFactionFullName($faction);
       }
     }
-    $grid_form['draw_explanation'] = array(
+    $grid_form['cells']['draw_explanation'] = array(
+      '#prefix' => '<div class="label">',
+      '#suffix' => '</div>',
       '#markup' => $this->t("!faction has called for a draw. What is your answer ?", array(
         '!faction' => $peacemonger_faction,
+
       )),
     );
     if (!empty($accepted_factions)) {
-      $grid_form['draw_accepted'] = array(
+      $grid_form['cells']['draw_accepted'] = array(
+        '#prefix' => '<div class="description">',
+        '#suffix' => '</div>',
         '#markup' => $this->formatPlural(count($accepted_factions), "The following side has accepted the draw : !factions.",
           "The following sides have accepted the draw : !factions.", array('!factions' => implode(', ', $accepted_factions))),
       );
     }
     if (!empty($undecided_factions)) {
-      $grid_form['draw_undecided'] = array(
+      $grid_form['cells']['draw_undecided'] = array(
+        '#prefix' => '<div class="description">',
+        '#suffix' => '</div>',
         '#markup' => $this->formatPlural(count($undecided_factions), "The following side has not made his mind now : !factions",
           "The following sides have to announce their decisions : !factions.", array('!factions' => implode(', ', $undecided_factions))),
       );

@@ -9,6 +9,7 @@
 namespace Drupal\djambi\Form\Actions;
 
 
+use Djambi\Enums\StatusEnum;
 use Djambi\Exceptions\DisallowedActionException;
 use Drupal\Core\Form\FormStateInterface;
 use Drupal\djambi\Form\BaseGameForm;
@@ -33,5 +34,9 @@ class DrawAccept extends BaseAction {
     catch (DisallowedActionException $exception) {
       $this->raiseError($form_state, $exception);
     }
+  }
+
+  protected function isPrinted() {
+    return $this->form->getGameManager()->getStatus() == StatusEnum::STATUS_DRAW_PROPOSAL;
   }
 }

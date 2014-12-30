@@ -76,7 +76,7 @@ class RollbackTurnTest extends BaseDjambiTest {
     $this->assertEquals('t1', $battlefield->findFactionById('t1')->getControl()->getId());
     $this->assertEquals('t2', $battlefield->findFactionById('t2')->getControl()->getId());
     $this->assertEquals('t3', $battlefield->findFactionById('t3')->getControl()->getId());
-    $this->checkPlayOrder(array('t1', 't2', 't1', 't3', 't1'));
+    $this->checkPlayOrder(array('t1', 't2', 't1', 't3'));
   }
 
 }

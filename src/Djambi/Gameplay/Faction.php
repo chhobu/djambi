@@ -230,7 +230,7 @@ class Faction implements ArrayableInterface {
   }
 
   public function setDrawStatus($value) {
-    if (is_null($value)) {
+    if (is_null($value) || $value == static::DRAW_STATUS_REJECTED) {
       $this->getBattlefield()->getGameManager()->setStatus(StatusEnum::STATUS_PENDING);
     }
     else {
@@ -546,14 +546,15 @@ class Faction implements ArrayableInterface {
     $event = new Event(new GlossaryTerm(Glossary::EVENT_DRAW_REJECTED, array(
       '!faction_id' => $this->getId(),
     )));
-    $factions = $this->getBattlefield()->getFactions();
-    foreach ($factions as $faction) {
-      $this->getBattlefield()->findFactionById($faction->getId())->setDrawStatus(NULL);
-      $event->logChange(new FactionChange($faction, 'drawStatus', static::DRAW_STATUS_UNDECIDED, NULL,
-        new GlossaryTerm(Glossary::CHANGE_DRAW_REJECTED)));
+    foreach ($this->getBattlefield()->getFactions() as $faction) {
+      if (!empty($faction->getDrawStatus())) {
+        $event->logChange(new FactionChange($faction, 'drawStatus', $faction->getDrawStatus(), static::DRAW_STATUS_REJECTED,
+          $faction->getId() == $this->getId() ? new GlossaryTerm(Glossary::CHANGE_DRAW_REJECTED) : NULL));
+        $faction->setDrawStatus(static::DRAW_STATUS_REJECTED);
+      }
     }
-    $this->getBattlefield()->getCurrentTurn()->logEvent($event);
     $this->getBattlefield()->prepareTurn(TRUE);
+    $this->getBattlefield()->getCurrentTurn()->logEvent($event);
     return $this;
   }
 

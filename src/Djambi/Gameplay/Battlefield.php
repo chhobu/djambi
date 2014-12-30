@@ -532,20 +532,17 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
     $scheme_size = count($this->factions) * 2;
     $turn_scheme = array();
     $events = array();
-    $peace_negociation = $this->getGameManager()
-        ->getStatus() == StatusEnum::STATUS_DRAW_PROPOSAL;
+    $peace_negociation = $this->getGameManager()->getStatus() == StatusEnum::STATUS_DRAW_PROPOSAL;
     foreach ($this->factions as $faction) {
-      if ($faction->isAlive() && $faction->getControl()
-          ->getId() == $faction->getId()
-      ) {
+      if ($faction->isAlive() && $faction->getControl()->getId() == $faction->getId()) {
         $nb_factions++;
       }
       $turn_scheme[$faction->getStartOrder() * 2 - 1] = array(
         "side" => $faction->getId(),
         "type" => Cell::TYPE_STANDARD,
         "played" => FALSE,
-        "playable" => $faction->getControl()
-            ->getId() == $faction->getId() && (!$peace_negociation || $peace_negociation && $faction->getDrawStatus() == Faction::DRAW_STATUS_UNDECIDED),
+        "playable" => $faction->getControl()->getId() == $faction->getId() &&
+          (!$peace_negociation || $peace_negociation && $faction->getDrawStatus() == Faction::DRAW_STATUS_UNDECIDED),
         "alive" => $faction->isAlive(),
         "new_round" => FALSE,
       );
@@ -579,9 +576,10 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
     // Gestion des tours de jeu liés à l'occupation de la case centrale
     $this->findRuler();
     if (!empty($this->ruler)) {
+      $ruler_faction = $this->findFactionById($this->ruler);
+      $decided = $peace_negociation && $ruler_faction->getDrawStatus() != Faction::DRAW_STATUS_UNDECIDED;
       if ($nb_factions > 2) {
-        $ruler_key = $this->findFactionById($this->ruler)
-            ->getStartOrder() * 2 - 2;
+        $ruler_key = $ruler_faction->getStartOrder() * 2 - 2;
         while (isset($turn_scheme[$ruler_key])) {
           if ($turn_scheme[$ruler_key]['alive']) {
             $turn_scheme[$ruler_key]['exclude'][] = $this->ruler;
@@ -589,8 +587,7 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
           }
           $ruler_key = $ruler_key - 2;
         }
-        $ruler_key = $this->findFactionById($this->ruler)
-            ->getStartOrder() * 2 - 2 + $scheme_size;
+        $ruler_key = $ruler_faction->getStartOrder() * 2 - 2 + $scheme_size;
         while (isset($turn_scheme[$ruler_key])) {
           if ($turn_scheme[$ruler_key]['alive'] && $turn_scheme[$ruler_key]['side'] != $this->ruler) {
             $turn_scheme[$ruler_key]['exclude'][] = $this->ruler;
@@ -602,7 +599,7 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
       foreach ($turn_scheme as $key => $scheme) {
         if ($scheme['type'] == Cell::TYPE_THRONE) {
           $turn_scheme[$key]['side'] = $this->ruler;
-          if (in_array($this->ruler, $scheme['exclude'])) {
+          if ($decided || in_array($this->ruler, $scheme['exclude'])) {
             $turn_scheme[$key]['playable'] = FALSE;
           }
           elseif ($peace_negociation) {
@@ -624,7 +621,7 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
         break;
       }
       if ($scheme['playable'] && !$scheme['played'] && !empty($scheme['side']) && $scheme['alive']) {
-        if (is_null($first_element) && !empty($last_turn) && $last_turn['actingFaction'] == $scheme['side']) {
+        if (!$peace_negociation && is_null($first_element) && !empty($last_turn) && $last_turn['actingFaction'] == $scheme['side']) {
           // Corrections de cas non-standards
           if ($nb_factions > 2) {
             // Un camp ne peut pas jouer 2x de suite
@@ -646,6 +643,14 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
           $first_element = $key;
         }
       }
+    }
+    if ($nb_factions > 2 && !$peace_negociation) {
+      $first = reset($this->playOrder);
+      $last = end($this->playOrder);
+      if ($first == $last) {
+        array_pop($this->playOrder);
+      }
+      reset($this->playOrder);
     }
     // Détermination de la faction en tour de jeu
     $this->findFactionById(current($this->playOrder))->setPlaying(TRUE);
