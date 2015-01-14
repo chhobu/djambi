@@ -6,16 +6,33 @@ use Djambi\Players\HumanPlayer;
 use Drupal\Core\Session\AccountInterface;
 use Drupal\djambi\Utils\GameUI;
 use Drupal\user\Entity\User;
-use Symfony\Component\HttpFoundation\Request;
 
 abstract class Drupal8Player extends HumanPlayer {
-  const COOKIE_NAME = 'djambiplayerid';
+  const COOKIE_AUTH_NAME = 'djambiplayerid';
 
   /** @var AccountInterface */
   protected $account;
 
   /** @var array */
   protected $displaySettings;
+
+  protected static function getCookieBag() {
+    return 'Djambi.Player.';
+  }
+
+  protected static function getCookie($name) {
+    return \Drupal::request()->cookies->get(str_replace('.', '_', static::getCookieBag() . $name));
+  }
+
+  protected function setCookie($name, $value, $expire = 31536000) {
+    setrawcookie(static::getCookieBag() . $name, $value, REQUEST_TIME + $expire);
+    return $this;
+  }
+
+  protected function deleteCookie($name) {
+    setrawcookie(static::getCookieBag() . $name, '', REQUEST_TIME - 3600);
+    return $this;
+  }
 
   public function setAccount(AccountInterface $user) {
     $this->account = $user;
@@ -69,7 +86,7 @@ abstract class Drupal8Player extends HumanPlayer {
       '#theme' => 'username',
       '#account' => $this->getAccount(),
     );
-    return drupal_render($theme_username);
+    return \Drupal::service('renderer')->render($theme_username);
   }
 
   public static function fromArray(array $data, array $context = array()) {
@@ -90,15 +107,14 @@ abstract class Drupal8Player extends HumanPlayer {
     return $player;
   }
 
-  public static function fromCurrentUser(AccountInterface $account, Request $request) {
+  public static function fromCurrentUser(AccountInterface $account) {
     if ($account->isAuthenticated()) {
       $player = new AuthenticatedDrupal8Player(AuthenticatedDrupal8Player::CLASS_NICKNAME . $account->id());
+      $player->setAccount($account);
     }
     else {
-      $anonymous_id = $request->cookies->get('Drupal_visitor_' . static::COOKIE_NAME);
-      $player = new AnonymousDrupal8Player($anonymous_id);
+      $player = new AnonymousDrupal8Player(AnonymousDrupal8Player::retrieveId($account->id()));
     }
-    $player->setAccount($account);
     return $player;
   }
 

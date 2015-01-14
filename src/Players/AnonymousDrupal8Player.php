@@ -15,14 +15,21 @@ class AnonymousDrupal8Player extends Drupal8Player {
   const CLASS_NICKNAME = 'anon-';
   const COOKIE_SETTINGS_NAME = 'djambisettings';
 
+  public static function retrieveId($session_id) {
+    $djambi_id = static::getCookie(static::COOKIE_AUTH_NAME);
+    if (empty($djambi_id)) {
+      $djambi_id = static::CLASS_NICKNAME . Crypt::hashBase64($session_id);
+    }
+    return $djambi_id;
+  }
+
   public function useSeat() {
-    $this->id = static::CLASS_NICKNAME . Crypt::hashBase64($this->getId());
-    user_cookie_save(array(static::COOKIE_NAME => $this->getId()));
+    $this->setCookie(static::COOKIE_AUTH_NAME, $this->getId());
     return parent::useSeat();
   }
 
   public function loadDisplaySettings() {
-    $user_settings = \Drupal::request()->cookies->get('Drupal_visitor_' . static::COOKIE_SETTINGS_NAME);
+    $user_settings = $this->getCookie(static::COOKIE_SETTINGS_NAME);
     if (!empty($user_settings)) {
       $user_settings = unserialize($user_settings);
     }
@@ -34,13 +41,19 @@ class AnonymousDrupal8Player extends Drupal8Player {
   }
 
   public function saveDisplaySettings($settings) {
-    user_cookie_save(array(static::COOKIE_SETTINGS_NAME => serialize($settings)));
+    $this->setCookie(static::COOKIE_SETTINGS_NAME, serialize($settings));
     return parent::saveDisplaySettings($settings);
   }
 
   public function clearDisplaySettings() {
-    user_cookie_delete(static::COOKIE_SETTINGS_NAME);
+    $this->deleteCookie(static::COOKIE_SETTINGS_NAME);
     return parent::clearDisplaySettings();
+  }
+
+  public function __sleep() {
+    $keys = get_object_vars($this);
+    unset($keys['account']);
+    return array_keys($keys);
   }
 
 }

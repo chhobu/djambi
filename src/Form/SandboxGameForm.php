@@ -30,9 +30,9 @@ class SandboxGameForm extends BaseGameForm {
    */
   public function createGameManager() {
     $game_factory = new GameFactory('\Djambi\GameManagers\SandboxGameManager');
-    $game_factory->setId($this->getFormId());
     $game_factory->addPlayer($this->getCurrentPlayer());
     $this->getCurrentPlayer()->useSeat();
+    $game_factory->setId($this->getFormId());
     $this->setGameManager($game_factory->createGameManager());
     $this->gameManager->setInfo('form', get_class($this));
     $this->gameManager->setInfo('path', request_uri());

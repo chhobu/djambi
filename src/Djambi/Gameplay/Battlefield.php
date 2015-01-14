@@ -458,9 +458,7 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
             Faction::STATUS_WITHDRAW,
             Faction::STATUS_SURROUNDED,
           );
-          if (in_array($faction->getStatus(), $allowed_statuses) && $faction->getControl()
-              ->getId() != $faction->getId()
-          ) {
+          if (in_array($faction->getStatus(), $allowed_statuses) && !$faction->isSelfControlled()) {
             $faction->setControl($faction);
           }
         }
@@ -534,14 +532,14 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
     $events = array();
     $peace_negociation = $this->getGameManager()->getStatus() == StatusEnum::STATUS_DRAW_PROPOSAL;
     foreach ($this->factions as $faction) {
-      if ($faction->isAlive() && $faction->getControl()->getId() == $faction->getId()) {
+      if ($faction->isAlive() && $faction->isSelfControlled()) {
         $nb_factions++;
       }
       $turn_scheme[$faction->getStartOrder() * 2 - 1] = array(
         "side" => $faction->getId(),
         "type" => Cell::TYPE_STANDARD,
         "played" => FALSE,
-        "playable" => $faction->getControl()->getId() == $faction->getId() &&
+        "playable" => $faction->isSelfControlled() &&
           (!$peace_negociation || $peace_negociation && $faction->getDrawStatus() == Faction::DRAW_STATUS_UNDECIDED),
         "alive" => $faction->isAlive(),
         "new_round" => FALSE,
@@ -550,7 +548,7 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
         "side" => NULL,
         "type" => Cell::TYPE_THRONE,
         "played" => FALSE,
-        "playable" => $faction->getControl()->getId() == $faction->getId(),
+        "playable" => $faction->isSelfControlled(),
         "alive" => $faction->isAlive(),
         "new_round" => FALSE,
         "exclude" => array($faction->getId()),
@@ -645,12 +643,11 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
       }
     }
     if ($nb_factions > 2 && !$peace_negociation) {
-      $first = reset($this->playOrder);
       $last = end($this->playOrder);
+      $first = reset($this->playOrder);
       if ($first == $last) {
         array_pop($this->playOrder);
       }
-      reset($this->playOrder);
     }
     // Détermination de la faction en tour de jeu
     $this->findFactionById(current($this->playOrder))->setPlaying(TRUE);
@@ -710,9 +707,7 @@ class Battlefield implements BattlefieldInterface, ArrayableInterface {
     $nb_alive = 0;
     /* @var $faction Faction */
     foreach ($this->getFactions() as $faction) {
-      if ($faction->isAlive() && $faction->getControl()
-          ->getId() == $faction->getId()
-      ) {
+      if ($faction->isAlive() && $faction->isSelfControlled()) {
         $nb_alive++;
       }
     }

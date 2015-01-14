@@ -50,15 +50,6 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
     return $form;
   }
 
-  public static function retrieve(Drupal8Player $player, PlayableGameInterface $game_manager, TempStore $store) {
-    $form = new static();
-    $form->tmpStore = $store;
-    $form->currentPlayer = $player;
-    $form->setGameManager($game_manager);
-    Glossary::getInstance()->setTranslaterHandler(array($form, 'translateDjambiStrings'));
-    return $form;
-  }
-
   public function translateDjambiStrings($string, $args) {
     if (isset($args['@corpse_id'])) {
       $args['!corpse_name'] = GameUI::printPieceLog($this->getGameManager()->getBattlefield()->findPieceById($args['@corpse_id']), TRUE);

@@ -40,7 +40,7 @@ class DjambiAjaxController extends ControllerBase {
     $stored_game_key = $request->request->get('form_id');
     /** @var TempStoreFactory $tmp_store_factory */
     $tmp_store_factory = \Drupal::service('djambi.tempstore');
-    $this->current_player = Drupal8Player::fromCurrentUser($this->currentUser(), $request);
+    $this->current_player = Drupal8Player::fromCurrentUser($this->currentUser());
     $this->store = $tmp_store_factory->get('djambi', $this->current_player->getId());
     $this->game_manager = $this->store->get($stored_game_key);
     if (empty($this->game_manager)) {
@@ -59,10 +59,9 @@ class DjambiAjaxController extends ControllerBase {
     $build_info['callback_object'] = $form_controller;
     $form_state->setBuildInfo($build_info);
     $form = $form_controller->buildForm(array(), $form_state);
-    $this->formBuilder()
-      ->prepareForm($form_controller->getFormId(), $form, $form_state);
-    $this->formBuilder()
-      ->processForm($form_controller->getFormId(), $form, $form_state);
+    $form_id = $form_controller->getFormId();
+    $this->formBuilder()->prepareForm($form_id, $form, $form_state);
+    $this->formBuilder()->processForm($form_id, $form, $form_state);
     $form['#action'] = $this->game_manager->getInfo('path');
     return $form;
   }
