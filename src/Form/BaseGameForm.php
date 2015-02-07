@@ -278,7 +278,6 @@ abstract class BaseGameForm extends FormBase implements GameFormInterface {
 
   protected function getAjaxSettings() {
     return array(
-      'path' => 'djambi/ajax',
       'wrapper' => static::FORM_WRAPPER . $this->getFormId(),
     );
   }

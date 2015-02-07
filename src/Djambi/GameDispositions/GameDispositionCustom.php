@@ -9,7 +9,7 @@ class GameDispositionCustom extends BaseGameDisposition {
 
   protected static $nb_players;
 
-  public function __construct(GameDispositionsFactory $factory, $settings) {
+  public function __construct($settings) {
     $this->setGrid(CustomGrid::fromArray($settings));
     $nb_players = 0;
     foreach ($this->getGrid()->getSides() as $side) {

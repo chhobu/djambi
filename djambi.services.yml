@@ -1,8 +1,8 @@
 services:
   djambi.tempstore:
-    class: Drupal\user\TempStoreFactory
-    arguments: ['@serialization.phpigbinaryserialize', '@database', '@lock', '%djambi.tempstore.expire%']
-  serialization.phpigbinaryserialize:
+    class: Drupal\djambi\Services\DjambiTempStoreFactory
+    arguments: ['@djambi.serialization.phpigbinaryserialize', '@database', '@lock', '%djambi.tempstore.expire%']
+  djambi.serialization.phpigbinaryserialize:
       class: Drupal\djambi\Services\PhpIgbinarySerialize
 
 parameters:

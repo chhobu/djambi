@@ -141,7 +141,7 @@ class GameDispositionsFactory implements GameDispositionsFactoryInterface {
   }
 
   public function deliverDisposition() {
-    return new GameDispositionCustom($this, $this->getSettings());
+    return new GameDispositionCustom($this->getSettings());
   }
 
 }
